@@ -4,6 +4,7 @@ import os
 import re
 import json
 from datetime import datetime, timedelta
+from collections import Counter
 
 app = Flask(__name__)
 
@@ -12,44 +13,30 @@ client = MongoClient(MONGO_URL)
 db = client['mylottodata']
 collection = db['lotterypost']
 
-# Outliers - games that are named like Pick X but are actually different game types
 OUTLIERS = {
-    ('Nebraska', 'Pick 5'): 'cash5',  # Nebraska Pick 5 is actually a Cash 5 type
+    ('Nebraska', 'Pick 5'): 'cash5',
 }
 
 def get_game_type(game_name, state_name=''):
-    """Classify game type"""
     name = game_name.lower()
     state = state_name
     
-    # Check outliers first
     if (state, game_name) in OUTLIERS:
         return OUTLIERS[(state, game_name)]
     
-    # Cash 5 / Fantasy 5 type games (pick from larger pool, not single digits)
     if any(x in name for x in ['cash 5', 'cash5', 'fantasy 5', 'fantasy5', 'take 5', 'take5', 'match 5', 'lotto 5']):
         return 'cash5'
-    
-    # Pick 2 (single digit 0-9)
     if any(x in name for x in ['pick 2', 'pick2', 'dc-2', 'dc2', 'cash 2', 'daily 2', 'play 2']):
         return 'pick2'
-    
-    # Pick 3 (single digit 0-9)
     if any(x in name for x in ['pick 3', 'pick3', 'dc-3', 'dc3', 'cash 3', 'cash3', 'daily 3', 'daily3', 'play 3', 'play3', 'numbers game', 'tri-state pick 3']):
         return 'pick3'
-    
-    # Pick 4 (single digit 0-9)
     if any(x in name for x in ['pick 4', 'pick4', 'dc-4', 'dc4', 'cash 4', 'cash4', 'daily 4', 'daily4', 'play 4', 'play4', 'win 4', 'win4', 'tri-state pick 4']):
         return 'pick4'
-    
-    # Pick 5 (single digit 0-9) - NOT Cash 5/Fantasy 5
     if any(x in name for x in ['pick 5', 'pick5', 'dc-5', 'dc5', 'daily 5', 'daily5', 'play 5', 'play5', 'georgia five']):
         return 'pick5'
-    
     return None
 
 def normalize_tod(tod_field, game_name=''):
-    """Normalize time of day values"""
     tod = (tod_field or '').lower().strip()
     name = (game_name or '').lower()
     
@@ -61,7 +48,6 @@ def normalize_tod(tod_field, game_name=''):
         return 'Day'
     if tod in ['morning', 'early bird']:
         return 'Morning'
-    
     if tod in ['7pm', '9pm', '10pm', '7:50pm']:
         return 'Evening'
     if tod in ['1pm', '2pm', '4pm', '1:50pm']:
@@ -76,28 +62,31 @@ def normalize_tod(tod_field, game_name=''):
             return 'Morning'
         if ' day' in name or '-day' in name:
             return 'Day'
-        if '7:50pm' in name or '7:50 pm' in name:
+        if '7:50pm' in name:
             return 'Evening'
-        if '1:50pm' in name or '1:50 pm' in name:
+        if '1:50pm' in name:
             return 'Midday'
-    
     return ''
 
 def parse_numbers(numbers_str):
-    """Parse numbers from JSON string"""
     try:
         nums = json.loads(numbers_str)
         return [str(n) for n in nums]
     except:
         return []
 
-def build_game_query(game_id, country, base_date_query=None):
-    """Build MongoDB query for games, properly handling outliers"""
-    query = base_date_query.copy() if base_date_query else {}
-    
-    if country != 'all':
-        query['country'] = country
-    
+def get_sorted_value(nums):
+    """Consistent sorted value calculation"""
+    if not nums:
+        return ''
+    # Sort as integers for single digits, as strings for multi-digit
+    try:
+        return '-'.join(sorted(nums, key=lambda x: int(x)))
+    except:
+        return '-'.join(sorted(nums))
+
+def get_matching_game_pairs(game_id, country):
+    """Get list of (state, game) pairs that match the query"""
     if game_id.startswith('ALL_'):
         game_type = game_id.replace('ALL_', '')
         base_q = {'country': country} if country != 'all' else {}
@@ -106,35 +95,41 @@ def build_game_query(game_id, country, base_date_query=None):
             {'$group': {'_id': {'game': '$game_name', 'state': '$state_name'}}}
         ]
         results = list(collection.aggregate(pipeline))
-        
-        # Build list of (state, game) tuples that match this type
-        matching_pairs = [(r['_id']['state'], r['_id']['game']) for r in results 
-                         if get_game_type(r['_id']['game'], r['_id']['state']) == game_type]
-        
-        # Build OR query for each valid state+game combination
-        if matching_pairs:
-            or_conditions = [{'state_name': state, 'game_name': game} for state, game in matching_pairs]
-            query['$or'] = or_conditions
-            
+        return [(r['_id']['state'], r['_id']['game']) for r in results 
+                if get_game_type(r['_id']['game'], r['_id']['state']) == game_type]
+    
     elif '|ALL_' in game_id:
         parts = game_id.split('|')
         cnt, state, game_type_str = parts[0], parts[1], parts[2]
         game_type = game_type_str.replace('ALL_', '')
+        query = {'state_name': state}
         if cnt != 'all':
             query['country'] = cnt
-        query['state_name'] = state
-        all_games = collection.distinct('game_name', {'state_name': state})
-        matching = [g for g in all_games if get_game_type(g, state) == game_type]
-        query['game_name'] = {'$in': matching}
-        
+        all_games = collection.distinct('game_name', query)
+        return [(state, g) for g in all_games if get_game_type(g, state) == game_type]
+    
     elif '|' in game_id:
         parts = game_id.split('|')
         if len(parts) == 3:
-            cnt, state, game = parts
-            if cnt != 'all':
-                query['country'] = cnt
-            query['state_name'] = state
-            query['game_name'] = game
+            return [(parts[1], parts[2])]
+    
+    return []
+
+def build_game_query(game_id, country, base_query=None):
+    query = base_query.copy() if base_query else {}
+    
+    if country != 'all':
+        query['country'] = country
+    
+    pairs = get_matching_game_pairs(game_id, country)
+    
+    if pairs:
+        if len(pairs) == 1:
+            query['state_name'] = pairs[0][0]
+            query['game_name'] = pairs[0][1]
+        else:
+            or_conditions = [{'state_name': state, 'game_name': game} for state, game in pairs]
+            query['$or'] = or_conditions
     
     return query
 
@@ -286,20 +281,62 @@ def get_draws():
     start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
     end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d') + timedelta(days=1)
     
-    base_date_query = {'date': {'$gte': start_date, '$lt': end_date}}
-    query = build_game_query(game_id, country, base_date_query)
+    # Get matching game pairs for this query
+    pairs = get_matching_game_pairs(game_id, country)
     
-    draws = list(collection.find(query).sort('date', -1).limit(1000))
+    if not pairs:
+        return jsonify([])
     
+    # Build query for date range
+    base_query = {'date': {'$gte': start_date, '$lt': end_date}}
+    if country != 'all':
+        base_query['country'] = country
+    
+    if len(pairs) == 1:
+        base_query['state_name'] = pairs[0][0]
+        base_query['game_name'] = pairs[0][1]
+    else:
+        base_query['$or'] = [{'state_name': s, 'game_name': g} for s, g in pairs]
+    
+    draws = list(collection.find(base_query).sort('date', -1).limit(1000))
+    
+    # Calculate TD: count sorted values across ALL historical data for this query scope
+    td_query = {}
+    if country != 'all':
+        td_query['country'] = country
+    
+    if len(pairs) == 1:
+        td_query['state_name'] = pairs[0][0]
+        td_query['game_name'] = pairs[0][1]
+    else:
+        td_query['$or'] = [{'state_name': s, 'game_name': g} for s, g in pairs]
+    
+    # Use aggregation to count sorted values efficiently
+    td_pipeline = [
+        {'$match': td_query},
+        {'$project': {'numbers': 1}},
+    ]
+    all_for_td = list(collection.aggregate(td_pipeline, allowDiskUse=True))
+    
+    # Count sorted values
+    td_counter = Counter()
+    for d in all_for_td:
+        nums = parse_numbers(d.get('numbers', '[]'))
+        if nums:
+            sv = get_sorted_value(nums)
+            td_counter[sv] += 1
+    
+    # Process draws
     result = []
     seen = set()
+    
     for d in draws:
         nums = parse_numbers(d.get('numbers', '[]'))
         if not nums:
             continue
         
         value = '-'.join(nums)
-        sorted_value = '-'.join(sorted(nums, key=lambda x: int(x) if x.isdigit() else 0))
+        sorted_value = get_sorted_value(nums)
         sums = sum(int(n) for n in nums if n.isdigit())
         tod = normalize_tod(d.get('tod', ''), d.get('game_name', ''))
         
@@ -316,7 +353,8 @@ def get_draws():
             'tod': tod,
             'value': value,
             'sorted_value': sorted_value,
-            'sums': sums
+            'sums': sums,
+            'td': td_counter.get(sorted_value, 0)
         })
     
     return jsonify(result)
@@ -329,8 +367,8 @@ def get_analysis():
     start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
     end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d') + timedelta(days=1)
     
-    base_date_query = {'date': {'$gte': start_date, '$lt': end_date}}
-    query = build_game_query(game_id, country, base_date_query)
+    base_query = {'date': {'$gte': start_date, '$lt': end_date}}
+    query = build_game_query(game_id, country, base_query)
     
     draws = list(collection.find(query, {'numbers': 1}))
     
@@ -353,7 +391,7 @@ def get_analysis():
         if all(n.isdigit() and len(n) == 1 for n in nums):
             s = sum(int(n) for n in nums)
             sum_freq[s] = sum_freq.get(s, 0) + 1
-            p = '-'.join(sorted(nums))
+            p = get_sorted_value(nums)
             pattern_freq[p] = pattern_freq.get(p, 0) + 1
     
     top_patterns = sorted(pattern_freq.items(), key=lambda x: x[1], reverse=True)[:20]
