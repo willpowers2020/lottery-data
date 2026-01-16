@@ -27,6 +27,9 @@
         .tod-evening { color: #673ab7; }
         .tod-morning { color: #4caf50; }
         .tod-day { color: #2196f3; }
+        .td-high { color: #4caf50; font-weight: bold; }
+        .td-medium { color: #ff9800; }
+        .td-low { color: #f44336; }
     </style>
 </head>
 <body>
@@ -91,6 +94,7 @@
                                     <th class="sortable" data-col="value">Draws</th>
                                     <th class="sortable" data-col="sorted_value">Sorted</th>
                                     <th class="sortable" data-col="sums">Sum</th>
+                                    <th class="sortable" data-col="td">TD</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsBody">
@@ -149,6 +153,12 @@
             if (t.includes('morning')) return 'tod-morning';
             if (t.includes('day')) return 'tod-day';
             return '';
+        }
+        
+        function getTdClass(td) {
+            if (td >= 100) return 'td-high';
+            if (td >= 50) return 'td-medium';
+            return 'td-low';
         }
         
         async function loadCountries() {
@@ -217,18 +227,15 @@
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
             
-            // Sort data
             const sorted = [...drawsData].sort((a, b) => {
                 let aVal = a[sortCol];
                 let bVal = b[sortCol];
                 
-                // Handle numeric sorting for sums
-                if (sortCol === 'sums') {
+                if (sortCol === 'sums' || sortCol === 'td') {
                     aVal = parseInt(aVal) || 0;
                     bVal = parseInt(bVal) || 0;
                 }
                 
-                // Handle empty values
                 if (!aVal && !bVal) return 0;
                 if (!aVal) return sortDir === 'asc' ? -1 : 1;
                 if (!bVal) return sortDir === 'asc' ? 1 : -1;
@@ -241,6 +248,7 @@
             sorted.forEach(d => {
                 const todDisplay = d.tod || '-';
                 const todClass = getTodClass(d.tod);
+                const tdClass = getTdClass(d.td);
                 tbody.innerHTML += `<tr>
                     <td>${d.draw_date || ''}</td>
                     <td><small>${d.country || ''}</small></td>
@@ -250,10 +258,10 @@
                     <td><strong>${d.value || ''}</strong></td>
                     <td>${d.sorted_value || ''}</td>
                     <td>${d.sums || ''}</td>
+                    <td class="${tdClass}">${d.td || 0}</td>
                 </tr>`;
             });
             
-            // Update header styles
             document.querySelectorAll('th.sortable').forEach(th => {
                 th.classList.remove('sort-asc', 'sort-desc');
                 if (th.dataset.col === sortCol) {
@@ -271,31 +279,39 @@
             const startDate = dates[0].toISOString().split('T')[0];
             const endDate = dates[1].toISOString().split('T')[0];
             
-            const drawsResp = await fetch('/api/draws', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
-            });
-            drawsData = await drawsResp.json();
+            // Show loading
+            document.getElementById('searchBtn').textContent = 'Loading...';
+            document.getElementById('searchBtn').disabled = true;
             
-            document.getElementById('resultCount').textContent = drawsData.length;
-            renderTable();
-            
-            const analysisResp = await fetch('/api/analysis', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
-            });
-            const analysis = await analysisResp.json();
-            
-            document.getElementById('totalDraws').textContent = analysis.total_draws;
-            document.getElementById('hotDigits').textContent = analysis.hot_digits.map(h => `${h[0]}(${h[1]})`).join(', ');
-            document.getElementById('coldDigits').textContent = analysis.cold_digits.map(c => `${c[0]}(${c[1]})`).join(', ');
-            document.getElementById('topPatterns').innerHTML = analysis.top_patterns.slice(0,5).map(p => `<div>${p[0]}: ${p[1]}x</div>`).join('');
-            document.getElementById('topSums').innerHTML = analysis.top_sums.slice(0,5).map(s => `<div>Sum ${s[0]}: ${s[1]}x</div>`).join('');
+            try {
+                const drawsResp = await fetch('/api/draws', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
+                });
+                drawsData = await drawsResp.json();
+                
+                document.getElementById('resultCount').textContent = drawsData.length;
+                renderTable();
+                
+                const analysisResp = await fetch('/api/analysis', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
+                });
+                const analysis = await analysisResp.json();
+                
+                document.getElementById('totalDraws').textContent = analysis.total_draws;
+                document.getElementById('hotDigits').textContent = analysis.hot_digits.map(h => `${h[0]}(${h[1]})`).join(', ');
+                document.getElementById('coldDigits').textContent = analysis.cold_digits.map(c => `${c[0]}(${c[1]})`).join(', ');
+                document.getElementById('topPatterns').innerHTML = analysis.top_patterns.slice(0,5).map(p => `<div>${p[0]}: ${p[1]}x</div>`).join('');
+                document.getElementById('topSums').innerHTML = analysis.top_sums.slice(0,5).map(s => `<div>Sum ${s[0]}: ${s[1]}x</div>`).join('');
+            } finally {
+                document.getElementById('searchBtn').textContent = 'Search';
+                document.getElementById('searchBtn').disabled = false;
+            }
         }
         
-        // Sortable headers
         document.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const col = th.dataset.col;
