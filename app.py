@@ -12,6 +12,19 @@ DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.lewvjrlflat
 def get_db():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def get_digit_count(game_name):
+    """Determine if game is Pick 2, 3, 4, or 5 based on name"""
+    name = game_name.lower()
+    if any(x in name for x in ['pick 2', 'dc-2', 'cash 2']):
+        return 2
+    if any(x in name for x in ['pick 3', 'dc-3', 'cash 3', 'daily 3', 'daily3', 'numbers', 'play 3', 'play3']):
+        return 3
+    if any(x in name for x in ['pick 4', 'dc-4', 'cash 4', 'daily 4', 'daily4', 'win 4', 'play 4', 'play4']):
+        return 4
+    if any(x in name for x in ['pick 5', 'dc-5', 'cash 5', 'daily 5', 'georgia five', 'fantasy 5']):
+        return 5
+    return None
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -25,49 +38,92 @@ def get_states():
     conn.close()
     return jsonify(states)
 
-@app.route('/api/games/<int:state_id>')
+@app.route('/api/games/<state_id>')
 def get_games(state_id):
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT id, name FROM games 
-        WHERE state_id = %s AND active = true 
-        ORDER BY name
-    """, (state_id,))
-    games = cur.fetchall()
-    conn.close()
     
-    # Group games by base name
-    grouped = {}
-    for g in games:
-        name = g['name']
-        # Extract base name (e.g., "Pick 3" from "Pick 3 Midday")
-        base = re.sub(r'\s*(Midday|Evening|Day|Night|Morning).*$', '', name, flags=re.IGNORECASE).strip()
+    if state_id == 'all':
+        # Get all games across all states
+        cur.execute("""
+            SELECT g.id, g.name, s.name as state_name FROM games g
+            JOIN states s ON g.state_id = s.id
+            WHERE g.active = true 
+            ORDER BY g.name, s.name
+        """)
+        games = cur.fetchall()
+        conn.close()
         
-        if base not in grouped:
-            grouped[base] = {'base': base, 'games': []}
-        grouped[base]['games'].append({'id': g['id'], 'name': name})
+        # Group by digit count for "All States"
+        by_digits = {2: [], 3: [], 4: [], 5: []}
+        for g in games:
+            digits = get_digit_count(g['name'])
+            if digits:
+                by_digits[digits].append({'id': g['id'], 'name': g['name'], 'state': g['state_name']})
+        
+        result = []
+        digit_names = {2: 'Pick 2', 3: 'Pick 3', 4: 'Pick 4', 5: 'Pick 5'}
+        
+        for digits in [2, 3, 4, 5]:
+            games_list = by_digits[digits]
+            if games_list:
+                # Add grouped option
+                ids = ','.join(str(g['id']) for g in games_list)
+                result.append({
+                    'id': ids,
+                    'name': f"{digit_names[digits]} (All States - {len(games_list)} games)",
+                    'is_group': True
+                })
+                # Add individual games
+                for g in sorted(games_list, key=lambda x: (x['state'], x['name'])):
+                    result.append({
+                        'id': str(g['id']),
+                        'name': f"{g['state']} - {g['name']}",
+                        'is_group': False
+                    })
+        
+        return jsonify(result)
     
-    # Build response with grouped options
-    result = []
-    for base, data in sorted(grouped.items()):
-        if len(data['games']) > 1:
-            # Add "All" option for this game type
-            ids = ','.join(str(g['id']) for g in data['games'])
-            result.append({
-                'id': ids,
-                'name': f"{base} (All)",
-                'is_group': True
-            })
-        # Add individual games
-        for g in data['games']:
-            result.append({
-                'id': str(g['id']),
-                'name': g['name'],
-                'is_group': False
-            })
-    
-    return jsonify(result)
+    else:
+        # Single state - group by game type
+        cur.execute("""
+            SELECT g.id, g.name FROM games g
+            WHERE g.state_id = %s AND g.active = true 
+            ORDER BY g.name
+        """, (state_id,))
+        games = cur.fetchall()
+        conn.close()
+        
+        # Group by base name (e.g., "Pick 3 Midday" and "Pick 3 Evening" -> "Pick 3")
+        grouped = {}
+        for g in games:
+            name = g['name']
+            base = re.sub(r'\s*(Midday|Evening|Day|Night|Morning).*$', '', name, flags=re.IGNORECASE).strip()
+            
+            if base not in grouped:
+                grouped[base] = []
+            grouped[base].append({'id': g['id'], 'name': name})
+        
+        result = []
+        for base in sorted(grouped.keys()):
+            games_list = grouped[base]
+            if len(games_list) > 1:
+                # Add grouped option
+                ids = ','.join(str(g['id']) for g in games_list)
+                result.append({
+                    'id': ids,
+                    'name': f"{base} (All)",
+                    'is_group': True
+                })
+            # Add individual games
+            for g in games_list:
+                result.append({
+                    'id': str(g['id']),
+                    'name': g['name'],
+                    'is_group': False
+                })
+        
+        return jsonify(result)
 
 @app.route('/api/game_info', methods=['POST'])
 def get_game_info():
@@ -111,15 +167,16 @@ def get_draws():
     
     placeholders = ','.join(['%s'] * len(game_ids))
     
-    # Use DISTINCT to avoid duplicates
     query = f"""
-        SELECT DISTINCT d.draw_date, d.value, d.sorted_value, d.sums, g.name as game_name
+        SELECT DISTINCT ON (d.draw_date, s.name, g.name, d.value) 
+            d.draw_date, d.value, d.sorted_value, d.sums, g.name as game_name, s.name as state_name
         FROM draws d
         JOIN games g ON d.game_id = g.id
+        JOIN states s ON g.state_id = s.id
         WHERE d.game_id IN ({placeholders})
         AND d.draw_date BETWEEN %s AND %s
-        ORDER BY d.draw_date DESC, g.name
-        LIMIT 500
+        ORDER BY d.draw_date DESC, s.name, g.name, d.value
+        LIMIT 1000
     """
     params = game_ids + [start_date, end_date]
     
@@ -148,7 +205,6 @@ def get_analysis():
     
     placeholders = ','.join(['%s'] * len(game_ids))
     
-    # Use DISTINCT to avoid counting duplicates
     cur.execute(f"""
         SELECT DISTINCT draw_date, value, sorted_value, sums FROM draws
         WHERE game_id IN ({placeholders}) AND draw_date BETWEEN %s AND %s
