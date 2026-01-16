@@ -12,12 +12,17 @@
         .welcome-text { color: #2196F3; font-weight: 600; }
         .btn-primary { background: #2196F3; border: none; border-radius: 8px; }
         .btn-primary:hover { background: #1976D2; }
-        .results-table { max-height: 400px; overflow-y: auto; }
+        .results-table { max-height: 500px; overflow-y: auto; }
         .hot { color: #f44336; font-weight: bold; }
         .cold { color: #2196F3; font-weight: bold; }
         .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; }
         .group-option { font-weight: bold; background: #e3f2fd !important; }
         .all-option { font-weight: bold; background: #c8e6c9 !important; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background: #e3f2fd; }
+        th.sortable::after { content: ' ⇅'; opacity: 0.3; }
+        th.sort-asc::after { content: ' ↑'; opacity: 1; }
+        th.sort-desc::after { content: ' ↓'; opacity: 1; }
     </style>
 </head>
 <body>
@@ -71,16 +76,17 @@
                 <div class="card p-3 mb-4">
                     <h5>Results <span class="badge bg-primary" id="resultCount">0</span></h5>
                     <div class="results-table">
-                        <table class="table table-striped table-sm">
+                        <table class="table table-striped table-sm" id="resultsTable">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Country</th>
-                                    <th>State</th>
-                                    <th>Game</th>
-                                    <th>Numbers</th>
-                                    <th>Sorted</th>
-                                    <th>Sum</th>
+                                    <th class="sortable" data-col="draw_date">Date</th>
+                                    <th class="sortable" data-col="country">Country</th>
+                                    <th class="sortable" data-col="state_name">State</th>
+                                    <th class="sortable" data-col="game_name">Game</th>
+                                    <th class="sortable" data-col="tod">TOD</th>
+                                    <th class="sortable" data-col="value">Draws</th>
+                                    <th class="sortable" data-col="sorted_value">Sorted</th>
+                                    <th class="sortable" data-col="sums">Sum</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsBody">
@@ -127,6 +133,9 @@
         let minDate = null;
         let maxDate = null;
         let datePicker = null;
+        let drawsData = [];
+        let sortCol = 'draw_date';
+        let sortDir = 'desc';
         
         async function loadCountries() {
             const resp = await fetch('/api/countries');
@@ -190,6 +199,48 @@
             return `${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}/${date.getFullYear()}`;
         }
         
+        function renderTable() {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            // Sort data
+            const sorted = [...drawsData].sort((a, b) => {
+                let aVal = a[sortCol];
+                let bVal = b[sortCol];
+                
+                // Handle numeric sorting for sums
+                if (sortCol === 'sums') {
+                    aVal = parseInt(aVal) || 0;
+                    bVal = parseInt(bVal) || 0;
+                }
+                
+                if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            sorted.forEach(d => {
+                tbody.innerHTML += `<tr>
+                    <td>${d.draw_date}</td>
+                    <td><small>${d.country}</small></td>
+                    <td><small>${d.state_name}</small></td>
+                    <td><small>${d.game_name}</small></td>
+                    <td><small>${d.tod}</small></td>
+                    <td><strong>${d.value}</strong></td>
+                    <td>${d.sorted_value}</td>
+                    <td>${d.sums}</td>
+                </tr>`;
+            });
+            
+            // Update header styles
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.col === sortCol) {
+                    th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+        
         async function search() {
             if (!gameIds) return alert('Please select a game');
             
@@ -204,22 +255,10 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
             });
-            const draws = await drawsResp.json();
+            drawsData = await drawsResp.json();
             
-            const tbody = document.getElementById('resultsBody');
-            tbody.innerHTML = '';
-            draws.forEach(d => {
-                tbody.innerHTML += `<tr>
-                    <td>${d.draw_date}</td>
-                    <td><small>${d.country}</small></td>
-                    <td><small>${d.state_name}</small></td>
-                    <td><small>${d.game_name}</small></td>
-                    <td><strong>${d.value}</strong></td>
-                    <td>${d.sorted_value}</td>
-                    <td>${d.sums}</td>
-                </tr>`;
-            });
-            document.getElementById('resultCount').textContent = draws.length;
+            document.getElementById('resultCount').textContent = drawsData.length;
+            renderTable();
             
             const analysisResp = await fetch('/api/analysis', {
                 method: 'POST',
@@ -234,6 +273,20 @@
             document.getElementById('topPatterns').innerHTML = analysis.top_patterns.slice(0,5).map(p => `<div>${p[0]}: ${p[1]}x</div>`).join('');
             document.getElementById('topSums').innerHTML = analysis.top_sums.slice(0,5).map(s => `<div>Sum ${s[0]}: ${s[1]}x</div>`).join('');
         }
+        
+        // Sortable headers
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (sortCol === col) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortCol = col;
+                    sortDir = 'asc';
+                }
+                renderTable();
+            });
+        });
         
         document.getElementById('country').addEventListener('change', e => loadStates(e.target.value));
         document.getElementById('state').addEventListener('change', e => loadGames(e.target.value));
