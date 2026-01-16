@@ -16,8 +16,8 @@
         .hot { color: #f44336; font-weight: bold; }
         .cold { color: #2196F3; font-weight: bold; }
         .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; }
-        .group-option { font-weight: bold; background: #e3f2fd; }
-        select option.group-option { font-weight: bold; }
+        .group-option { font-weight: bold; background: #e3f2fd !important; }
+        .all-states-option { font-weight: bold; background: #c8e6c9 !important; }
     </style>
 </head>
 <body>
@@ -25,15 +25,6 @@
         <div class="card p-4 mb-4">
             <h4>Welcome <span class="welcome-text">User</span></h4>
             <p class="text-muted">Use the algorithms to predict your next lottery wins</p>
-            
-            <ul class="nav nav-tabs mb-3">
-                <li class="nav-item">
-                    <a class="nav-link active" href="#">Single game</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-primary" href="#">All games</a>
-                </li>
-            </ul>
             
             <div class="row g-3">
                 <div class="col-md-3">
@@ -84,6 +75,7 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
+                                    <th>State</th>
                                     <th>Game</th>
                                     <th>Numbers</th>
                                     <th>Sorted</th>
@@ -139,6 +131,8 @@
             const states = await resp.json();
             const select = document.getElementById('state');
             select.innerHTML = '<option value="">Select state...</option>';
+            // Add "All States" option first
+            select.innerHTML += '<option value="all" class="all-states-option">🌎 All States</option>';
             states.forEach(s => {
                 select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
             });
@@ -205,6 +199,7 @@
             draws.forEach(d => {
                 tbody.innerHTML += `<tr>
                     <td>${d.draw_date}</td>
+                    <td><small>${d.state_name}</small></td>
                     <td><small>${d.game_name}</small></td>
                     <td><strong>${d.value}</strong></td>
                     <td>${d.sorted_value}</td>
