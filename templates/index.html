@@ -17,7 +17,7 @@
         .cold { color: #2196F3; font-weight: bold; }
         .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; }
         .group-option { font-weight: bold; background: #e3f2fd !important; }
-        .all-states-option { font-weight: bold; background: #c8e6c9 !important; }
+        .all-option { font-weight: bold; background: #c8e6c9 !important; }
     </style>
 </head>
 <body>
@@ -30,19 +30,19 @@
                 <div class="col-md-3">
                     <label class="form-label">Country</label>
                     <select class="form-select" id="country">
-                        <option value="USA" selected>USA</option>
+                        <option value="">Loading...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">State</label>
+                    <label class="form-label">State/Region</label>
                     <select class="form-select" id="state">
-                        <option value="">Select state...</option>
+                        <option value="">Select country first...</option>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Game</label>
                     <select class="form-select" id="game">
-                        <option value="">Select game...</option>
+                        <option value="">Select state first...</option>
                     </select>
                 </div>
             </div>
@@ -75,6 +75,7 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
+                                    <th>Country</th>
                                     <th>State</th>
                                     <th>Game</th>
                                     <th>Numbers</th>
@@ -120,27 +121,38 @@
     
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        let stateId = null;
+        let currentCountry = 'all';
+        let currentState = 'all';
         let gameIds = null;
         let minDate = null;
         let maxDate = null;
         let datePicker = null;
         
-        async function loadStates() {
-            const resp = await fetch('/api/states');
-            const states = await resp.json();
-            const select = document.getElementById('state');
-            select.innerHTML = '<option value="">Select state...</option>';
-            // Add "All States" option first
-            select.innerHTML += '<option value="all" class="all-states-option">🌎 All States</option>';
-            states.forEach(s => {
-                select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        async function loadCountries() {
+            const resp = await fetch('/api/countries');
+            const countries = await resp.json();
+            const select = document.getElementById('country');
+            select.innerHTML = '<option value="all" class="all-option">🌍 All Countries</option>';
+            countries.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
             });
         }
         
-        async function loadGames(sid) {
-            stateId = sid;
-            const resp = await fetch(`/api/games/${sid}`);
+        async function loadStates(country) {
+            currentCountry = country;
+            const resp = await fetch(`/api/states/${country}`);
+            const states = await resp.json();
+            const select = document.getElementById('state');
+            select.innerHTML = '<option value="all" class="all-option">🌎 All States/Regions</option>';
+            states.forEach(s => {
+                select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+            });
+            document.getElementById('game').innerHTML = '<option value="">Select state first...</option>';
+        }
+        
+        async function loadGames(state) {
+            currentState = state;
+            const resp = await fetch(`/api/games/${currentCountry}/${state}`);
             const games = await resp.json();
             const select = document.getElementById('game');
             select.innerHTML = '<option value="">Select game...</option>';
@@ -155,12 +167,12 @@
             const resp = await fetch('/api/game_info', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_ids: gids })
+                body: JSON.stringify({ game_ids: gids, country: currentCountry })
             });
             const info = await resp.json();
             minDate = info.min_date;
             maxDate = info.max_date;
-            document.getElementById('dataRange').value = `${formatDate(minDate)} - ${formatDate(maxDate)}`;
+            document.getElementById('dataRange').value = `${formatDate(minDate)} - ${formatDate(maxDate)} (${info.total.toLocaleString()} draws)`;
             
             if (datePicker) datePicker.destroy();
             datePicker = flatpickr('#dateRange', {
@@ -190,7 +202,7 @@
             const drawsResp = await fetch('/api/draws', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_ids: gameIds, start_date: startDate, end_date: endDate })
+                body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
             });
             const draws = await drawsResp.json();
             
@@ -199,6 +211,7 @@
             draws.forEach(d => {
                 tbody.innerHTML += `<tr>
                     <td>${d.draw_date}</td>
+                    <td><small>${d.country}</small></td>
                     <td><small>${d.state_name}</small></td>
                     <td><small>${d.game_name}</small></td>
                     <td><strong>${d.value}</strong></td>
@@ -211,7 +224,7 @@
             const analysisResp = await fetch('/api/analysis', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_ids: gameIds, start_date: startDate, end_date: endDate })
+                body: JSON.stringify({ game_ids: gameIds, country: currentCountry, start_date: startDate, end_date: endDate })
             });
             const analysis = await analysisResp.json();
             
@@ -222,11 +235,12 @@
             document.getElementById('topSums').innerHTML = analysis.top_sums.slice(0,5).map(s => `<div>Sum ${s[0]}: ${s[1]}x</div>`).join('');
         }
         
+        document.getElementById('country').addEventListener('change', e => loadStates(e.target.value));
         document.getElementById('state').addEventListener('change', e => loadGames(e.target.value));
         document.getElementById('game').addEventListener('change', e => loadGameInfo(e.target.value));
         document.getElementById('searchBtn').addEventListener('click', search);
         
-        loadStates();
+        loadCountries();
     </script>
 </body>
 </html>

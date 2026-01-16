@@ -1,29 +1,37 @@
 from flask import Flask, render_template, jsonify, request
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from pymongo import MongoClient
 import os
 import re
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.lewvjrlflatexlcndefi:jx4wdz7vQ62ENoCD@aws-1-us-east-1.pooler.supabase.com:5432/postgres')
-
-def get_db():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb+srv://willpowers:Ilovemymom2@cluster0.nmujtyo.mongodb.net/')
+client = MongoClient(MONGO_URL)
+db = client['mylottodata']
+collection = db['lotterypost']
 
 def get_digit_count(game_name):
-    """Determine if game is Pick 2, 3, 4, or 5 based on name"""
+    """Determine if game is Pick 2, 3, 4, or 5"""
     name = game_name.lower()
-    if any(x in name for x in ['pick 2', 'dc-2', 'cash 2']):
+    if any(x in name for x in ['pick 2', 'dc-2', 'cash 2', 'daily 2', 'play 2']):
         return 2
-    if any(x in name for x in ['pick 3', 'dc-3', 'cash 3', 'daily 3', 'daily3', 'numbers', 'play 3', 'play3']):
+    if any(x in name for x in ['pick 3', 'dc-3', 'cash 3', 'daily 3', 'play 3', 'numbers game', 'tri-state pick 3']):
         return 3
-    if any(x in name for x in ['pick 4', 'dc-4', 'cash 4', 'daily 4', 'daily4', 'win 4', 'play 4', 'play4']):
+    if any(x in name for x in ['pick 4', 'dc-4', 'cash 4', 'daily 4', 'play 4', 'win 4', 'tri-state pick 4']):
         return 4
-    if any(x in name for x in ['pick 5', 'dc-5', 'cash 5', 'daily 5', 'georgia five', 'fantasy 5']):
+    if any(x in name for x in ['pick 5', 'dc-5', 'cash 5', 'daily 5', 'play 5', 'georgia five', 'fantasy 5']):
         return 5
     return None
+
+def parse_numbers(numbers_str):
+    """Parse numbers from JSON string like '["0", "6", "1"]'"""
+    try:
+        nums = json.loads(numbers_str)
+        return [str(n) for n in nums]
+    except:
+        return []
 
 @app.route('/')
 def index():
@@ -31,35 +39,30 @@ def index():
 
 @app.route('/api/states')
 def get_states():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT id, name FROM states ORDER BY name")
-    states = cur.fetchall()
-    conn.close()
-    return jsonify(states)
+    # Get distinct US states
+    states = collection.distinct('state_name', {'country': 'USA'})
+    states = sorted([s for s in states if s])
+    return jsonify([{'id': s, 'name': s} for s in states])
 
 @app.route('/api/games/<state_id>')
 def get_games(state_id):
-    conn = get_db()
-    cur = conn.cursor()
-    
     if state_id == 'all':
-        # Get all games across all states
-        cur.execute("""
-            SELECT g.id, g.name, s.name as state_name FROM games g
-            JOIN states s ON g.state_id = s.id
-            WHERE g.active = true 
-            ORDER BY g.name, s.name
-        """)
-        games = cur.fetchall()
-        conn.close()
+        # Get all Pick 2-5 games across all US states
+        pipeline = [
+            {'$match': {'country': 'USA'}},
+            {'$group': {'_id': {'game': '$game_name', 'state': '$state_name'}}},
+            {'$sort': {'_id.game': 1, '_id.state': 1}}
+        ]
+        results = list(collection.aggregate(pipeline))
         
-        # Group by digit count for "All States"
+        # Group by digit count
         by_digits = {2: [], 3: [], 4: [], 5: []}
-        for g in games:
-            digits = get_digit_count(g['name'])
+        for r in results:
+            game = r['_id']['game']
+            state = r['_id']['state']
+            digits = get_digit_count(game)
             if digits:
-                by_digits[digits].append({'id': g['id'], 'name': g['name'], 'state': g['state_name']})
+                by_digits[digits].append({'game': game, 'state': state})
         
         result = []
         digit_names = {2: 'Pick 2', 3: 'Pick 3', 4: 'Pick 4', 5: 'Pick 5'}
@@ -67,59 +70,51 @@ def get_games(state_id):
         for digits in [2, 3, 4, 5]:
             games_list = by_digits[digits]
             if games_list:
-                # Add grouped option
-                ids = ','.join(str(g['id']) for g in games_list)
+                # Create grouped ID (game names joined)
+                unique_games = list(set(g['game'] for g in games_list))
                 result.append({
-                    'id': ids,
-                    'name': f"{digit_names[digits]} (All States - {len(games_list)} games)",
-                    'is_group': True
+                    'id': f"ALL_{digits}",
+                    'name': f"{digit_names[digits]} (All States - {len(games_list)} game/state combos)",
+                    'is_group': True,
+                    'digits': digits
                 })
-                # Add individual games
-                for g in sorted(games_list, key=lambda x: (x['state'], x['name'])):
+                for g in sorted(games_list, key=lambda x: (x['state'], x['game'])):
                     result.append({
-                        'id': str(g['id']),
-                        'name': f"{g['state']} - {g['name']}",
-                        'is_group': False
+                        'id': f"{g['state']}|{g['game']}",
+                        'name': f"{g['state']} - {g['game']}",
+                        'is_group': False,
+                        'digits': digits
                     })
         
         return jsonify(result)
     
     else:
-        # Single state - group by game type
-        cur.execute("""
-            SELECT g.id, g.name FROM games g
-            WHERE g.state_id = %s AND g.active = true 
-            ORDER BY g.name
-        """, (state_id,))
-        games = cur.fetchall()
-        conn.close()
+        # Single state - get games
+        games = collection.distinct('game_name', {'state_name': state_id, 'country': 'USA'})
         
-        # Group by base name (e.g., "Pick 3 Midday" and "Pick 3 Evening" -> "Pick 3")
+        # Group by digit count
         grouped = {}
-        for g in games:
-            name = g['name']
-            base = re.sub(r'\s*(Midday|Evening|Day|Night|Morning).*$', '', name, flags=re.IGNORECASE).strip()
-            
-            if base not in grouped:
-                grouped[base] = []
-            grouped[base].append({'id': g['id'], 'name': name})
+        for game in games:
+            digits = get_digit_count(game)
+            if digits:
+                base = f"Pick {digits}"
+                if base not in grouped:
+                    grouped[base] = []
+                grouped[base].append(game)
         
         result = []
         for base in sorted(grouped.keys()):
-            games_list = grouped[base]
+            games_list = sorted(grouped[base])
             if len(games_list) > 1:
-                # Add grouped option
-                ids = ','.join(str(g['id']) for g in games_list)
                 result.append({
-                    'id': ids,
+                    'id': f"{state_id}|ALL_{base.replace(' ', '')}",
                     'name': f"{base} (All)",
                     'is_group': True
                 })
-            # Add individual games
             for g in games_list:
                 result.append({
-                    'id': str(g['id']),
-                    'name': g['name'],
+                    'id': f"{state_id}|{g}",
+                    'name': g,
                     'is_group': False
                 })
         
@@ -128,100 +123,171 @@ def get_games(state_id):
 @app.route('/api/game_info', methods=['POST'])
 def get_game_info():
     data = request.json
-    game_ids = data.get('game_ids', '').split(',')
-    game_ids = [int(g) for g in game_ids if g.isdigit()]
+    game_id = data.get('game_ids', '')
     
-    if not game_ids:
-        return jsonify({'error': 'No game IDs'}), 400
+    # Build query based on game_id format
+    query = {'country': 'USA'}
     
-    conn = get_db()
-    cur = conn.cursor()
+    if game_id.startswith('ALL_'):
+        # All states for a digit count
+        digits = int(game_id.replace('ALL_', ''))
+        # Get all games matching this digit count
+        all_games = collection.distinct('game_name', {'country': 'USA'})
+        matching = [g for g in all_games if get_digit_count(g) == digits]
+        query['game_name'] = {'$in': matching}
+    elif '|ALL_' in game_id:
+        # All games of a type in one state
+        state, game_type = game_id.split('|ALL_')
+        digits = int(game_type.replace('Pick', ''))
+        all_games = collection.distinct('game_name', {'state_name': state, 'country': 'USA'})
+        matching = [g for g in all_games if get_digit_count(g) == digits]
+        query['state_name'] = state
+        query['game_name'] = {'$in': matching}
+    elif '|' in game_id:
+        # Specific state and game
+        state, game = game_id.split('|', 1)
+        query['state_name'] = state
+        query['game_name'] = game
     
-    placeholders = ','.join(['%s'] * len(game_ids))
-    cur.execute(f"""
-        SELECT MIN(draw_date) as min_date, MAX(draw_date) as max_date, COUNT(*) as total
-        FROM draws WHERE game_id IN ({placeholders})
-    """, game_ids)
-    info = cur.fetchone()
-    conn.close()
+    # Get date range
+    pipeline = [
+        {'$match': query},
+        {'$group': {
+            '_id': None,
+            'min_date': {'$min': '$date'},
+            'max_date': {'$max': '$date'},
+            'total': {'$sum': 1}
+        }}
+    ]
+    result = list(collection.aggregate(pipeline))
     
-    return jsonify({
-        'min_date': info['min_date'].isoformat() if info['min_date'] else None,
-        'max_date': info['max_date'].isoformat() if info['max_date'] else None,
-        'total': info['total']
-    })
+    if result:
+        return jsonify({
+            'min_date': result[0]['min_date'].strftime('%Y-%m-%d') if result[0]['min_date'] else None,
+            'max_date': result[0]['max_date'].strftime('%Y-%m-%d') if result[0]['max_date'] else None,
+            'total': result[0]['total']
+        })
+    return jsonify({'min_date': None, 'max_date': None, 'total': 0})
 
 @app.route('/api/draws', methods=['POST'])
 def get_draws():
     data = request.json
-    game_ids = data.get('game_ids', '').split(',')
-    game_ids = [int(g) for g in game_ids if g.isdigit()]
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
+    game_id = data.get('game_ids', '')
+    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
+    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d') + timedelta(days=1)
     
-    if not game_ids:
-        return jsonify([])
+    # Build query
+    query = {
+        'country': 'USA',
+        'date': {'$gte': start_date, '$lt': end_date}
+    }
     
-    conn = get_db()
-    cur = conn.cursor()
+    if game_id.startswith('ALL_'):
+        digits = int(game_id.replace('ALL_', ''))
+        all_games = collection.distinct('game_name', {'country': 'USA'})
+        matching = [g for g in all_games if get_digit_count(g) == digits]
+        query['game_name'] = {'$in': matching}
+    elif '|ALL_' in game_id:
+        state, game_type = game_id.split('|ALL_')
+        digits = int(game_type.replace('Pick', ''))
+        all_games = collection.distinct('game_name', {'state_name': state, 'country': 'USA'})
+        matching = [g for g in all_games if get_digit_count(g) == digits]
+        query['state_name'] = state
+        query['game_name'] = {'$in': matching}
+    elif '|' in game_id:
+        state, game = game_id.split('|', 1)
+        query['state_name'] = state
+        query['game_name'] = game
     
-    placeholders = ','.join(['%s'] * len(game_ids))
+    # Fetch draws
+    draws = list(collection.find(query).sort('date', -1).limit(1000))
     
-    query = f"""
-        SELECT DISTINCT ON (d.draw_date, s.name, g.name, d.value) 
-            d.draw_date, d.value, d.sorted_value, d.sums, g.name as game_name, s.name as state_name
-        FROM draws d
-        JOIN games g ON d.game_id = g.id
-        JOIN states s ON g.state_id = s.id
-        WHERE d.game_id IN ({placeholders})
-        AND d.draw_date BETWEEN %s AND %s
-        ORDER BY d.draw_date DESC, s.name, g.name, d.value
-        LIMIT 1000
-    """
-    params = game_ids + [start_date, end_date]
-    
-    cur.execute(query, params)
-    draws = cur.fetchall()
-    conn.close()
-    
+    result = []
+    seen = set()
     for d in draws:
-        d['draw_date'] = d['draw_date'].isoformat()
+        nums = parse_numbers(d.get('numbers', '[]'))
+        if not nums:
+            continue
+        
+        value = '-'.join(nums)
+        sorted_value = '-'.join(sorted(nums))
+        sums = sum(int(n) for n in nums if n.isdigit())
+        
+        # Dedupe
+        key = (d['date'].strftime('%Y-%m-%d'), d['state_name'], d['game_name'], value)
+        if key in seen:
+            continue
+        seen.add(key)
+        
+        result.append({
+            'draw_date': d['date'].strftime('%Y-%m-%d'),
+            'state_name': d['state_name'],
+            'game_name': d['game_name'],
+            'value': value,
+            'sorted_value': sorted_value,
+            'sums': sums
+        })
     
-    return jsonify(draws)
+    return jsonify(result)
 
 @app.route('/api/analysis', methods=['POST'])
 def get_analysis():
     data = request.json
-    game_ids = data.get('game_ids', '').split(',')
-    game_ids = [int(g) for g in game_ids if g.isdigit()]
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
+    game_id = data.get('game_ids', '')
+    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
+    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d') + timedelta(days=1)
     
-    if not game_ids:
-        return jsonify({'error': 'No game IDs'}), 400
+    # Build query
+    query = {
+        'country': 'USA',
+        'date': {'$gte': start_date, '$lt': end_date}
+    }
     
-    conn = get_db()
-    cur = conn.cursor()
+    if game_id.startswith('ALL_'):
+        digits = int(game_id.replace('ALL_', ''))
+        all_games = collection.distinct('game_name', {'country': 'USA'})
+        matching = [g for g in all_games if get_digit_count(g) == digits]
+        query['game_name'] = {'$in': matching}
+    elif '|ALL_' in game_id:
+        state, game_type = game_id.split('|ALL_')
+        digits = int(game_type.replace('Pick', ''))
+        all_games = collection.distinct('game_name', {'state_name': state, 'country': 'USA'})
+        matching = [g for g in all_games if get_digit_count(g) == digits]
+        query['state_name'] = state
+        query['game_name'] = {'$in': matching}
+    elif '|' in game_id:
+        state, game = game_id.split('|', 1)
+        query['state_name'] = state
+        query['game_name'] = game
     
-    placeholders = ','.join(['%s'] * len(game_ids))
-    
-    cur.execute(f"""
-        SELECT DISTINCT draw_date, value, sorted_value, sums FROM draws
-        WHERE game_id IN ({placeholders}) AND draw_date BETWEEN %s AND %s
-    """, game_ids + [start_date, end_date])
-    draws = cur.fetchall()
+    # Fetch and analyze
+    draws = list(collection.find(query, {'numbers': 1}))
     
     digit_freq = {str(i): 0 for i in range(10)}
     sum_freq = {}
     pattern_freq = {}
+    total = 0
     
     for d in draws:
-        for digit in d['value'].replace('-', ''):
-            digit_freq[digit] = digit_freq.get(digit, 0) + 1
-        s = d['sums']
-        sum_freq[s] = sum_freq.get(s, 0) + 1
-        p = d['sorted_value']
-        pattern_freq[p] = pattern_freq.get(p, 0) + 1
+        nums = parse_numbers(d.get('numbers', '[]'))
+        if not nums or len(nums) < 2:
+            continue
+        
+        total += 1
+        
+        # Count digits
+        for n in nums:
+            if n.isdigit() and len(n) == 1:
+                digit_freq[n] = digit_freq.get(n, 0) + 1
+        
+        # Sums (only for single-digit numbers)
+        if all(n.isdigit() and len(n) == 1 for n in nums):
+            s = sum(int(n) for n in nums)
+            sum_freq[s] = sum_freq.get(s, 0) + 1
+            
+            # Patterns (sorted)
+            p = '-'.join(sorted(nums))
+            pattern_freq[p] = pattern_freq.get(p, 0) + 1
     
     top_patterns = sorted(pattern_freq.items(), key=lambda x: x[1], reverse=True)[:20]
     top_sums = sorted(sum_freq.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -229,15 +295,13 @@ def get_analysis():
     hot = sorted_digits[:5]
     cold = sorted_digits[-5:]
     
-    conn.close()
-    
     return jsonify({
         'digit_frequency': digit_freq,
         'hot_digits': hot,
         'cold_digits': cold,
         'top_patterns': top_patterns,
         'top_sums': top_sums,
-        'total_draws': len(draws)
+        'total_draws': total
     })
 
 if __name__ == '__main__':
