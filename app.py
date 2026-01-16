@@ -411,3 +411,76 @@ def get_analysis():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
+@app.route('/api/lookup', methods=['POST'])
+def lookup_number():
+    data = request.json
+    number = data.get('number', '').strip()
+    country = data.get('country', 'all')
+    state = data.get('state', 'all')
+    game_type = data.get('game_type', 'all')
+    
+    if not number:
+        return jsonify({'error': 'No number provided'}), 400
+    
+    # Parse and sort the number
+    digits = list(number.replace('-', '').replace(' ', ''))
+    sorted_digits = sorted(digits, key=lambda x: int(x) if x.isdigit() else 0)
+    sorted_value = '-'.join(sorted_digits)
+    
+    # Build scope description
+    scope_parts = []
+    if country != 'all':
+        scope_parts.append(country)
+    else:
+        scope_parts.append('All Countries')
+    if state != 'all':
+        scope_parts.append(state)
+    else:
+        scope_parts.append('All States')
+    if game_type != 'all':
+        scope_parts.append(game_type.replace('pick', 'Pick '))
+    scope = ' > '.join(scope_parts)
+    
+    # Build query
+    query = {}
+    if country != 'all':
+        query['country'] = country
+    if state != 'all':
+        query['state_name'] = state
+    
+    # Filter by game type
+    if game_type != 'all':
+        base_q = query.copy()
+        pipeline = [
+            {'$match': base_q if base_q else {}},
+            {'$group': {'_id': {'game': '$game_name', 'state': '$state_name'}}}
+        ]
+        results = list(collection.aggregate(pipeline))
+        matching_pairs = [(r['_id']['state'], r['_id']['game']) for r in results 
+                         if get_game_type(r['_id']['game'], r['_id']['state']) == game_type]
+        if matching_pairs:
+            query['$or'] = [{'state_name': s, 'game_name': g} for s, g in matching_pairs]
+    
+    # Find all draws matching this sorted value
+    all_draws = list(collection.find(query, {'numbers': 1, 'date': 1, 'state_name': 1, 'game_name': 1}).sort('date', -1))
+    
+    matching = []
+    for d in all_draws:
+        nums = parse_numbers(d.get('numbers', '[]'))
+        if nums:
+            sv = get_sorted_value(nums)
+            if sv == sorted_value:
+                matching.append({
+                    'date': d['date'].strftime('%Y-%m-%d'),
+                    'state': d.get('state_name', ''),
+                    'game': d.get('game_name', ''),
+                    'value': '-'.join(nums)
+                })
+    
+    return jsonify({
+        'td': len(matching),
+        'sorted_value': sorted_value,
+        'scope': scope,
+        'history': matching[:100]  # Limit to 100 most recent
+    })
