@@ -10,12 +10,14 @@
         body { background: #f5f5f5; }
         .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .welcome-text { color: #2196F3; font-weight: 600; }
-        .tab-active { border-bottom: 2px solid #2196F3; color: #2196F3; }
-        .btn-primary { background: #2196F3; border: none; }
+        .btn-primary { background: #2196F3; border: none; border-radius: 8px; }
+        .btn-primary:hover { background: #1976D2; }
         .results-table { max-height: 400px; overflow-y: auto; }
         .hot { color: #f44336; font-weight: bold; }
         .cold { color: #2196F3; font-weight: bold; }
         .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; }
+        .group-option { font-weight: bold; background: #e3f2fd; }
+        select option.group-option { font-weight: bold; }
     </style>
 </head>
 <body>
@@ -26,10 +28,10 @@
             
             <ul class="nav nav-tabs mb-3">
                 <li class="nav-item">
-                    <a class="nav-link active" href="#" id="singleGameTab">Single game</a>
+                    <a class="nav-link active" href="#">Single game</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#" id="allGamesTab">All games</a>
+                    <a class="nav-link text-primary" href="#">All games</a>
                 </li>
             </ul>
             
@@ -46,18 +48,11 @@
                         <option value="">Select state...</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">Game</label>
                     <select class="form-select" id="game">
                         <option value="">Select game...</option>
                     </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-secondary w-100" id="subscribeBtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4z"/>
-                        </svg>
-                    </button>
                 </div>
             </div>
             
@@ -72,17 +67,9 @@
                 </div>
             </div>
             
-            <div class="row g-3 mt-2">
-                <div class="col-md-6">
-                    <label class="form-label">Choose a draw time</label>
-                    <select class="form-select" id="drawTime">
-                        <option value="All" selected>All</option>
-                        <option value="Midday">Midday</option>
-                        <option value="Evening">Evening</option>
-                    </select>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button class="btn btn-primary w-100" id="searchBtn">Search</button>
+            <div class="row g-3 mt-3">
+                <div class="col-12">
+                    <button class="btn btn-primary w-100 py-2" id="searchBtn">Search</button>
                 </div>
             </div>
         </div>
@@ -97,6 +84,7 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
+                                    <th>Game</th>
                                     <th>Numbers</th>
                                     <th>Sorted</th>
                                     <th>Sum</th>
@@ -141,12 +129,11 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         let stateId = null;
-        let gameId = null;
+        let gameIds = null;
         let minDate = null;
         let maxDate = null;
         let datePicker = null;
         
-        // Load states
         async function loadStates() {
             const resp = await fetch('/api/states');
             const states = await resp.json();
@@ -157,7 +144,6 @@
             });
         }
         
-        // Load games for state
         async function loadGames(sid) {
             stateId = sid;
             const resp = await fetch(`/api/games/${sid}`);
@@ -165,20 +151,23 @@
             const select = document.getElementById('game');
             select.innerHTML = '<option value="">Select game...</option>';
             games.forEach(g => {
-                select.innerHTML += `<option value="${g.id}">${g.name}</option>`;
+                const cls = g.is_group ? 'group-option' : '';
+                select.innerHTML += `<option value="${g.id}" class="${cls}">${g.name}</option>`;
             });
         }
         
-        // Load game info (date range)
-        async function loadGameInfo(gid) {
-            gameId = gid;
-            const resp = await fetch(`/api/game_info/${gid}`);
+        async function loadGameInfo(gids) {
+            gameIds = gids;
+            const resp = await fetch('/api/game_info', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ game_ids: gids })
+            });
             const info = await resp.json();
             minDate = info.min_date;
             maxDate = info.max_date;
             document.getElementById('dataRange').value = `${formatDate(minDate)} - ${formatDate(maxDate)}`;
             
-            // Initialize date picker
             if (datePicker) datePicker.destroy();
             datePicker = flatpickr('#dateRange', {
                 mode: 'range',
@@ -195,31 +184,28 @@
             return `${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}/${date.getFullYear()}`;
         }
         
-        // Search
         async function search() {
-            if (!gameId) return alert('Please select a game');
+            if (!gameIds) return alert('Please select a game');
             
             const dates = datePicker.selectedDates;
             if (dates.length < 2) return alert('Please select a date range');
             
             const startDate = dates[0].toISOString().split('T')[0];
             const endDate = dates[1].toISOString().split('T')[0];
-            const drawTime = document.getElementById('drawTime').value;
             
-            // Get draws
             const drawsResp = await fetch('/api/draws', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_id: gameId, start_date: startDate, end_date: endDate, draw_time: drawTime })
+                body: JSON.stringify({ game_ids: gameIds, start_date: startDate, end_date: endDate })
             });
             const draws = await drawsResp.json();
             
-            // Display results
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
             draws.forEach(d => {
                 tbody.innerHTML += `<tr>
                     <td>${d.draw_date}</td>
+                    <td><small>${d.game_name}</small></td>
                     <td><strong>${d.value}</strong></td>
                     <td>${d.sorted_value}</td>
                     <td>${d.sums}</td>
@@ -227,11 +213,10 @@
             });
             document.getElementById('resultCount').textContent = draws.length;
             
-            // Get analysis
             const analysisResp = await fetch('/api/analysis', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ game_id: gameId, start_date: startDate, end_date: endDate })
+                body: JSON.stringify({ game_ids: gameIds, start_date: startDate, end_date: endDate })
             });
             const analysis = await analysisResp.json();
             
@@ -242,12 +227,10 @@
             document.getElementById('topSums').innerHTML = analysis.top_sums.slice(0,5).map(s => `<div>Sum ${s[0]}: ${s[1]}x</div>`).join('');
         }
         
-        // Event listeners
         document.getElementById('state').addEventListener('change', e => loadGames(e.target.value));
         document.getElementById('game').addEventListener('change', e => loadGameInfo(e.target.value));
         document.getElementById('searchBtn').addEventListener('click', search);
         
-        // Initialize
         loadStates();
     </script>
 </body>
