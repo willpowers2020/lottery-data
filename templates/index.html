@@ -23,6 +23,10 @@
         th.sortable::after { content: ' ⇅'; opacity: 0.3; }
         th.sort-asc::after { content: ' ↑'; opacity: 1; }
         th.sort-desc::after { content: ' ↓'; opacity: 1; }
+        .tod-midday { color: #ff9800; }
+        .tod-evening { color: #673ab7; }
+        .tod-morning { color: #4caf50; }
+        .tod-day { color: #2196f3; }
     </style>
 </head>
 <body>
@@ -137,6 +141,16 @@
         let sortCol = 'draw_date';
         let sortDir = 'desc';
         
+        function getTodClass(tod) {
+            if (!tod) return '';
+            const t = tod.toLowerCase();
+            if (t.includes('midday')) return 'tod-midday';
+            if (t.includes('evening') || t.includes('night')) return 'tod-evening';
+            if (t.includes('morning')) return 'tod-morning';
+            if (t.includes('day')) return 'tod-day';
+            return '';
+        }
+        
         async function loadCountries() {
             const resp = await fetch('/api/countries');
             const countries = await resp.json();
@@ -214,21 +228,28 @@
                     bVal = parseInt(bVal) || 0;
                 }
                 
+                // Handle empty values
+                if (!aVal && !bVal) return 0;
+                if (!aVal) return sortDir === 'asc' ? -1 : 1;
+                if (!bVal) return sortDir === 'asc' ? 1 : -1;
+                
                 if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
                 if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
                 return 0;
             });
             
             sorted.forEach(d => {
+                const todDisplay = d.tod || '-';
+                const todClass = getTodClass(d.tod);
                 tbody.innerHTML += `<tr>
-                    <td>${d.draw_date}</td>
-                    <td><small>${d.country}</small></td>
-                    <td><small>${d.state_name}</small></td>
-                    <td><small>${d.game_name}</small></td>
-                    <td><small>${d.tod}</small></td>
-                    <td><strong>${d.value}</strong></td>
-                    <td>${d.sorted_value}</td>
-                    <td>${d.sums}</td>
+                    <td>${d.draw_date || ''}</td>
+                    <td><small>${d.country || ''}</small></td>
+                    <td><small>${d.state_name || ''}</small></td>
+                    <td><small>${d.game_name || ''}</small></td>
+                    <td><small class="${todClass}">${todDisplay}</small></td>
+                    <td><strong>${d.value || ''}</strong></td>
+                    <td>${d.sorted_value || ''}</td>
+                    <td>${d.sums || ''}</td>
                 </tr>`;
             });
             

@@ -7,39 +7,76 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb+srv://USERNAME:PASSWORD@cluster0.nmujtyo.mongodb.net/')
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb+srv://willpowers2026:dFUATeYtHrP87gPk@cluster0.nmujtyo.mongodb.net/')
 client = MongoClient(MONGO_URL)
 db = client['mylottodata']
 collection = db['lotterypost']
 
-def get_game_type(game_name):
+def get_game_type(game_name, state_name=''):
     """Classify game type"""
     name = game_name.lower()
+    state = state_name.lower()
     
-    # Cash 5 / Fantasy 5 type games (pick from larger pool, not single digits)
+    if 'nebraska' in state and 'pick 5' in name:
+        return 'cash5'
+    
     if any(x in name for x in ['cash 5', 'cash5', 'fantasy 5', 'fantasy5', 'take 5', 'take5', 'match 5', 'lotto 5']):
         return 'cash5'
     
-    # Pick 2 (single digit 0-9)
     if any(x in name for x in ['pick 2', 'pick2', 'dc-2', 'dc2', 'cash 2', 'daily 2', 'play 2']):
         return 'pick2'
     
-    # Pick 3 (single digit 0-9)
     if any(x in name for x in ['pick 3', 'pick3', 'dc-3', 'dc3', 'cash 3', 'cash3', 'daily 3', 'daily3', 'play 3', 'play3', 'numbers game', 'tri-state pick 3']):
         return 'pick3'
     
-    # Pick 4 (single digit 0-9)
     if any(x in name for x in ['pick 4', 'pick4', 'dc-4', 'dc4', 'cash 4', 'cash4', 'daily 4', 'daily4', 'play 4', 'play4', 'win 4', 'win4', 'tri-state pick 4']):
         return 'pick4'
     
-    # Pick 5 (single digit 0-9) - NOT Cash 5/Fantasy 5
     if any(x in name for x in ['pick 5', 'pick5', 'dc-5', 'dc5', 'daily 5', 'daily5', 'play 5', 'play5', 'georgia five']):
         return 'pick5'
     
     return None
 
+def normalize_tod(tod_field, game_name=''):
+    """Normalize time of day values"""
+    tod = (tod_field or '').lower().strip()
+    name = (game_name or '').lower()
+    
+    # Map from MongoDB values to normalized display
+    if tod in ['evening', 'night', 'noche', 'night owl']:
+        return 'Evening'
+    if tod in ['midday', 'matinee', 'daytime', 'día']:
+        return 'Midday'
+    if tod in ['day']:
+        return 'Day'
+    if tod in ['morning', 'early bird']:
+        return 'Morning'
+    
+    # Time-based mappings
+    if tod in ['7pm', '9pm', '10pm', '7:50pm']:
+        return 'Evening'
+    if tod in ['1pm', '2pm', '4pm', '1:50pm']:
+        return 'Midday'
+    
+    # Check game name if tod field is empty
+    if not tod:
+        if any(x in name for x in ['evening', 'night', 'noche']):
+            return 'Evening'
+        if any(x in name for x in ['midday', 'mid-day']):
+            return 'Midday'
+        if any(x in name for x in ['morning']):
+            return 'Morning'
+        if ' day' in name or '-day' in name:
+            return 'Day'
+        if '7:50pm' in name or '7:50 pm' in name:
+            return 'Evening'
+        if '1:50pm' in name or '1:50 pm' in name:
+            return 'Midday'
+    
+    return ''
+
 def parse_numbers(numbers_str):
-    """Parse numbers from JSON string like '["0", "6", "1"]'"""
+    """Parse numbers from JSON string"""
     try:
         nums = json.loads(numbers_str)
         return [str(n) for n in nums]
@@ -79,13 +116,12 @@ def get_games(country, state_id):
         ]
         results = list(collection.aggregate(pipeline))
         
-        # Group by game type
         by_type = {'pick2': [], 'pick3': [], 'pick4': [], 'pick5': [], 'cash5': []}
         for r in results:
             game = r['_id']['game']
             state = r['_id']['state']
             cnt = r['_id'].get('country', '')
-            game_type = get_game_type(game)
+            game_type = get_game_type(game, state)
             if game_type:
                 by_type[game_type].append({'game': game, 'state': state, 'country': cnt})
         
@@ -124,7 +160,6 @@ def get_games(country, state_id):
             query['country'] = country
         games = collection.distinct('game_name', query)
         
-        # Group by game type
         grouped = {}
         type_names = {
             'pick2': 'Pick 2 (0-9)',
@@ -135,7 +170,7 @@ def get_games(country, state_id):
         }
         
         for game in games:
-            game_type = get_game_type(game)
+            game_type = get_game_type(game, state_id)
             if game_type:
                 if game_type not in grouped:
                     grouped[game_type] = []
@@ -173,9 +208,13 @@ def get_game_info():
     
     if game_id.startswith('ALL_'):
         game_type = game_id.replace('ALL_', '')
-        all_games = collection.distinct('game_name', query if query else None)
-        matching = [g for g in all_games if get_game_type(g) == game_type]
-        query['game_name'] = {'$in': matching}
+        pipeline = [
+            {'$match': query if query else {}},
+            {'$group': {'_id': {'game': '$game_name', 'state': '$state_name'}}}
+        ]
+        results = list(collection.aggregate(pipeline))
+        matching = [r['_id']['game'] for r in results if get_game_type(r['_id']['game'], r['_id']['state']) == game_type]
+        query['game_name'] = {'$in': list(set(matching))}
     elif '|ALL_' in game_id:
         parts = game_id.split('|')
         cnt, state, game_type_str = parts[0], parts[1], parts[2]
@@ -184,7 +223,7 @@ def get_game_info():
             query['country'] = cnt
         query['state_name'] = state
         all_games = collection.distinct('game_name', query)
-        matching = [g for g in all_games if get_game_type(g) == game_type]
+        matching = [g for g in all_games if get_game_type(g, state) == game_type]
         query['game_name'] = {'$in': matching}
     elif '|' in game_id:
         parts = game_id.split('|')
@@ -229,9 +268,13 @@ def get_draws():
     if game_id.startswith('ALL_'):
         game_type = game_id.replace('ALL_', '')
         base_q = {'country': country} if country != 'all' else {}
-        all_games = collection.distinct('game_name', base_q if base_q else None)
-        matching = [g for g in all_games if get_game_type(g) == game_type]
-        query['game_name'] = {'$in': matching}
+        pipeline = [
+            {'$match': base_q if base_q else {}},
+            {'$group': {'_id': {'game': '$game_name', 'state': '$state_name'}}}
+        ]
+        results = list(collection.aggregate(pipeline))
+        matching = [r['_id']['game'] for r in results if get_game_type(r['_id']['game'], r['_id']['state']) == game_type]
+        query['game_name'] = {'$in': list(set(matching))}
     elif '|ALL_' in game_id:
         parts = game_id.split('|')
         cnt, state, game_type_str = parts[0], parts[1], parts[2]
@@ -240,7 +283,7 @@ def get_draws():
             query['country'] = cnt
         query['state_name'] = state
         all_games = collection.distinct('game_name', query)
-        matching = [g for g in all_games if get_game_type(g) == game_type]
+        matching = [g for g in all_games if get_game_type(g, state) == game_type]
         query['game_name'] = {'$in': matching}
     elif '|' in game_id:
         parts = game_id.split('|')
@@ -263,6 +306,7 @@ def get_draws():
         value = '-'.join(nums)
         sorted_value = '-'.join(sorted(nums, key=lambda x: int(x) if x.isdigit() else 0))
         sums = sum(int(n) for n in nums if n.isdigit())
+        tod = normalize_tod(d.get('tod', ''), d.get('game_name', ''))
         
         key = (d['date'].strftime('%Y-%m-%d'), d.get('country', ''), d.get('state_name', ''), d['game_name'], value)
         if key in seen:
@@ -274,6 +318,7 @@ def get_draws():
             'country': d.get('country', ''),
             'state_name': d.get('state_name', ''),
             'game_name': d['game_name'],
+            'tod': tod,
             'value': value,
             'sorted_value': sorted_value,
             'sums': sums
@@ -296,9 +341,13 @@ def get_analysis():
     if game_id.startswith('ALL_'):
         game_type = game_id.replace('ALL_', '')
         base_q = {'country': country} if country != 'all' else {}
-        all_games = collection.distinct('game_name', base_q if base_q else None)
-        matching = [g for g in all_games if get_game_type(g) == game_type]
-        query['game_name'] = {'$in': matching}
+        pipeline = [
+            {'$match': base_q if base_q else {}},
+            {'$group': {'_id': {'game': '$game_name', 'state': '$state_name'}}}
+        ]
+        results = list(collection.aggregate(pipeline))
+        matching = [r['_id']['game'] for r in results if get_game_type(r['_id']['game'], r['_id']['state']) == game_type]
+        query['game_name'] = {'$in': list(set(matching))}
     elif '|ALL_' in game_id:
         parts = game_id.split('|')
         cnt, state, game_type_str = parts[0], parts[1], parts[2]
@@ -307,7 +356,7 @@ def get_analysis():
             query['country'] = cnt
         query['state_name'] = state
         all_games = collection.distinct('game_name', query)
-        matching = [g for g in all_games if get_game_type(g) == game_type]
+        matching = [g for g in all_games if get_game_type(g, state) == game_type]
         query['game_name'] = {'$in': matching}
     elif '|' in game_id:
         parts = game_id.split('|')
