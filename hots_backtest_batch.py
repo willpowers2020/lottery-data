@@ -29,12 +29,15 @@ DB_MODE = "mongo_v2"
 def api(path, data=None):
     """Call local Flask API."""
     url = f"{BASE_URL}{path}?db={DB_MODE}"
-    if data:
-        r = requests.post(url, json=data, timeout=60)
-    else:
-        r = requests.get(url, timeout=60)
-    r.raise_for_status()
-    return r.json()
+    try:
+        if data:
+            r = requests.post(url, json=data, timeout=60)
+        else:
+            r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"Cannot connect to {BASE_URL}. Is Flask running?")
 
 
 # ── Hots Candidate Generator ───────────────────────────────────────────────
@@ -211,6 +214,21 @@ def run_batch(state, game_type, start_date, end_date, pw_days=5):
     print(f"Lookback: {pw_days} days | Strategies: {len(STRATEGIES)}")
     print(f"{'='*70}\n")
     
+    # Pre-load ALL TDs for every possible 4-digit combo in one shot
+    print("📈 Pre-loading TD map (this may take a moment)...")
+    all_combos = get_sorted_combos(list(range(10)), 4)
+    td_map = {}
+    for i in range(0, len(all_combos), 500):
+        chunk = all_combos[i:i+500]
+        try:
+            td_data = api('/api/td/lookup', {
+                'candidates': chunk, 'state': state, 'game_type': game_type
+            })
+            td_map.update(td_data.get('td', {}))
+        except Exception as e:
+            print(f"  ⚠️  TD fetch error at batch {i}: {e}")
+    print(f"✅ TD map loaded: {len(td_map)} entries (max TD: {max(td_map.values()) if td_map else 0})")
+    
     # Initialize results tracking
     results = {name: {'hits': 0, 'misses': 0, 'total_cands': 0, 'dates': 0, 'winners': 0,
                        'type_hits': {'S':0,'D':0,'DD':0,'T':0,'Q':0}} 
@@ -227,9 +245,9 @@ def run_batch(state, game_type, start_date, end_date, pw_days=5):
     while current <= end:
         target_date = current.strftime('%Y-%m-%d')
         
-        # Get seeds: draws from lookback window before target
+        # Get seeds: draws from BEFORE target date
         seed_start = (current - timedelta(days=pw_days)).strftime('%Y-%m-%d')
-        seed_end = target_date
+        seed_end = (current - timedelta(days=1)).strftime('%Y-%m-%d')  # day before target
         
         try:
             seed_data = api('/api/draws/recent', {
@@ -237,19 +255,26 @@ def run_batch(state, game_type, start_date, end_date, pw_days=5):
                 'start_date': seed_start, 'end_date': seed_end
             })
         except Exception as e:
+            if date_count == 0:
+                print(f"  ⚠️  API error on {target_date}: {e}")
             current += timedelta(days=1)
             continue
         
-        draws = seed_data.get('draws', [])
-        if len(draws) < 2:
+        seeds = seed_data.get('draws', [])
+        
+        # Get target winners: draws ON the target date
+        try:
+            winner_data = api('/api/draws/recent', {
+                'state': state, 'game_type': game_type,
+                'start_date': target_date, 'end_date': target_date
+            })
+        except Exception as e:
             current += timedelta(days=1)
             continue
         
-        # Suppress target date draws (they're the winners, not seeds)
-        seeds = [d for d in draws if d['date'] != target_date]
-        target_winners = [d for d in draws if d['date'] == target_date]
+        target_winners = winner_data.get('draws', [])
         
-        if not seeds or not target_winners:
+        if len(seeds) < 2 or not target_winners:
             current += timedelta(days=1)
             continue
         
@@ -260,28 +285,7 @@ def run_batch(state, game_type, start_date, end_date, pw_days=5):
         # Analyze seeds
         analysis = analyze_seeds(seed_values)
         
-        # Get TDs for all possible candidates (we'll generate broadly first)
-        # Use all 10 digits for the broadest TD lookup
-        all_combos = get_sorted_combos(list(range(10)), 4)
-        
-        # Filter to reasonable sum range first to reduce TD lookup size
-        broad_sum_min = max(0, analysis['sum_min'] - 8)
-        broad_sum_max = min(36, analysis['sum_max'] + 8)
-        broad_cands = [c for c in all_combos if broad_sum_min <= digit_sum(c) <= broad_sum_max]
-        
-        # Fetch TDs in batches
-        td_map = {}
-        for i in range(0, len(broad_cands), 500):
-            chunk = broad_cands[i:i+500]
-            try:
-                td_data = api('/api/td/lookup', {
-                    'candidates': chunk, 'state': state, 'game_type': game_type
-                })
-                td_map.update(td_data.get('td', {}))
-            except Exception as e:
-                print(f"  TD fetch error: {e}")
-        
-        # Get seed TD range
+        # Get seed TD range from pre-loaded map
         seed_tds = [td_map.get(n, 0) for n in set(seed_norms)]
         seed_tds_nonzero = [t for t in seed_tds if t > 0]
         
@@ -459,5 +463,20 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     BASE_URL = args.url
+    
+    # Test connectivity
+    print(f"Connecting to {BASE_URL}...")
+    try:
+        r = requests.get(f"{BASE_URL}/api/rbtl/data-stats/Florida/pick4?db={DB_MODE}", timeout=5)
+        if r.status_code == 200:
+            stats = r.json()
+            print(f"✅ Connected — {stats.get('total_draws', '?')} draws available")
+        else:
+            print(f"⚠️  API returned {r.status_code}")
+    except Exception as e:
+        print(f"❌ Cannot connect to Flask API at {BASE_URL}")
+        print(f"   Make sure Flask is running: python3 app.py")
+        print(f"   Error: {e}")
+        sys.exit(1)
     
     run_batch(args.state, args.game, args.start, args.end, args.pw)

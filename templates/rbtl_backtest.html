@@ -279,12 +279,17 @@
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
             <span style="font-size:.68rem;font-weight:700;color:var(--text2);align-self:center;margin-right:2px">Presets:</span>
-            <button onclick="applyHotsPreset('hot_sum_td')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Hot Σ+TD</button>
-            <button onclick="applyHotsPreset('cold_sum_td')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold Σ+TD</button>
-            <button onclick="applyHotsPreset('hot_all')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Hot (All)</button>
-            <button onclick="applyHotsPreset('cold_all')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold (All)</button>
-            <button onclick="applyHotsPreset('hot_sum_cold_2dp')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--pri);background:var(--pri-g);color:var(--pri)">🔥Σ + ❄️2DP</button>
-            <button onclick="applyHotsPreset('all_digits')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2)">All Digits</button>
+            <button onclick="applyHotsPreset('hot_sum_td')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Σ+TD</button>
+            <button onclick="applyHotsPreset('asym_sd')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid #10b981;background:rgba(16,185,129,.08);color:#10b981" title="Σ±2 TD[Q1→max+5] SD — 61% hit rate, ~300 cands">⚡ Asym SD</button>
+            <button onclick="applyHotsPreset('asym_d')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:rgba(245,158,11,.08);color:#f59e0b" title="Σ±2 TD[Q1→max+5] Doubles only — ~40% hit, $1250 box payout">💰 Asym D</button>
+            <button onclick="applyHotsPreset('iqr_sd')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid #8b5cf6;background:rgba(139,92,246,.08);color:#8b5cf6" title="Σ IQR±2 TD±2 SD — 64% hit, ~340 cands">📊 IQR SD</button>
+            <button onclick="applyHotsPreset('momentum')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid #ec4899;background:rgba(236,72,153,.08);color:#ec4899" title="Auto-detect type & TD band streaks from recent draws">🔗 Momentum</button>
+            <button onclick="applyHotsPreset('cold_sum_td')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold</button>
+            <button onclick="applyHotsPreset('hot_all')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 All</button>
+            <button onclick="applyHotsPreset('hot_sum_cold_2dp')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid var(--pri);background:var(--pri-g);color:var(--pri)">🔥Σ+❄️2DP</button>
+            <button onclick="applyHotsPreset('all_digits')" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2)">All Digits</button>
+        </div>
+        <div id="momentumPanel" class="hidden" style="margin-bottom:10px;padding:8px 12px;border-radius:8px;border:1px solid rgba(236,72,153,.25);background:rgba(236,72,153,.04)">
         </div>
         <div id="hotsBuilderControls" style="margin-bottom:10px">
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
@@ -1133,8 +1138,59 @@ function applyHotsPreset(preset){
         Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
     }
 
+    // Track which type filter to auto-apply after build
+    var autoTypeFilter=null;
+
+    if(preset==='momentum'){
+        // Analyze momentum from recent draws
+        var mom=analyzeMomentum();
+        renderMomentumPanel(mom);
+        
+        // Start with hot sum+TD as base
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
+        document.getElementById('hotsTDMin').value=Math.max(0,tr.min-2);
+        document.getElementById('hotsTDMax').value=tr.max+2;
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+        
+        if(mom){
+            // Apply type streak filter
+            if(mom.typeStreak&&mom.typeStreakLen>=2){
+                autoTypeFilter=mom.typeStreak;
+            }
+            
+            // Narrow TD band if streak detected
+            if(mom.tdBandStreak&&mom.tdBandStreakLen>=2){
+                var parts=mom.tdBandStreak.split('-');
+                var bandLo=parseInt(parts[0]);
+                var bandHi=parseInt(parts[1]);
+                // Use the streaking band as primary, but keep some padding
+                document.getElementById('hotsTDMin').value=Math.max(0,bandLo-5);
+                document.getElementById('hotsTDMax').value=bandHi+5;
+            }
+            
+            // Narrow sum band if streak detected
+            if(mom.sumBandStreak&&mom.sumBandStreakLen>=2){
+                var sp2=mom.sumBandStreak.split('-');
+                var sbLo=parseInt(sp2[0]);
+                var sbHi=parseInt(sp2[1]);
+                // Tighten sum around the streaking band
+                document.getElementById('hotsSumMin').value=Math.max(0,sbLo-3);
+                document.getElementById('hotsSumMax').value=Math.min(36,sbHi+3);
+            }
+        }else{
+            renderMomentumPanel(null);
+        }
+        
+        renderHots1dpPicker();
+        document.getElementById('hotsBuilderStatus').textContent='Momentum preset — building...';
+        window._hotsAutoTypeFilter=autoTypeFilter;
+        runHotsBuilder();
+        return;
+    }
+
     if(preset==='hot_sum_td'){
-        // Hot Σ+TD only — dense cluster ±2, tight TD
         document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=Math.max(0,tr.min-2);
@@ -1142,8 +1198,41 @@ function applyHotsPreset(preset){
         document.getElementById('hotsRequire2dp').value='';
         document.getElementById('hotsRequire3dp').value='';
     }
+    else if(preset==='asym_sd'){
+        // Σ±2 TD[Q1→max+5] SD — 61% hit rate, ~300 cands
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
+        document.getElementById('hotsTDMin').value=tr.q1;
+        document.getElementById('hotsTDMax').value=tr.max+5;
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+        autoTypeFilter='SD';
+    }
+    else if(preset==='asym_d'){
+        // Σ±2 TD[Q1→max+5] Doubles only — $1250 box payout sweet spot
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
+        document.getElementById('hotsTDMin').value=tr.q1;
+        document.getElementById('hotsTDMax').value=tr.max+5;
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+        autoTypeFilter='D';
+    }
+    else if(preset==='iqr_sd'){
+        // Σ IQR±2 TD±2 SD — uses seed sum Q1-Q3 instead of min-max
+        var hotSumFreq=window._hotSumFreq||{};
+        var sums=Object.keys(hotSumFreq).map(Number).filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return a-b});
+        var sq1=sums.length>0?sums[Math.floor(sums.length*0.25)]:sr.clusterMin;
+        var sq3=sums.length>0?sums[Math.floor(sums.length*0.75)]:sr.clusterMax;
+        document.getElementById('hotsSumMin').value=Math.max(0,sq1-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sq3+2);
+        document.getElementById('hotsTDMin').value=Math.max(0,tr.min-2);
+        document.getElementById('hotsTDMax').value=tr.max+2;
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+        autoTypeFilter='SD';
+    }
     else if(preset==='cold_sum_td'){
-        // Cold Σ+TD — full sum range (outliers), lower TD
         document.getElementById('hotsSumMin').value=Math.max(0,sr.min-3);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.max+3);
         document.getElementById('hotsTDMin').value=0;
@@ -1152,7 +1241,6 @@ function applyHotsPreset(preset){
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='hot_all'){
-        // Hot everything: dense cluster Σ+TD+2DP
         document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=Math.max(0,tr.min-2);
@@ -1160,17 +1248,7 @@ function applyHotsPreset(preset){
         document.getElementById('hotsRequire2dp').value=hotPairList.slice(0,3).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
-    else if(preset==='cold_all'){
-        // Cold everything: full range Σ, low TD, cold 2DP
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-3);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+3);
-        document.getElementById('hotsTDMin').value=0;
-        document.getElementById('hotsTDMax').value=Math.max(tr.min-1,10);
-        document.getElementById('hotsRequire2dp').value=coldPairs.slice(0,2).join(',');
-        document.getElementById('hotsRequire3dp').value='';
-    }
     else if(preset==='hot_sum_cold_2dp'){
-        // Hot sums + cold 2DP pairs
         document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=0;
@@ -1189,8 +1267,175 @@ function applyHotsPreset(preset){
 
     renderHots1dpPicker();
     document.getElementById('hotsBuilderStatus').textContent='Preset: '+preset.replace(/_/g,' ')+' — building...';
+    // Hide momentum panel for non-momentum presets
+    document.getElementById('momentumPanel').classList.add('hidden');
+    // Store auto type filter to apply after build
+    window._hotsAutoTypeFilter=autoTypeFilter;
     // Auto-run build
     runHotsBuilder();
+}
+
+// Momentum analysis — detect streaks in recent draws
+function analyzeMomentum(){
+    if(!recentDraws||recentDraws.length<4)return null;
+    
+    // Use the most recent draws (all loaded draws, ordered most recent first)
+    var draws=recentDraws.slice().reverse(); // oldest→newest
+    if(draws.length<4)return null;
+    
+    // Get last 6 draws for streak analysis
+    var recent=draws.slice(-6).reverse(); // newest first
+    
+    var momentum={typeStreak:null,typeStreakLen:0,tdBandStreak:null,tdBandStreakLen:0,
+                  sumBandStreak:null,sumBandStreakLen:0,
+                  streakDigits:[],coolDigits:[],signals:[]};
+    
+    // Classify each draw
+    var classified=recent.map(function(d){
+        var norm=d.actual||d.value;
+        var chars=norm.split('');
+        var freq={};chars.forEach(function(c){freq[c]=(freq[c]||0)+1});
+        var counts=Object.values(freq).sort(function(a,b){return b-a});
+        var type='S';
+        if(counts[0]===4)type='Q';
+        else if(counts[0]===3)type='T';
+        else if(counts[0]===2&&counts.length>1&&counts[1]===2)type='DD';
+        else if(counts[0]===2)type='D';
+        var dsum=0;chars.forEach(function(c){dsum+=parseInt(c)});
+        var tdVal=0;
+        var seedTD=window._seedTDMap||{};
+        tdVal=seedTD[norm]||0;
+        return {value:d.value,norm:norm,type:type,sum:dsum,
+                sumBand:Math.floor(dsum/5)*5+'-'+(Math.floor(dsum/5)*5+4),
+                td:tdVal,tdBand:Math.floor(tdVal/10)*10+'-'+(Math.floor(tdVal/10)*10+9),
+                digits:new Set(chars),date:d.date,tod:d.tod||''};
+    });
+    
+    // Type streak
+    var firstType=classified[0].type;
+    var typeStreak=0;
+    for(var i=0;i<classified.length;i++){
+        if(classified[i].type===firstType)typeStreak++;
+        else break;
+    }
+    if(typeStreak>=2){
+        momentum.typeStreak=firstType;
+        momentum.typeStreakLen=typeStreak;
+        var pct=typeStreak===2?52:typeStreak===3?55:typeStreak>=4?53:50;
+        momentum.signals.push({
+            icon:'🔗',type:'Type Streak',
+            detail:typeStreak+' consecutive <strong>'+firstType+'</strong> draws',
+            action:'Filter to '+firstType+' type',
+            strength:pct+'% continuation rate (baseline ~40%)',
+            tag:'hot'
+        });
+    }
+    
+    // TD band streak
+    if(classified[0].td>0){
+        var firstTDB=classified[0].tdBand;
+        var tdStreak=0;
+        for(var i=0;i<classified.length;i++){
+            if(classified[i].td>0&&classified[i].tdBand===firstTDB)tdStreak++;
+            else break;
+        }
+        if(tdStreak>=2){
+            momentum.tdBandStreak=firstTDB;
+            momentum.tdBandStreakLen=tdStreak;
+            var pct2=tdStreak===2?32:tdStreak===3?29:tdStreak>=4?50:30;
+            momentum.signals.push({
+                icon:'📈',type:'TD Band Streak',
+                detail:tdStreak+' consecutive winners in TD band <strong>'+firstTDB+'</strong>',
+                action:'Narrow TD to '+firstTDB,
+                strength:pct2+'% continuation rate (baseline ~25%)',
+                tag:pct2>=40?'hot':'warm'
+            });
+        }
+    }
+    
+    // Sum band streak
+    var firstSB=classified[0].sumBand;
+    var sbStreak=0;
+    for(var i=0;i<classified.length;i++){
+        if(classified[i].sumBand===firstSB)sbStreak++;
+        else break;
+    }
+    if(sbStreak>=2){
+        momentum.sumBandStreak=firstSB;
+        momentum.sumBandStreakLen=sbStreak;
+        momentum.signals.push({
+            icon:'Σ',type:'Sum Band Streak',
+            detail:sbStreak+' consecutive sums in band <strong>'+firstSB+'</strong>',
+            action:'Narrow sum to '+firstSB,
+            strength:'~27% continuation rate (baseline ~25%)',
+            tag:'warm'
+        });
+    }
+    
+    // Digit streaks (consecutive appearances → mean reversion signal)
+    for(var d=0;d<=9;d++){
+        var ds=String(d);
+        var dStreak=0;
+        for(var i=0;i<classified.length;i++){
+            if(classified[i].digits.has(ds))dStreak++;
+            else break;
+        }
+        if(dStreak>=3){
+            momentum.coolDigits.push({digit:d,streak:dStreak});
+        }
+    }
+    if(momentum.coolDigits.length>0){
+        var dList=momentum.coolDigits.map(function(x){return x.digit+'('+x.streak+'x)'}).join(', ');
+        momentum.signals.push({
+            icon:'🔄',type:'Digit Mean Reversion',
+            detail:'Digits <strong>'+dList+'</strong> streaking 3+ draws',
+            action:'These digits may cool off (32% vs 65% baseline)',
+            strength:'Anti-signal — streaking digits continue only ~32%',
+            tag:'cold'
+        });
+    }
+    
+    // Store classified draws for display
+    momentum.recent=classified;
+    
+    return momentum;
+}
+
+function renderMomentumPanel(momentum){
+    var panel=document.getElementById('momentumPanel');
+    if(!momentum||momentum.signals.length===0){
+        panel.classList.add('hidden');
+        return;
+    }
+    panel.classList.remove('hidden');
+    
+    var html='<div style="font-size:.72rem;font-weight:700;color:#ec4899;margin-bottom:6px">🔗 MOMENTUM SIGNALS <span style="font-weight:400;color:var(--text3)">(detected from last '+momentum.recent.length+' draws)</span></div>';
+    
+    // Show recent draws inline
+    html+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">';
+    momentum.recent.forEach(function(d,i){
+        var bg=i===0?'rgba(236,72,153,.12)':'var(--surface2)';
+        html+='<span style="font-family:monospace;font-size:.7rem;padding:2px 6px;border-radius:4px;background:'+bg+';border:1px solid var(--border)">';
+        html+=d.value+' <span style="color:var(--text3);font-size:.6rem">'+d.type+' Σ'+d.sum;
+        if(d.td>0)html+=' TD'+d.td;
+        html+='</span></span>';
+    });
+    html+='</div>';
+    
+    // Show signals
+    momentum.signals.forEach(function(s){
+        var tagColor=s.tag==='hot'?'var(--ora)':s.tag==='warm'?'#f59e0b':s.tag==='cold'?'#3b82f6':'var(--text2)';
+        var tagBg=s.tag==='hot'?'var(--ora-g)':s.tag==='warm'?'rgba(245,158,11,.08)':s.tag==='cold'?'rgba(59,130,246,.08)':'var(--surface2)';
+        html+='<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;padding:6px 8px;border-radius:6px;background:'+tagBg+';border:1px solid '+tagColor+'22">';
+        html+='<span style="font-size:1rem;flex-shrink:0">'+s.icon+'</span>';
+        html+='<div style="flex:1;min-width:0">';
+        html+='<div style="font-size:.72rem;font-weight:700;color:'+tagColor+'">'+s.type+'</div>';
+        html+='<div style="font-size:.7rem;color:var(--text1)">'+s.detail+'</div>';
+        html+='<div style="font-size:.65rem;color:var(--text3);margin-top:2px">→ '+s.action+' <span style="opacity:.7">('+s.strength+')</span></div>';
+        html+='</div></div>';
+    });
+    
+    panel.innerHTML=html;
 }
 
 function renderHots1dpPicker(){
@@ -1255,12 +1500,14 @@ function getHotSumRange(){
 }
 
 function getHotTDRange(){
-    // Returns {min, max, med} of seed TDs
+    // Returns {min, max, med, q1, q3} of seed TDs
     var tdMap=window._hotsTDMap||window._seedTDMap||{};
     var tds=Object.values(tdMap).filter(function(v){return v>0}).sort(function(a,b){return a-b});
-    if(tds.length===0)return{min:15,max:45,med:25};
+    if(tds.length===0)return{min:15,max:45,med:25,q1:20,q3:40};
     var med=tds[Math.floor(tds.length*0.5)];
-    return{min:tds[0],max:tds[tds.length-1],med:med};
+    var q1=tds[Math.floor(tds.length*0.25)];
+    var q3=tds[Math.floor(tds.length*0.75)];
+    return{min:tds[0],max:tds[tds.length-1],med:med,q1:q1,q3:q3};
 }
 
 function getColdBand2DPPairs(){
@@ -1465,6 +1712,32 @@ async function runHotsBuilder(){
     window._hotsCandidates=results;
     window._hotsRBTLSet=rbtlSet;
     window._hotsTypeFilter='ALL';
+
+    // Auto-apply type filter if preset requested one
+    var autoTF=window._hotsAutoTypeFilter;
+    if(autoTF){
+        window._hotsAutoTypeFilter=null;
+        // SD means show both S and D — need special handling
+        if(autoTF==='SD'){
+            // Hide everything except S and D
+            _hotsTypeFilter='SD';
+            var allCands=document.querySelectorAll('.hots-cand');
+            var visible=0;
+            allCands.forEach(function(el){
+                var t=el.getAttribute('data-type');
+                if(t==='S'||t==='D'){el.style.display='';visible++}
+                else{el.style.display='none'}
+            });
+            // Highlight both S and D buttons
+            document.querySelectorAll('.hots-type-btn').forEach(function(b){
+                var bt=b.getAttribute('data-type');
+                b.style.outline=(bt==='S'||bt==='D')?'2px solid var(--pri)':'none';
+            });
+            document.getElementById('hotsBuilderStatus').textContent=visible+' shown (S+D)';
+        }else{
+            filterHotsType(autoTF);
+        }
+    }
 }
 
 var _hotsTypeFilter='ALL';
@@ -1499,8 +1772,9 @@ function copyHotsCandidates(mode){
     if(mode==='rbtl_miss')list=cands.filter(function(r){return !rbtlSet[r.candidate]});
     else if(mode==='filtered'){
         list=cands.filter(function(r){
-            if(_hotsTypeFilter!=='ALL'&&r.type!==_hotsTypeFilter)return false;
-            return true;
+            if(_hotsTypeFilter==='ALL')return true;
+            if(_hotsTypeFilter==='SD')return r.type==='S'||r.type==='D';
+            return r.type===_hotsTypeFilter;
         });
     }
     var text=list.map(function(r){
