@@ -1830,8 +1830,219 @@ function emailPlayList(){
 }
 
 // Run Backtest
+// Hots Backtest — client-side candidate generation + winner check
+async function runHotsBacktest(){
+    var state=document.getElementById('stateSelect').value;
+    var gameType=document.getElementById('gameType').value;
+    var targetDate=document.getElementById('targetDate').value;
+    var targetTOD=document.getElementById('targetTOD').value;
+    if(!state||!targetDate){alert('Please select state and date');return}
+    if(selectedSeeds.length===0){alert('Please select at least one seed');return}
+
+    var btn=document.getElementById('runBtn');btn.disabled=true;btn.textContent='⏳ Running Hots...';
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('loadingDiv').classList.remove('hidden');
+    document.getElementById('resultArea').classList.add('hidden');
+
+    try{
+        // Step 1: Get target winners from API
+        var lookback=5;
+        if(selectedSeeds.length===1)lookback=0;
+        else{
+            var targetD=new Date(targetDate);
+            var dates=selectedSeeds.map(function(i){return new Date(recentDraws[i].date)});
+            var earliest=new Date(Math.min.apply(null,dates));
+            lookback=Math.round((targetD-earliest)/(1000*60*60*24));
+        }
+
+        var body={
+            state:state,game_type:gameType,target_date:targetDate,
+            target_tod:targetTOD,
+            lookback_days:lookback,
+            min_count:1,dp_size:0,dp_seed_mode:'last',
+            suggested_limit:999,include_same_day:true,
+            look_forward_days:0,grouping:'monthly',
+            top_n_clusters:0,duplicates_only:false,truth_table_seed:''
+        };
+
+        var res=await fetch(apiUrl('/api/rbtl/backtest-v2'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        var data=await res.json();
+        if(data.error){alert(data.error);return}
+
+        // Step 2: Build Hots candidates from current parameters
+        var digits=Object.keys(hotsSelectedDigits).map(Number);
+        if(digits.length<3){alert('Select at least 3 digits in Hots Builder');return}
+        var sumMin=parseInt(document.getElementById('hotsSumMin').value)||0;
+        var sumMax=parseInt(document.getElementById('hotsSumMax').value)||36;
+        var req2dp=(document.getElementById('hotsRequire2dp').value||'').split(/[,\s]+/).filter(function(s){return s.length===2});
+        var req3dp=(document.getElementById('hotsRequire3dp').value||'').split(/[,\s]+/).filter(function(s){return s.length===3});
+
+        var numDigits=gameType==='pick5'?5:4;
+        var hotsCands=[];
+        function genSorted(arr,len,start,cur,res){
+            if(cur.length===len){
+                var norm=cur.join('');
+                var dsum=0;cur.forEach(function(c){dsum+=parseInt(c)});
+                if(dsum<sumMin||dsum>sumMax)return;
+                if(req2dp.length>0){
+                    var pp={};for(var a=0;a<cur.length;a++)for(var b=a+1;b<cur.length;b++){pp[cur[a]+cur[b]]=true}
+                    for(var r=0;r<req2dp.length;r++){if(!pp[req2dp[r]])return}
+                }
+                if(req3dp.length>0){
+                    var tt={};for(var a=0;a<cur.length;a++)for(var b=a+1;b<cur.length;b++)for(var c=b+1;c<cur.length;c++){tt[cur[a]+cur[b]+cur[c]]=true}
+                    for(var r=0;r<req3dp.length;r++){if(!tt[req3dp[r]])return}
+                }
+                res.push({candidate:norm,sum:dsum});
+                return;
+            }
+            for(var i=start;i<arr.length;i++){
+                cur.push(String(arr[i]));
+                genSorted(arr,len,i,cur,res);
+                cur.pop();
+            }
+        }
+        genSorted(digits.sort(function(a,b){return a-b}),numDigits,0,[],hotsCands);
+
+        // Step 3: Fetch TD for Hots candidates and filter by TD range
+        var tdMin=parseInt(document.getElementById('hotsTDMin').value)||0;
+        var tdMax=parseInt(document.getElementById('hotsTDMax').value)||999;
+        var tdMap={};
+        if(tdMin>0||tdMax<999){
+            var candList=hotsCands.map(function(r){return r.candidate});
+            for(var i=0;i<candList.length;i+=500){
+                var chunk=candList.slice(i,i+500);
+                try{
+                    var tdRes=await fetch(apiUrl('/api/td/lookup'),{
+                        method:'POST',headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({candidates:chunk,state:state,game_type:gameType})
+                    });
+                    var tdData=await tdRes.json();
+                    if(tdData.td)Object.assign(tdMap,tdData.td);
+                }catch(e){console.error('TD fetch:',e)}
+            }
+            hotsCands=hotsCands.filter(function(r){
+                var td=tdMap[r.candidate]||0;
+                return td>=tdMin&&td<=tdMax;
+            });
+        }
+
+        // Step 4: Check winners against Hots candidates
+        var hotsSet={};
+        hotsCands.forEach(function(c,idx){hotsSet[c.candidate]=idx+1});
+
+        var winners=data.target_winners||[];
+        var winnerResults=[];
+        var winnersFound=0;
+        winners.forEach(function(w){
+            var norm=w.actual||w.value.split('').sort().join('');
+            var inHots=hotsSet[norm]||false;
+            if(inHots)winnersFound++;
+            winnerResults.push({
+                value:w.value,actual:norm,tod:w.tod||'',
+                found:!!inHots,rank:inHots||null,
+                td:tdMap[norm]||null
+            });
+        });
+
+        // Also check against RBTL candidates for comparison
+        var rbtlSet={};
+        (data.suggested_plays||[]).forEach(function(p){rbtlSet[p.candidate]=p.rank});
+
+        // Step 5: Display Hots backtest results
+        var hitRate=winners.length>0?Math.round(winnersFound/winners.length*100*10)/10:0;
+        var area=document.getElementById('resultArea');area.classList.remove('hidden');
+        var html='';
+
+        // Summary
+        html+='<div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🌶️ Hots Backtest Results</div>';
+        html+='<div class="stats-grid">';
+        html+=sc('Seeds Used',data.seed_count,data.seed_values.join(', '),'var(--pri)');
+        html+=sc('Hit Rate',hitRate+'%',winnersFound+'/'+winners.length,hitRate>0?'var(--ok)':'var(--err)');
+        html+=sc('Hots Cands',hotsCands.length,'Σ'+sumMin+'-'+sumMax+' TD'+tdMin+'-'+tdMax,'var(--ora)');
+        html+=sc('RBTL Cands',(data.suggested_plays||[]).length,'For comparison','var(--pri)');
+        html+='</div>';
+
+        // Parameters
+        html+='<div class="seeds-banner"><span>🌶️</span> <strong style="color:var(--ora)">Hots Params:</strong> ';
+        html+='Digits: ['+digits.join(',')+'] · Σ'+sumMin+'-'+sumMax+' · TD'+tdMin+'-'+tdMax;
+        if(req2dp.length>0)html+=' · 2DP: '+req2dp.join(',');
+        if(req3dp.length>0)html+=' · 3DP: '+req3dp.join(',');
+        html+='</div>';
+
+        // Seeds banner
+        html+='<div class="seeds-banner"><span>🌱</span> <strong style="color:var(--warn)">Seeds:</strong> ';
+        data.seed_values.forEach(function(v){html+='<span class="sv">'+v+'</span> '});
+        html+='</div>';
+
+        // Winner results
+        if(winnerResults.length>0){
+            html+='<div class="card"><h3>🎯 Target Winners — '+targetDate+' '+(targetTOD||'all')+'</h3>';
+            winnerResults.forEach(function(w){
+                html+='<div class="winner-item '+(w.found?'hit':'miss')+'">'+(w.found?'✅':'❌');
+                html+=' <strong style="font-family:monospace;letter-spacing:2px">'+w.value+'</strong> ';
+                html+='<span style="font-size:.78rem;color:var(--text2)">('+w.actual+') '+w.tod;
+                if(w.found)html+=' — <strong style="color:var(--ok)">Hots #'+w.rank+'/'+hotsCands.length+'</strong>';
+                html+='</span>';
+                // Comparison with RBTL
+                var inRBTL=rbtlSet[w.actual];
+                html+='<div style="margin-top:4px;font-size:.72rem;color:var(--text3)">';
+                if(w.td!==null)html+='<strong>TD:</strong> '+w.td+' ';
+                var wsum=0;w.actual.split('').forEach(function(c){wsum+=parseInt(c)});
+                html+='<strong>Σ:</strong> '+wsum+' ';
+                html+='<strong>RBTL:</strong> '+(inRBTL?'✅ Rank #'+inRBTL:'❌ Not found')+' ';
+                if(w.found&&!inRBTL)html+='<span style="color:var(--ok);font-weight:700">⭐ HOTS-ONLY CATCH</span>';
+                if(!w.found&&inRBTL)html+='<span style="color:var(--pri);font-weight:700">📊 RBTL-ONLY CATCH</span>';
+                html+='</div></div>';
+            });
+            html+='</div>';
+        }
+
+        // Candidate list
+        html+='<div class="card"><h3>🌶️ Hots Candidates <span style="font-size:.72rem;font-weight:400;color:var(--text3)">('+hotsCands.length+' total)</span></h3>';
+        html+='<div style="max-height:250px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:3px">';
+        var winActuals={};
+        winnerResults.forEach(function(w){winActuals[w.actual]=w.found});
+        hotsCands.forEach(function(c){
+            var isW=winActuals[c.candidate];
+            var inR=rbtlSet[c.candidate];
+            var bg=isW?'var(--ok-g)':inR?'rgba(99,102,241,.08)':'var(--surface2)';
+            var bdr=isW?'var(--ok)':inR?'rgba(99,102,241,.25)':'var(--border)';
+            var td=tdMap[c.candidate];
+            html+='<span style="font-family:monospace;font-size:.72rem;font-weight:700;padding:2px 6px;border-radius:4px;background:'+bg+';border:1px solid '+bdr+';letter-spacing:1px'+(isW?';color:var(--ok)':'')+(inR&&!isW?';color:#6366f1':'')+'"';
+            html+=' title="Σ'+c.sum+(td!==undefined?' TD:'+td:'')+(isW?' WINNER':'')+(inR?' +RBTL':'')+'">';
+            html+=c.candidate+(isW?' 🏆':'')+'</span>';
+        });
+        html+='</div></div>';
+
+        // Overlap analysis
+        var hotsOnly=hotsCands.filter(function(c){return !rbtlSet[c.candidate]}).length;
+        var rbtlOnly=(data.suggested_plays||[]).filter(function(p){return !hotsSet[p.candidate]}).length;
+        var overlap=hotsCands.filter(function(c){return rbtlSet[c.candidate]}).length;
+        html+='<div class="card"><h3>📊 Hots vs RBTL Overlap</h3>';
+        html+='<div class="stats-grid">';
+        html+=sc('Hots Only',hotsOnly,'Not in RBTL','var(--ora)');
+        html+=sc('RBTL Only',rbtlOnly,'Not in Hots','var(--pri)');
+        html+=sc('Overlap',overlap,'In both','var(--ok)');
+        html+=sc('Combined',hotsCands.length+(data.suggested_plays||[]).length-overlap,'Union','var(--text2)');
+        html+='</div></div>';
+
+        area.innerHTML=html;
+
+        // Store plays for Hot TD card
+        window._allPlays=data.suggested_plays||[];
+        window._lastWinSet={};
+        winners.forEach(function(w){window._lastWinSet[w.actual]=true});
+
+    }catch(e){alert('Error: '+e.message)}
+    finally{btn.disabled=false;btn.textContent='🧪 Run Backtest';document.getElementById('loadingDiv').classList.remove('hidden');document.getElementById('loadingDiv').classList.add('hidden')}
+}
+
 async function runBacktest(){
     if(currentProfile==='radar'||currentProfile==='crossfire'){alert('Coming soon!');return}
+
+    // Hots profile: run Hots backtest instead
+    if(currentProfile==='hots'){return runHotsBacktest()}
+
     var state=document.getElementById('stateSelect').value;
     var gameType=document.getElementById('gameType').value;
     var targetDate=document.getElementById('targetDate').value;
