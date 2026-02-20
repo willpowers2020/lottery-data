@@ -196,6 +196,7 @@
             <div class="profile" onclick="selectProfile('truthtable')"><span class="tag tag-live">LIVE</span><span class="icon">🔢</span><span class="name">Truth Table</span></div>
             <div class="profile" onclick="selectProfile('radar')"><span class="tag tag-soon">SOON</span><span class="icon">📡</span><span class="name">Radar</span></div>
             <div class="profile" onclick="selectProfile('crossfire')"><span class="tag tag-soon">SOON</span><span class="icon">⚡</span><span class="name">Crossfire</span></div>
+            <div class="profile" onclick="selectProfile('hots')"><span class="tag tag-live">LIVE</span><span class="icon">🌶️</span><span class="name">Hots</span></div>
         </div>
         <div class="profile-desc" id="profileDesc"><strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list. <em>Win #1: Rank #18/226 → $8,100 (72x ROI)</em></div>
     </div>
@@ -269,6 +270,47 @@
         <div id="autopsyResults"></div>
     </div>
 
+    <!-- Hots Builder -->
+    <div class="card hidden" id="hotsBuilderCard">
+        <h3>🌶️ Hots Builder <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(generate candidates from hot properties)</span></h3>
+        <div style="font-size:.75rem;color:var(--text2);margin-bottom:10px;padding:6px 10px;background:var(--surface2);border-radius:8px">
+            Select which hot properties to use. All 4-digit combos matching <strong>ALL</strong> selected criteria become candidates.
+            Click chips in Hot Digits / Sums sections above, or use the pickers below.
+        </div>
+        <div id="hotsBuilderControls" style="margin-bottom:10px">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                <div class="fg" style="min-width:120px">
+                    <label style="font-size:.68rem">1DP Digits (required)</label>
+                    <div id="hots1dpPicker" class="hd-row" style="margin-top:3px"></div>
+                </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                <div class="fg" style="min-width:200px">
+                    <label style="font-size:.68rem">Sum Range</label>
+                    <div style="display:flex;gap:4px;align-items:center;margin-top:3px">
+                        <input type="number" id="hotsSumMin" min="0" max="36" value="10" style="width:50px;font-size:.85rem;text-align:center">
+                        <span style="font-size:.8rem;color:var(--text3)">to</span>
+                        <input type="number" id="hotsSumMax" min="0" max="36" value="28" style="width:50px;font-size:.85rem;text-align:center">
+                        <button onclick="autoFillSumRange()" style="font-size:.65rem;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer" title="Auto-fill from seed sum range">Auto</button>
+                    </div>
+                </div>
+                <div class="fg" style="min-width:120px">
+                    <label style="font-size:.68rem">Must contain 2DP pair</label>
+                    <input type="text" id="hotsRequire2dp" placeholder="e.g. 27,58" style="width:100px;font-family:monospace;font-size:.85rem">
+                </div>
+                <div class="fg" style="min-width:120px">
+                    <label style="font-size:.68rem">Must contain 3DP triple</label>
+                    <input type="text" id="hotsRequire3dp" placeholder="e.g. 279" style="width:80px;font-family:monospace;font-size:.85rem">
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <button onclick="runHotsBuilder()" style="padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(90deg,#ef4444,#f97316);color:#fff;font-weight:700;font-size:.85rem;cursor:pointer">🌶️ Build Candidates</button>
+                <span id="hotsBuilderStatus" style="font-size:.75rem;color:var(--text3)"></span>
+            </div>
+        </div>
+        <div id="hotsBuilderResults"></div>
+    </div>
+
     <!-- Empty / Loading / Results -->
     <div id="emptyState" class="empty-state"><div class="big">🧪</div><div style="font-size:1rem;font-weight:600;margin-bottom:4px">Select a strategy, pick your seeds, and run</div><div style="font-size:.85rem">Results will appear here</div></div>
     <div id="loadingDiv" class="hidden"><div class="loading"><div class="spinner"></div><div>Running backtest...</div></div></div>
@@ -309,7 +351,9 @@ var PROFILES={
     radar:{name:'Radar',icon:'📡',desc:'<strong>📡 Radar:</strong> 330 all-possibles from 2DP. Narrow by historical proximity. <em>Coming soon.</em>',
         config:{}},
     crossfire:{name:'Crossfire',icon:'⚡',desc:'<strong>⚡ Crossfire:</strong> RBTL ∩ DP-AP. Two algorithms agree = highest confidence. <em>Coming soon.</em>',
-        config:{}}
+        config:{}},
+    hots:{name:'Hots',icon:'🌶️',desc:'<strong>🌶️ Hots:</strong> Build candidates from hot digit properties — cherry-pick 1DP, 2DP bands, sum range, 3DP. Bypasses RBTL grouping entirely. Use Autopsy to reverse-engineer winners, then build forward. <em>New strategy.</em>',
+        config:{minCount:'1',dpSize:'0',exclNonDupes:false,targetTOD:''}}
 };
 
 function selectProfile(p){
@@ -354,6 +398,7 @@ function selectProfile(p){
     }
     else if(p==='widenet'){autoSelectSeeds(10)}
     else if(p==='rewind'){autoSelectSeeds(0)}
+    else if(p==='hots'){autoSelectSeeds(10);showHotsBuilder()}
 }
 
 function autoSelectSeeds(n){
@@ -487,6 +532,7 @@ function updateHotDigits(){
         document.getElementById('hotDigitsCard').classList.add('hidden');
         document.getElementById('hotSumsCard').classList.add('hidden');
         document.getElementById('autopsyCard').classList.add('hidden');
+        document.getElementById('hotsBuilderCard').classList.add('hidden');
         return;
     }
     document.getElementById('hotDigitsCard').classList.remove('hidden');
@@ -628,6 +674,8 @@ function updateHotDigits(){
 
     // Show autopsy card (hot data now available for analysis)
     document.getElementById('autopsyCard').classList.remove('hidden');
+    // Show hots builder if profile is hots
+    if(currentProfile==='hots'){showHotsBuilder()}
 }
 
 // Hot Sums
@@ -998,6 +1046,167 @@ function runAutopsy(){
     });
 
     document.getElementById('autopsyResults').innerHTML=html;
+}
+
+// Hots Builder — generate candidates from hot properties
+var hotsSelectedDigits={};
+
+function showHotsBuilder(){
+    document.getElementById('hotsBuilderCard').classList.remove('hidden');
+    // Auto-select all hot digits
+    var hotDigits=window._hotDigits||{};
+    hotsSelectedDigits={};
+    Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
+    renderHots1dpPicker();
+    autoFillSumRange();
+}
+
+function renderHots1dpPicker(){
+    var hotDigits=window._hotDigits||{};
+    var html='';
+    for(var d=0;d<=9;d++){
+        var cnt=hotDigits[d]||0;
+        var isHot=cnt>0;
+        var sel=hotsSelectedDigits[d]?true:false;
+        html+='<span class="hd-chip'+(sel?' active':'')+'" style="'+(isHot?'':'opacity:.4')+'" onclick="toggleHotsDigit('+d+',this)">'+d+(cnt>0?' <span class=cnt>'+cnt+'x</span>':'')+'</span>';
+    }
+    document.getElementById('hots1dpPicker').innerHTML=html;
+}
+
+function toggleHotsDigit(d,el){
+    if(hotsSelectedDigits[d]){delete hotsSelectedDigits[d];el.classList.remove('active')}
+    else{hotsSelectedDigits[d]=true;el.classList.add('active')}
+}
+
+function autoFillSumRange(){
+    var hotSumFreq=window._hotSumFreq||{};
+    var sums=Object.keys(hotSumFreq).map(Number);
+    if(sums.length>0){
+        // Use seed sum range ± 2
+        var minS=Math.max(0,Math.min.apply(null,sums)-2);
+        var maxS=Math.min(36,Math.max.apply(null,sums)+2);
+        document.getElementById('hotsSumMin').value=minS;
+        document.getElementById('hotsSumMax').value=maxS;
+    }
+}
+
+function runHotsBuilder(){
+    var digits=Object.keys(hotsSelectedDigits).map(Number);
+    if(digits.length<3){
+        document.getElementById('hotsBuilderStatus').textContent='Select at least 3 digits';
+        return;
+    }
+    var sumMin=parseInt(document.getElementById('hotsSumMin').value)||0;
+    var sumMax=parseInt(document.getElementById('hotsSumMax').value)||36;
+    var req2dp=(document.getElementById('hotsRequire2dp').value||'').split(/[,\s]+/).filter(function(s){return s.length===2});
+    var req3dp=(document.getElementById('hotsRequire3dp').value||'').split(/[,\s]+/).filter(function(s){return s.length===3});
+
+    document.getElementById('hotsBuilderStatus').textContent='Building...';
+
+    // Generate all 4-digit sorted combos from selected digits (with repeats)
+    var candidates=[];
+    var numDigits=4; // pick4
+    if(recentDraws.length>0){
+        var firstNorm=(recentDraws[0].actual||recentDraws[0].value);
+        if(firstNorm.length===5)numDigits=5;
+    }
+
+    // Generate sorted combos with repetition
+    function generateSorted(arr,len,start,current,results){
+        if(current.length===len){
+            var norm=current.join('');
+            var dsum=0;current.forEach(function(c){dsum+=parseInt(c)});
+            // Sum filter
+            if(dsum<sumMin||dsum>sumMax)return;
+            // 2DP filter
+            if(req2dp.length>0){
+                var pairs={};
+                for(var a=0;a<current.length;a++)for(var b=a+1;b<current.length;b++){
+                    pairs[current[a]+current[b]]=true;
+                }
+                for(var r=0;r<req2dp.length;r++){
+                    if(!pairs[req2dp[r]])return;
+                }
+            }
+            // 3DP filter
+            if(req3dp.length>0){
+                var trips={};
+                for(var a=0;a<current.length;a++)for(var b=a+1;b<current.length;b++)for(var c=b+1;c<current.length;c++){
+                    trips[current[a]+current[b]+current[c]]=true;
+                }
+                for(var r=0;r<req3dp.length;r++){
+                    if(!trips[req3dp[r]])return;
+                }
+            }
+            results.push({candidate:norm,sum:dsum});
+            return;
+        }
+        for(var i=start;i<arr.length;i++){
+            current.push(String(arr[i]));
+            generateSorted(arr,len,i,current,results);
+            current.pop();
+        }
+    }
+
+    var results=[];
+    generateSorted(digits.sort(function(a,b){return a-b}),numDigits,0,[],results);
+
+    document.getElementById('hotsBuilderStatus').textContent=results.length+' candidates from '+digits.length+' digits · Σ'+sumMin+'-'+sumMax;
+
+    // Cross-reference with existing RBTL candidates if available
+    var rbtlSet={};
+    (window._allPlays||[]).forEach(function(p){rbtlSet[p.candidate]=p.rank||0});
+
+    // Build results HTML
+    var html='';
+    if(results.length===0){
+        html='<div style="padding:20px;text-align:center;color:var(--text3)">No candidates match these criteria. Try adding more digits or widening the sum range.</div>';
+    }else{
+        // Stats
+        var inRBTL=results.filter(function(r){return rbtlSet[r.candidate]}).length;
+        var notInRBTL=results.length-inRBTL;
+        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">';
+        html+='<span class="sum-stat">Total <span class="sv">'+results.length+'</span></span>';
+        if(Object.keys(rbtlSet).length>0){
+            html+='<span class="sum-stat">In RBTL <span class="sv" style="color:var(--ok)">'+inRBTL+'</span></span>';
+            html+='<span class="sum-stat">RBTL Miss <span class="sv" style="color:var(--ora)">'+notInRBTL+'</span></span>';
+        }
+        html+='<span class="sum-stat">Σ Range <span class="sv">'+sumMin+'-'+sumMax+'</span></span>';
+        html+='</div>';
+
+        // Candidate list with copy
+        html+='<div style="display:flex;gap:6px;margin-bottom:6px">';
+        html+='<button onclick="copyHotsCandidates()" style="font-size:.7rem;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);cursor:pointer">📋 Copy All</button>';
+        html+='<button onclick="copyHotsCandidates(\'rbtl_miss\')" style="font-size:.7rem;padding:3px 10px;border:1px solid var(--ora);border-radius:6px;background:var(--ora-g);color:var(--ora);cursor:pointer">📋 Copy RBTL Misses Only</button>';
+        html+='</div>';
+
+        html+='<div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">';
+        html+='<div style="display:flex;flex-wrap:wrap;gap:3px">';
+        results.forEach(function(r){
+            var inR=rbtlSet[r.candidate];
+            var bg=inR?'var(--ok-g)':'var(--surface2)';
+            var border=inR?'rgba(16,185,129,.2)':'var(--border)';
+            html+='<span style="font-family:monospace;font-size:.75rem;font-weight:700;padding:2px 6px;border-radius:4px;background:'+bg+';border:1px solid '+border+';letter-spacing:1px'+(inR?';color:var(--ok)':'')+'" title="Σ'+r.sum+(inR?' · RBTL #'+inR:'')+'">'+r.candidate+'</span>';
+        });
+        html+='</div></div>';
+    }
+
+    document.getElementById('hotsBuilderResults').innerHTML=html;
+
+    // Store for copy
+    window._hotsCandidates=results;
+    window._hotsRBTLSet=rbtlSet;
+}
+
+function copyHotsCandidates(mode){
+    var cands=window._hotsCandidates||[];
+    var rbtlSet=window._hotsRBTLSet||{};
+    var list=cands;
+    if(mode==='rbtl_miss')list=cands.filter(function(r){return !rbtlSet[r.candidate]});
+    var text=list.map(function(r){return r.candidate}).join('\n');
+    navigator.clipboard.writeText(text).then(function(){
+        alert('Copied '+list.length+' candidates');
+    });
 }
 
 // Multi-filter system — all active filters are AND'd together
