@@ -94,6 +94,21 @@
         .band-bar-fill{height:100%;border-radius:2px;transition:width .3s}
         .band-pairs{display:flex;flex-wrap:wrap;gap:2px}
         .band-pair{font-size:.62rem;font-family:monospace;color:var(--text2);padding:1px 3px;border-radius:3px;background:var(--surface2)}
+        .band-divider{width:100%;height:1px;background:var(--border);margin:10px 0 6px}
+        .sum-range-bar{display:flex;align-items:flex-end;gap:1px;height:40px;margin:6px 0}
+        .sum-bar-col{flex:1;min-width:0;border-radius:2px 2px 0 0;cursor:pointer;transition:.15s;position:relative}
+        .sum-bar-col:hover{opacity:.8;transform:scaleY(1.05);transform-origin:bottom}
+        .sum-bar-col.active{outline:2px solid var(--pri);outline-offset:1px}
+        .sum-bar-label{font-size:.5rem;color:var(--text3);text-align:center;white-space:nowrap;overflow:hidden}
+        .sum-range-labels{display:flex;gap:1px;margin-bottom:4px}
+        .sum-range-labels span{flex:1;text-align:center;font-size:.5rem;color:var(--text3);font-family:monospace}
+        .sum-stat{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;font-size:.68rem;font-weight:600;background:var(--surface);border:1px solid var(--border);margin-right:4px;margin-bottom:3px}
+        .sum-stat .sv{font-weight:800;font-family:monospace;color:var(--text1)}
+        .sum-band-group{border:1px solid var(--border);border-radius:8px;padding:5px 7px;background:var(--surface);cursor:pointer;transition:.15s;position:relative;min-width:70px}
+        .sum-band-group:hover{border-color:var(--ora);background:var(--ora-g)}
+        .sum-band-group.active{border-color:var(--ora);background:var(--ora-g);box-shadow:0 0 6px rgba(245,158,11,.2)}
+        .sum-band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
+        .sum-band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
 
         /* Buttons */
         .btn{width:100%;padding:11px;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s}
@@ -210,6 +225,12 @@
     <div class="card hidden" id="hotDigitsCard">
         <h3>🔥 Hot Digits <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(click to filter candidates)</span></h3>
         <div id="hotDigitsContent"></div>
+    </div>
+
+    <!-- Hot Sums -->
+    <div class="card hidden" id="hotSumsCard">
+        <h3>🔢 Hot Sums <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(digit sum frequency · click bands to filter)</span></h3>
+        <div id="hotSumsContent"></div>
     </div>
 
     <!-- Empty / Loading / Results -->
@@ -426,20 +447,34 @@ function toggleSeed(i){
 
 // Hot Digits
 function updateHotDigits(){
-    if(selectedSeeds.length===0){document.getElementById('hotDigitsCard').classList.add('hidden');return}
+    if(selectedSeeds.length===0){
+        document.getElementById('hotDigitsCard').classList.add('hidden');
+        document.getElementById('hotSumsCard').classList.add('hidden');
+        return;
+    }
     document.getElementById('hotDigitsCard').classList.remove('hidden');
-    var digits={},pairs={};
+    var digits={},pairs={},triples={};
     // Track which 2DP pairs belong to which 1DP digits
     var pairsByDigit={};
+    var seedSums=[];
     selectedSeeds.forEach(function(i){
         var d=recentDraws[i];if(!d)return;
         var norm=(d.actual||d.value).split('');
+        // Digit sum
+        var dsum=0;norm.forEach(function(c){dsum+=parseInt(c)});
+        seedSums.push(dsum);
         var seenDigits={};
         norm.forEach(function(c){if(!seenDigits[c]){seenDigits[c]=true;digits[c]=(digits[c]||0)+1}});
         var seenPairs={};
         for(var a=0;a<norm.length;a++)for(var b=a+1;b<norm.length;b++){
             var pair=norm[a]+norm[b];
             if(!seenPairs[pair]){seenPairs[pair]=true;pairs[pair]=(pairs[pair]||0)+1}
+        }
+        // 3DP triples (sorted combos of 3 digits)
+        var seenTrips={};
+        for(var a=0;a<norm.length;a++)for(var b=a+1;b<norm.length;b++)for(var c=b+1;c<norm.length;c++){
+            var trip=norm[a]+norm[b]+norm[c];
+            if(!seenTrips[trip]){seenTrips[trip]=true;triples[trip]=(triples[trip]||0)+1}
         }
     });
     // Map each pair to its constituent digits
@@ -470,32 +505,26 @@ function updateHotDigits(){
     // === 2DP Bands: group pairs by first digit ===
     var bands={};
     var maxBandTotal=0;
-    // All possible bands 0-9
     for(var b=0;b<=9;b++){bands[b]={pairs:[],total:0,label:b+'x'}}
     d2sorted.forEach(function(e){
         var firstDigit=parseInt(e[0][0]);
         bands[firstDigit].pairs.push({pair:e[0],count:e[1]});
         bands[firstDigit].total+=e[1];
     });
-    // Find max for bar scaling
     Object.values(bands).forEach(function(b){if(b.total>maxBandTotal)maxBandTotal=b.total});
-    // Sort bands by total ascending (coldest first) for the insight
     var bandEntries=Object.entries(bands).filter(function(e){return e[1].pairs.length>0});
     var bandsByCount=bandEntries.slice().sort(function(a,b){return a[1].total-b[1].total});
-    // Find the cold threshold (bottom third of active bands)
     var coldThreshold=bandsByCount.length>2?bandsByCount[Math.floor(bandsByCount.length/3)][1].total:0;
 
     html+='<div class="hd-label" style="margin-top:10px">2DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit · ❄️ = coldest — build candidates here)</span></div>';
     html+='<div class="band-row">';
-    // Show in natural order 0-9
     for(var i=0;i<=9;i++){
         var band=bands[i];
         if(band.pairs.length===0)continue;
         var isCold=band.total<=coldThreshold&&coldThreshold>0;
         var pct=maxBandTotal>0?Math.round(band.total/maxBandTotal*100):0;
-        // Color: hot=orange, warm=blue, cold=lightblue
         var barColor=pct>70?'var(--ora)':pct>40?'var(--pri)':'rgba(99,195,255,.7)';
-        html+='<div class="band-group'+(isCold?' cold':'')+'" onclick="applyBandFilter(\''+i+'\')" title="Click to filter candidates to '+band.label+' pairs">';
+        html+='<div class="band-group'+(isCold?' cold':'')+'" onclick="applyBandFilter(\'2dp\',\''+i+'\')" title="Click to filter candidates to '+band.label+' pairs">';
         html+='<div class="band-header"><span class="band-name">'+band.label+'</span><span class="band-count">'+band.total+' hits · '+band.pairs.length+' pairs</span></div>';
         html+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>';
         html+='<div class="band-pairs">';
@@ -506,11 +535,168 @@ function updateHotDigits(){
     }
     html+='</div>';
 
+    // === 3DP Triples ===
+    var d3sorted=Object.entries(triples).sort(function(a,b){return b[1]-a[1]||a[0].localeCompare(b[0])});
+    html+='<div class="band-divider"></div>';
+    html+='<div class="hd-label" style="margin-top:6px">3DP Triples</div>';
+    html+='<div class="hd-row">';
+    d3sorted.forEach(function(e){
+        html+='<span class="hd-chip" onclick="applyHotFilter(\'3dp\',\''+e[0]+'\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    html+='</div>';
+
+    // === 3DP Bands: group triples by first digit ===
+    var bands3={};
+    var maxBand3Total=0;
+    for(var b=0;b<=9;b++){bands3[b]={triples:[],total:0,label:b+'xx'}}
+    d3sorted.forEach(function(e){
+        var firstDigit=parseInt(e[0][0]);
+        bands3[firstDigit].triples.push({triple:e[0],count:e[1]});
+        bands3[firstDigit].total+=e[1];
+    });
+    Object.values(bands3).forEach(function(b){if(b.total>maxBand3Total)maxBand3Total=b.total});
+    var band3Entries=Object.entries(bands3).filter(function(e){return e[1].triples.length>0});
+    var bands3ByCount=band3Entries.slice().sort(function(a,b){return a[1].total-b[1].total});
+    var cold3Threshold=bands3ByCount.length>2?bands3ByCount[Math.floor(bands3ByCount.length/3)][1].total:0;
+
+    html+='<div class="hd-label" style="margin-top:10px">3DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit · ❄️ = coldest)</span></div>';
+    html+='<div class="band-row">';
+    for(var i=0;i<=9;i++){
+        var band3=bands3[i];
+        if(band3.triples.length===0)continue;
+        var isCold3=band3.total<=cold3Threshold&&cold3Threshold>0;
+        var pct3=maxBand3Total>0?Math.round(band3.total/maxBand3Total*100):0;
+        var barColor3=pct3>70?'var(--ora)':pct3>40?'var(--pri)':'rgba(99,195,255,.7)';
+        html+='<div class="band-group'+(isCold3?' cold':'')+'" onclick="applyBandFilter(\'3dp\',\''+i+'\')" title="Click to filter candidates to '+band3.label+' triples">';
+        html+='<div class="band-header"><span class="band-name">'+band3.label+'</span><span class="band-count">'+band3.total+' hits · '+band3.triples.length+' trips</span></div>';
+        html+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct3+'%;background:'+barColor3+'"></div></div>';
+        html+='<div class="band-pairs">';
+        band3.triples.forEach(function(t){
+            html+='<span class="band-pair">'+t.triple+'<sup>'+t.count+'</sup></span>';
+        });
+        html+='</div></div>';
+    }
+    html+='</div>';
+
     document.getElementById('hotDigitsContent').innerHTML=html;
     // Store for filtering
     window._hotDigits=digits;
     window._hotPairs=pairs;
+    window._hotTriples=triples;
     window._hotBands=bands;
+    window._hotBands3=bands3;
+
+    // Update Hot Sums
+    updateHotSums(seedSums);
+}
+
+// Hot Sums
+function updateHotSums(seedSums){
+    if(!seedSums||seedSums.length===0){document.getElementById('hotSumsCard').classList.add('hidden');return}
+    document.getElementById('hotSumsCard').classList.remove('hidden');
+
+    // Count frequency of each sum
+    var sumFreq={};
+    seedSums.forEach(function(s){sumFreq[s]=(sumFreq[s]||0)+1});
+
+    // Stats
+    var minSum=Math.min.apply(null,seedSums);
+    var maxSum=Math.max.apply(null,seedSums);
+    var avgSum=Math.round(seedSums.reduce(function(a,b){return a+b},0)/seedSums.length*10)/10;
+    var range=maxSum-minSum;
+    // Median
+    var sorted=seedSums.slice().sort(function(a,b){return a-b});
+    var medSum=sorted.length%2===0?(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2:sorted[Math.floor(sorted.length/2)];
+
+    var html='';
+
+    // Summary stats row
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">';
+    html+='<span class="sum-stat">Min <span class="sv">'+minSum+'</span></span>';
+    html+='<span class="sum-stat">Max <span class="sv">'+maxSum+'</span></span>';
+    html+='<span class="sum-stat">Range <span class="sv">'+range+'</span></span>';
+    html+='<span class="sum-stat">Avg <span class="sv">'+avgSum+'</span></span>';
+    html+='<span class="sum-stat">Med <span class="sv">'+medSum+'</span></span>';
+    html+='<span class="sum-stat">Seeds <span class="sv">'+seedSums.length+'</span></span>';
+    html+='</div>';
+
+    // Histogram — show all possible sums (0 to 36 for pick4, 0 to 45 for pick5)
+    // Determine game from digit count of first seed
+    var maxPossible=36; // pick4 default
+    if(recentDraws.length>0){
+        var firstNorm=(recentDraws[0].actual||recentDraws[0].value);
+        if(firstNorm.length===5)maxPossible=45;
+    }
+    var maxFreq=0;
+    Object.values(sumFreq).forEach(function(v){if(v>maxFreq)maxFreq=v});
+
+    html+='<div class="hd-label">Sum Distribution <span style="font-weight:400;color:var(--text3)">('+minSum+' – '+maxSum+')</span></div>';
+    html+='<div class="sum-range-bar">';
+    for(var s=minSum;s<=maxSum;s++){
+        var freq=sumFreq[s]||0;
+        var h=maxFreq>0?Math.max(freq>0?8:2,Math.round(freq/maxFreq*38)):2;
+        var col=freq===0?'var(--border)':freq>=maxFreq*0.7?'var(--ora)':freq>=maxFreq*0.4?'var(--pri)':'rgba(99,195,255,.7)';
+        html+='<div class="sum-bar-col" style="height:'+h+'px;background:'+col+'" title="Sum '+s+': '+freq+'x" onclick="applyHotFilter(\'sum\',\''+s+'\')"></div>';
+    }
+    html+='</div>';
+    html+='<div class="sum-range-labels">';
+    for(var s=minSum;s<=maxSum;s++){
+        html+='<span'+(sumFreq[s]?' style="font-weight:700;color:var(--text1)"':'')+'>'+s+'</span>';
+    }
+    html+='</div>';
+
+    // Individual sum chips
+    html+='<div class="hd-label" style="margin-top:8px">Individual Sums</div><div class="hd-row">';
+    var sumSorted=Object.entries(sumFreq).sort(function(a,b){return b[1]-a[1]||parseInt(a[0])-parseInt(b[0])});
+    sumSorted.forEach(function(e){
+        html+='<span class="hd-chip" onclick="applyHotFilter(\'sum\',\''+e[0]+'\')">Σ'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    html+='</div>';
+
+    // Sum Bands (groups of 5: 0-4, 5-9, 10-14, etc.)
+    var sumBands={};
+    var maxSumBandTotal=0;
+    var bandSize=5;
+    var numBands=Math.ceil((maxPossible+1)/bandSize);
+    for(var b=0;b<numBands;b++){
+        var lo=b*bandSize,hi=Math.min(lo+bandSize-1,maxPossible);
+        sumBands[b]={lo:lo,hi:hi,sums:[],total:0,label:lo+'-'+hi};
+    }
+    Object.entries(sumFreq).forEach(function(e){
+        var s=parseInt(e[0]),cnt=e[1];
+        var bIdx=Math.floor(s/bandSize);
+        if(sumBands[bIdx]){
+            sumBands[bIdx].sums.push({sum:s,count:cnt});
+            sumBands[bIdx].total+=cnt;
+        }
+    });
+    Object.values(sumBands).forEach(function(b){if(b.total>maxSumBandTotal)maxSumBandTotal=b.total});
+    var sumBandEntries=Object.entries(sumBands).filter(function(e){return e[1].total>0});
+    var sumBandsByCount=sumBandEntries.slice().sort(function(a,b){return a[1].total-b[1].total});
+    var coldSumThreshold=sumBandsByCount.length>2?sumBandsByCount[Math.floor(sumBandsByCount.length/3)][1].total:0;
+
+    html+='<div class="hd-label" style="margin-top:10px">Sum Bands <span style="font-weight:400;color:var(--text3)">(groups of '+bandSize+' · ❄️ = coldest — underrepresented sum zones)</span></div>';
+    html+='<div class="band-row">';
+    for(var b=0;b<numBands;b++){
+        var sb=sumBands[b];
+        if(sb.total===0)continue;
+        var isCold=sb.total<=coldSumThreshold&&coldSumThreshold>0;
+        var pct=maxSumBandTotal>0?Math.round(sb.total/maxSumBandTotal*100):0;
+        var barColor=pct>70?'var(--ora)':pct>40?'var(--pri)':'rgba(99,195,255,.7)';
+        html+='<div class="sum-band-group'+(isCold?' cold':'')+'" onclick="applySumBandFilter(\''+sb.lo+'\',\''+sb.hi+'\')" title="Filter candidates with digit sum '+sb.label+'">';
+        html+='<div class="band-header"><span class="band-name">Σ'+sb.label+'</span><span class="band-count">'+sb.total+' hits</span></div>';
+        html+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>';
+        html+='<div class="band-pairs">';
+        sb.sums.sort(function(a,b){return a.sum-b.sum}).forEach(function(s){
+            html+='<span class="band-pair">'+s.sum+'<sup>'+s.count+'</sup></span>';
+        });
+        html+='</div></div>';
+    }
+    html+='</div>';
+
+    document.getElementById('hotSumsContent').innerHTML=html;
+    window._hotSumFreq=sumFreq;
+    window._hotSumBands=sumBands;
 }
 
 // Multi-filter system — all active filters are AND'd together
@@ -535,10 +721,14 @@ function applyHotFilter(type,val){
     var el=event.target.closest('.hd-chip,.hm-chip-click');
     toggleFilter(type,val,el);
 }
-function applyBandFilter(leadDigit){
-    // Toggle band filter — filters candidates that contain ANY 2DP pair from this band
+function applyBandFilter(dpType,leadDigit){
+    // Toggle band filter — filters candidates that contain ANY pair/triple from this band
     var el=event.target.closest('.band-group');
-    toggleFilter('band',leadDigit,el);
+    toggleFilter('band_'+dpType,leadDigit,el);
+}
+function applySumBandFilter(lo,hi){
+    var el=event.target.closest('.sum-band-group');
+    toggleFilter('sumband',lo+'-'+hi,el);
 }
 function filterByMonth(month){
     var el=event.target.closest('.hm-chip-click');
@@ -550,7 +740,7 @@ function filterByYear(year){
 }
 function clearFilter(){
     activeFilters=[];
-    document.querySelectorAll('.hd-chip,.hm-chip-click').forEach(function(c){c.classList.remove('active')});
+    document.querySelectorAll('.hd-chip,.hm-chip-click,.band-group,.sum-band-group,.sum-bar-col').forEach(function(c){c.classList.remove('active')});
     updateFullCandidateList();
 }
 function candidateMatchesFilter(p,f){
@@ -562,12 +752,18 @@ function candidateMatchesFilter(p,f){
             if(sorted[a]+sorted[b]===f.val)return true;
         }
         return false;
+    }else if(f.type==='3dp'){
+        var sorted=p.candidate.split('');
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++)for(var c=b+1;c<sorted.length;c++){
+            if(sorted[a]+sorted[b]+sorted[c]===f.val)return true;
+        }
+        return false;
     }else if(f.type==='month'){
         return(p.months||[]).indexOf(f.val)!==-1;
     }else if(f.type==='year'){
         return(p.months||[]).some(function(m){return m.startsWith(f.val)});
-    }else if(f.type==='band'){
-        // Match candidates that contain any 2DP pair starting with the band's lead digit
+    }else if(f.type==='band_2dp'){
+        // Match candidates that contain any 2DP pair from this band
         var sorted=p.candidate.split('');
         var bandPairs=window._hotBands&&window._hotBands[parseInt(f.val)]?window._hotBands[parseInt(f.val)].pairs:[];
         if(bandPairs.length===0)return false;
@@ -577,6 +773,29 @@ function candidateMatchesFilter(p,f){
             if(pairSet[sorted[a]+sorted[b]])return true;
         }
         return false;
+    }else if(f.type==='band_3dp'){
+        // Match candidates that contain any 3DP triple from this band
+        var sorted=p.candidate.split('');
+        var bandTrips=window._hotBands3&&window._hotBands3[parseInt(f.val)]?window._hotBands3[parseInt(f.val)].triples:[];
+        if(bandTrips.length===0)return false;
+        var tripSet={};
+        bandTrips.forEach(function(bt){tripSet[bt.triple]=true});
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++)for(var c=b+1;c<sorted.length;c++){
+            if(tripSet[sorted[a]+sorted[b]+sorted[c]])return true;
+        }
+        return false;
+    }else if(f.type==='sum'){
+        // Match candidates whose digit sum equals the selected sum
+        var csum=0;
+        p.candidate.split('').forEach(function(c){csum+=parseInt(c)});
+        return csum===parseInt(f.val);
+    }else if(f.type==='sumband'){
+        // Match candidates whose digit sum falls in the band range
+        var parts=f.val.split('-');
+        var lo=parseInt(parts[0]),hi=parseInt(parts[1]);
+        var csum=0;
+        p.candidate.split('').forEach(function(c){csum+=parseInt(c)});
+        return csum>=lo&&csum<=hi;
     }
     return true;
 }
