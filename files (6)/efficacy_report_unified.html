@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 DP AP Efficacy Report - MyLottoData</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        
+        .card h2 {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .form-group label {
+            font-size: 0.85rem;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-group select,
+        .form-group input {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: #fff;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
+        }
+        
+        /* DP Options Radio Group */
+        .dp-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .dp-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .dp-option:hover {
+            border-color: #1a73e8;
+            background: #f0f7ff;
+        }
+        
+        .dp-option.selected {
+            border-color: #1a73e8;
+            background: #e8f0fe;
+        }
+        
+        .dp-option input {
+            display: none;
+        }
+        
+        .dp-option .label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .dp-option .desc {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover { background: #1557b0; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .btn-secondary:hover { background: #e8e8e8; }
+        
+        .btn-warning {
+            background: #ff9800;
+        }
+        .btn-warning:hover { background: #f57c00; }
+        
+        .btn-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        /* Results Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .summary-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .summary-item .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a73e8;
+        }
+        
+        .summary-item .label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .summary-item.highlight {
+            background: #e8f5e9;
+        }
+        
+        .summary-item.highlight .value {
+            color: #2e7d32;
+        }
+        
+        /* Results Table */
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+        }
+        
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tr:hover { background: #f8f9fa; }
+        
+        .mono {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        
+        .hit-rate {
+            font-weight: 700;
+        }
+        
+        .hit-rate.good { color: #2e7d32; }
+        .hit-rate.medium { color: #f57c00; }
+        .hit-rate.low { color: #d32f2f; }
+        
+        .pairs-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .pair-badge {
+            padding: 2px 6px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+        
+        .hits-detail {
+            margin-top: 5px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .hit-after { color: #2e7d32; }
+        .hit-before { color: #1565c0; }
+        .hit-same-day { color: #ff6f00; font-weight: 600; }
+        
+        .pair-match-tag {
+            display: inline-block;
+            background: #fff3e0;
+            color: #e65100;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        
+        .more-hits {
+            color: #888;
+            font-size: 0.8rem;
+            font-style: italic;
+            margin-top: 4px;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a73e8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        /* Algorithm Info */
+        .algo-info {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .algo-info h3 {
+            color: #e65100;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .algo-info p {
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        /* Cost Warning Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .modal h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .modal .message {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        
+        .modal .estimate-details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .modal .estimate-details .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .modal .estimate-details .row:last-child {
+            border-bottom: none;
+        }
+        
+        .modal .estimate-details .label {
+            color: #666;
+        }
+        
+        .modal .estimate-details .value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .modal .estimate-details .value.warning {
+            color: #f57c00;
+        }
+        
+        .modal .estimate-details .value.cost {
+            color: #d32f2f;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .modal-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .modal-btn.primary {
+            background: #1a73e8;
+            color: #fff;
+        }
+        .modal-btn.primary:hover { background: #1557b0; }
+        
+        .modal-btn.secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .modal-btn.secondary:hover { background: #e8e8e8; }
+        
+        .modal-btn.warning {
+            background: #ff9800;
+            color: #fff;
+        }
+        .modal-btn.warning:hover { background: #f57c00; }
+        
+        .email-input-group {
+            display: none;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .email-input-group.show { display: block; }
+        
+        .email-input-group label {
+            font-size: 0.9rem;
+            color: #555;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .email-input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 DP AP Efficacy Report</h1>
+        
+        <div class="algo-info">
+            <h3>Unified Digit Pair - All Possibles Algorithm</h3>
+            <p>
+                This algorithm extracts digit pairs from winning numbers and finds all possible candidates 
+                that share those pairs. It then checks historical patterns to predict which candidates 
+                are likely to hit within a specified window.
+            </p>
+        </div>
+        
+        <!-- Configuration Card -->
+        <div class="card">
+            <h2>⚙️ Configuration</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Pick Game</label>
+                    <select id="gameType">
+                        <option value="pick2">Pick 2</option>
+                        <option value="pick3">Pick 3</option>
+                        <option value="pick4" selected>Pick 4</option>
+                        <option value="pick5">Pick 5</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>State</label>
+                    <select id="stateSelect">
+                        <option value="California">California</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate" value="2026-01-01">
+                </div>
+                
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate" value="2026-01-15">
+                </div>
+                
+                <div class="form-group">
+                    <label>Days Threshold</label>
+                    <input type="number" id="daysThreshold" value="30" min="1" max="365">
+                </div>
+                
+                <div class="form-group">
+                    <label>Hit Window (days)</label>
+                    <input type="number" id="hitWindow" value="10" min="1" max="30">
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Digit Pair Size</label>
+                <div class="dp-options" id="dpOptions">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <div class="btn-row">
+                <button class="btn" id="runBtn" onclick="checkCostAndRun()">🔍 Run Efficacy Report</button>
+                <span id="statusText" style="color: #666; font-size: 0.9rem;"></span>
+            </div>
+        </div>
+        
+        <!-- Results Summary -->
+        <div class="card" id="summaryCard" style="display: none;">
+            <h2>📈 Results Summary</h2>
+            <div class="summary-grid" id="summaryGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Results Table -->
+        <div class="card" id="resultsCard" style="display: none;">
+            <h2>📋 Detailed Results</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Seed Date</th>
+                            <th>Seed Value</th>
+                            <th>Normalized</th>
+                            <th>Pairs</th>
+                            <th>Common</th>
+                            <th>Hits</th>
+                            <th>Hit Rate</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cost Warning Modal -->
+    <div class="modal-overlay" id="costModal">
+        <div class="modal">
+            <div class="modal-icon">⚠️</div>
+            <h3>Heavy Query Detected</h3>
+            <p class="message" id="costMessage">This query may take a while to complete.</p>
+            
+            <div class="estimate-details" id="estimateDetails">
+                <!-- Populated dynamically -->
+            </div>
+            
+            <div class="email-input-group" id="emailInputGroup">
+                <label>Email for notification:</label>
+                <input type="email" id="backgroundEmail" placeholder="your@email.com">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeCostModal()">
+                    ❌ Cancel
+                </button>
+                <button class="modal-btn warning" onclick="runInBackground()">
+                    📧 Run in Background
+                </button>
+                <button class="modal-btn primary" id="proceedBtn" onclick="proceedWithQuery()">
+                    ▶️ Run Now
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal">
+            <div class="modal-icon">✅</div>
+            <h3>Job Queued Successfully</h3>
+            <p class="message" id="successMessage">You'll receive an email when results are ready.</p>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="closeSuccessModal()">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'mongo_v2';
+        
+        let selectedPairSize = 2;
+        let pendingQueryParams = null;
+        let currentEstimate = null;
+        
+        function apiUrl(path) {
+            const sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+        
+        // Load states for selected game type
+        async function loadStates() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/${gameType}/states`));
+                const states = await res.json();
+                const select = document.getElementById('stateSelect');
+                select.innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (e) {
+                console.error('Error loading states:', e);
+            }
+        }
+        
+        // Load DP options for selected game type
+        async function loadDpOptions() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/dp-options/${gameType}`));
+                const data = await res.json();
+                
+                const container = document.getElementById('dpOptions');
+                container.innerHTML = data.options.map((opt, i) => `
+                    <label class="dp-option ${i === 0 ? 'selected' : ''}" onclick="selectDpOption(this, ${opt.size})">
+                        <input type="radio" name="pairSize" value="${opt.size}" ${i === 0 ? 'checked' : ''}>
+                        <span class="label">${opt.label}</span>
+                    </label>
+                `).join('');
+                
+                selectedPairSize = data.options[0].size;
+            } catch (e) {
+                console.error('Error loading DP options:', e);
+            }
+        }
+        
+        function selectDpOption(el, size) {
+            document.querySelectorAll('.dp-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            el.querySelector('input').checked = true;
+            selectedPairSize = size;
+        }
+        
+        // Game type change handler
+        document.getElementById('gameType').addEventListener('change', () => {
+            loadStates();
+            loadDpOptions();
+        });
+        
+        // Build query params
+        function getQueryParams() {
+            return {
+                game_type: document.getElementById('gameType').value,
+                state: document.getElementById('stateSelect').value,
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value,
+                days_threshold: parseInt(document.getElementById('daysThreshold').value),
+                hit_window: parseInt(document.getElementById('hitWindow').value),
+                pair_size: selectedPairSize
+            };
+        }
+        
+        // Check cost before running
+        async function checkCostAndRun() {
+            const params = getQueryParams();
+            pendingQueryParams = params;
+            
+            try {
+                const res = await fetch(apiUrl('/api/query/estimate-cost'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query_type: 'efficacy_report',
+                        params: params
+                    })
+                });
+                
+                const data = await res.json();
+                currentEstimate = data.estimate;
+                
+                if (data.requires_confirmation) {
+                    showCostModal(data);
+                } else {
+                    // Run immediately for small queries
+                    runReport();
+                }
+            } catch (e) {
+                console.error('Error estimating cost:', e);
+                // On error, just run the query
+                runReport();
+            }
+        }
+        
+        // Show cost warning modal
+        function showCostModal(data) {
+            const estimate = data.estimate;
+            
+            document.getElementById('costMessage').textContent = data.message;
+            
+            const detailsHtml = `
+                <div class="row">
+                    <span class="label">Estimated Time:</span>
+                    <span class="value ${estimate.estimated_time_seconds > 30 ? 'warning' : ''}">${estimate.estimated_time_seconds}s</span>
+                </div>
+                <div class="row">
+                    <span class="label">Seeds to Analyze:</span>
+                    <span class="value">${estimate.estimated_seeds || 'N/A'}</span>
+                </div>
+                <div class="row">
+                    <span class="label">Candidates per Seed:</span>
+                    <span class="value">${estimate.estimated_candidates || 'N/A'}</span>
+                </div>
+                ${estimate.is_chargeable ? `
+                <div class="row">
+                    <span class="label">Cost:</span>
+                    <span class="value cost">$${estimate.estimated_cost.toFixed(4)}</span>
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('estimateDetails').innerHTML = detailsHtml;
+            
+            // Update proceed button text
+            const proceedBtn = document.getElementById('proceedBtn');
+            if (estimate.is_chargeable) {
+                proceedBtn.textContent = `▶️ Run Now ($${estimate.estimated_cost.toFixed(4)})`;
+            } else {
+                proceedBtn.textContent = '▶️ Run Now';
+            }
+            
+            document.getElementById('costModal').classList.add('show');
+        }
+        
+        function closeCostModal() {
+            document.getElementById('costModal').classList.remove('show');
+            document.getElementById('emailInputGroup').classList.remove('show');
+            pendingQueryParams = null;
+        }
+        
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.remove('show');
+        }
+        
+        // Run in background
+        async function runInBackground() {
+            const emailGroup = document.getElementById('emailInputGroup');
+            
+            if (!emailGroup.classList.contains('show')) {
+                emailGroup.classList.add('show');
+                document.getElementById('backgroundEmail').focus();
+                return;
+            }
+            
+            const email = document.getElementById('backgroundEmail').value;
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            try {
+                const res = await fetch(apiUrl('/api/query/background-job'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job_type: 'efficacy_report',
+                        params: pendingQueryParams,
+                        email: email
+                    })
+                });
+                
+                const data = await res.json();
+                
+                closeCostModal();
+                document.getElementById('successMessage').textContent = 
+                    `Job ID: ${data.job_id}. Results will be sent to ${email} in ~${data.estimated_time} seconds.`;
+                document.getElementById('successModal').classList.add('show');
+                
+            } catch (e) {
+                alert('Error creating background job: ' + e.message);
+            }
+        }
+        
+        // Proceed with query immediately
+        async function proceedWithQuery() {
+            closeCostModal();
+            
+            // If chargeable, process payment first
+            if (currentEstimate && currentEstimate.is_chargeable) {
+                try {
+                    await fetch(apiUrl('/api/query/charge'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            amount: currentEstimate.estimated_cost,
+                            query_type: 'efficacy_report',
+                            user_id: 'anonymous'
+                        })
+                    });
+                } catch (e) {
+                    alert('Payment failed: ' + e.message);
+                    return;
+                }
+            }
+            
+            runReport();
+        }
+        
+        // Run report
+        async function runReport() {
+            const btn = document.getElementById('runBtn');
+            const status = document.getElementById('statusText');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Running...';
+            status.textContent = 'Analyzing historical data...';
+            
+            const payload = pendingQueryParams || getQueryParams();
+            
+            try {
+                const res = await fetch(apiUrl('/api/prediction/efficacy-report'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    status.textContent = '';
+                    return;
+                }
+                
+                displayResults(data);
+                status.textContent = `Completed: ${data.algorithm} analysis`;
+                
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Error running report: ' + e.message);
+                status.textContent = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Run Efficacy Report';
+                pendingQueryParams = null;
+            }
+        }
+        
+        function displayResults(data) {
+            // Show summary
+            const summaryCard = document.getElementById('summaryCard');
+            const summaryGrid = document.getElementById('summaryGrid');
+            
+            summaryGrid.innerHTML = `
+                <div class="summary-item">
+                    <div class="value">${data.algorithm}</div>
+                    <div class="label">Algorithm</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value">${data.total_seeds_analyzed}</div>
+                    <div class="label">Seeds Analyzed</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value">${data.total_common_predicted}</div>
+                    <div class="label">Common Predicted</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value">${data.total_hits_within_window}</div>
+                    <div class="label">Common Hits</div>
+                </div>
+                <div class="summary-item highlight">
+                    <div class="value">${data.total_pair_hits_in_window || 0}</div>
+                    <div class="label">All Pair Hits</div>
+                </div>
+                <div class="summary-item highlight">
+                    <div class="value">${data.overall_hit_rate}%</div>
+                    <div class="label">Hit Rate</div>
+                </div>
+            `;
+            summaryCard.style.display = 'block';
+            
+            // Show results table
+            const resultsCard = document.getElementById('resultsCard');
+            const tbody = document.getElementById('resultsBody');
+            
+            // Update table header
+            document.querySelector('#resultsCard thead tr').innerHTML = `
+                <th>Seed Date</th>
+                <th>Seed Value</th>
+                <th>Normalized</th>
+                <th>Pairs</th>
+                <th>Common</th>
+                <th>Pair Hits</th>
+                <th>Hit Rate</th>
+                <th>All Pair Matches (incl. Same Day)</th>
+            `;
+            
+            if (!data.results || data.results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No results found. Try adjusting the date range or threshold.</td></tr>';
+            } else {
+                tbody.innerHTML = data.results.map(r => {
+                    const hitRateClass = r.hit_rate >= 20 ? 'good' : r.hit_rate >= 10 ? 'medium' : 'low';
+                    const pairsHtml = (r.pairs || []).slice(0, 6).map(p => 
+                        `<span class="pair-badge">${p}</span>`
+                    ).join('') + (r.pairs && r.pairs.length > 6 ? `<span class="pair-badge">+${r.pairs.length - 6}</span>` : '');
+                    
+                    // Show ALL pair hits including same day
+                    const allPairHitsHtml = (r.all_pair_hits || []).slice(0, 5).map(h => {
+                        const dirClass = h.direction === 'SAME DAY' ? 'same-day' : h.direction.toLowerCase();
+                        const sourceTag = h.source === 'COMMON' ? '' : '<span class="pair-match-tag">PAIR</span>';
+                        return `<div class="hit-${dirClass}">${sourceTag}${h.number} → ${h.hit_date} (${h.direction})</div>`;
+                    }).join('') + (r.all_pair_hits && r.all_pair_hits.length > 5 ? `<div class="more-hits">+${r.all_pair_hits.length - 5} more</div>` : '');
+                    
+                    return `
+                        <tr>
+                            <td>${r.seed_date}${r.seed_tod ? '<br><small>' + r.seed_tod + '</small>' : ''}</td>
+                            <td class="mono">${r.seed_value}</td>
+                            <td class="mono">${r.seed_norm}</td>
+                            <td><div class="pairs-list">${pairsHtml}</div></td>
+                            <td>${r.common_count}</td>
+                            <td><strong>${r.pair_hits_in_window || 0}</strong></td>
+                            <td class="hit-rate ${hitRateClass}">${r.hit_rate}%</td>
+                            <td><div class="hits-detail">${allPairHitsHtml || '-'}</div></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            resultsCard.style.display = 'block';
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStates();
+            loadDpOptions();
+            
+            const today = new Date().toISOString().split('T')[0];
+            const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('startDate').value = twoWeeksAgo;
+            document.getElementById('endDate').value = today;
+        });
+    </script>
+</body>
+</html>

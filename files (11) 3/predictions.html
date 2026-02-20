@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎱 MyLottoData - 2DP AP Predictions</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        h1 { font-size: 1.8rem; color: #4ecdc4; }
+        nav { display: flex; gap: 10px; flex-wrap: wrap; }
+        nav a {
+            background: #2a2a4a;
+            color: #4ecdc4;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        nav a:hover { background: #4ecdc4; color: #1a1a2e; }
+        nav a.active { background: #4ecdc4; color: #1a1a2e; }
+        
+        .db-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .db-badge.sqlite { background: #4ecdc4; color: #1a1a2e; }
+        .db-badge.mongo { background: #ff6b6b; }
+        .db-badge.mongo_v2 { background: #a855f7; }
+        
+        .card {
+            background: #2a2a4a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #4ecdc4;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #3a3a5a;
+            padding-bottom: 10px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85rem; color: #aaa; }
+        select, input {
+            background: #1a1a2e;
+            border: 1px solid #3a3a5a;
+            color: #eee;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        select:focus, input:focus { outline: none; border-color: #4ecdc4; }
+        
+        button {
+            background: #4ecdc4;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { background: #3dbdb5; transform: translateY(-1px); }
+        button:disabled { background: #3a3a5a; color: #666; cursor: not-allowed; transform: none; }
+        button.secondary { background: #3a3a5a; color: #eee; }
+        button.secondary:hover { background: #4a4a6a; }
+        
+        /* Quick Fetch Section */
+        .quick-fetch {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .quick-fetch-title {
+            font-size: 0.95rem;
+            color: #4ecdc4;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .quick-fetch-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .quick-fetch-row:last-child { margin-bottom: 0; }
+        .quick-fetch-label {
+            font-size: 0.85rem;
+            color: #888;
+            min-width: 50px;
+        }
+        
+        /* TOD Toggle Buttons */
+        .tod-toggle { display: flex; gap: 6px; }
+        .tod-btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .tod-btn.midday { background: #3a3a5a; color: #f59e0b; }
+        .tod-btn.midday:hover, .tod-btn.midday.active { background: #f59e0b; color: #1a1a2e; }
+        .tod-btn.evening { background: #3a3a5a; color: #8b5cf6; }
+        .tod-btn.evening:hover, .tod-btn.evening.active { background: #8b5cf6; color: white; }
+        .tod-btn.all { background: #3a3a5a; color: #4ecdc4; }
+        .tod-btn.all:hover, .tod-btn.all.active { background: #4ecdc4; color: #1a1a2e; }
+        
+        /* Date Navigation */
+        .date-nav { display: flex; align-items: center; gap: 6px; }
+        .date-nav-btn {
+            background: #3a3a5a;
+            color: #eee;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            padding: 0;
+        }
+        .date-nav-btn:hover { background: #4ecdc4; color: #1a1a2e; }
+        .date-nav input[type="date"] { padding: 10px 12px; font-size: 1rem; }
+        .date-nav-btn.today {
+            width: auto;
+            padding: 0 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        /* Fetched Info Display */
+        .fetched-info {
+            background: #0d3320;
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-top: 15px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .fetched-info.show { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .fetched-info .item { display: flex; flex-direction: column; gap: 2px; }
+        .fetched-info .label { font-size: 0.75rem; color: #4ecdc4; text-transform: uppercase; }
+        .fetched-info .value { font-family: monospace; font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .fetched-info .game-name { font-size: 0.85rem; color: #888; margin-left: auto; }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-box .value { font-size: 1.8rem; font-weight: bold; color: #4ecdc4; }
+        .stat-box .label { font-size: 0.75rem; color: #888; margin-top: 5px; }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #3a3a5a; }
+        th { background: #1a1a2e; color: #4ecdc4; font-weight: 600; }
+        tr:hover { background: #1a1a2e; }
+        
+        .pairs-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .pair {
+            background: #4ecdc4;
+            color: #1a1a2e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .numbers-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #1a1a2e;
+            border-radius: 8px;
+        }
+        .number-tag {
+            background: #3a3a5a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .number-tag.common { background: #4ecdc4; color: #1a1a2e; font-weight: bold; }
+        
+        .copy-btn { background: #3a3a5a; padding: 6px 12px; font-size: 0.8rem; margin-left: 10px; }
+        
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.4rem; }
+            .quick-fetch-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .quick-fetch-label { min-width: auto; }
+            .fetched-info { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .fetched-info .game-name { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🎱 MyLottoData - 2DP AP</h1>
+                <span class="db-badge sqlite" id="dbBadge">sqlite</span>
+            </div>
+            <nav>
+                <a href="/">🏠 Home</a>
+                <a href="/predictions" class="active">🔮 Pick 4</a>
+                <a href="/predictions/pick5">🎯 Pick 5</a>
+            </nav>
+        </header>
+        
+        <div class="card">
+            <h2>⚙️ Settings</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>State</label>
+                    <select id="stateSelect"><option value="">Loading...</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Game Type</label>
+                    <select id="gameTypeSelect"><option value="">Select state first</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Days Threshold</label>
+                    <input type="number" id="daysThreshold" value="30" min="1" max="90">
+                </div>
+            </div>
+            
+            <!-- Quick Fetch Section -->
+            <div class="quick-fetch">
+                <div class="quick-fetch-title">⚡ Quick Fetch Seed</div>
+                
+                <div class="quick-fetch-row">
+                    <span class="quick-fetch-label">Date:</span>
+                    <div class="date-nav">
+                        <button class="date-nav-btn" onclick="changeDate(-1)" title="Previous day">◀</button>
+                        <input type="date" id="seedDate">
+                        <button class="date-nav-btn" onclick="changeDate(1)" title="Next day">▶</button>
+                        <button class="date-nav-btn today" onclick="setToday()">Today</button>
+                    </div>
+                </div>
+                
+                <div class="quick-fetch-row">
+                    <span class="quick-fetch-label">TOD:</span>
+                    <div class="tod-toggle">
+                        <button class="tod-btn all active" onclick="setTod('')" data-tod="">All</button>
+                        <button class="tod-btn midday" onclick="setTod('Midday')" data-tod="Midday">☀️ Midday</button>
+                        <button class="tod-btn evening" onclick="setTod('Evening')" data-tod="Evening">🌙 Evening</button>
+                    </div>
+                </div>
+                
+                <div class="fetched-info" id="fetchedInfo">
+                    <div class="item">
+                        <span class="label">Number</span>
+                        <span class="value" id="fetchedNumber">-</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Date</span>
+                        <span class="value" id="fetchedDate">-</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">TOD</span>
+                        <span class="value" id="fetchedTod">-</span>
+                    </div>
+                    <span class="game-name" id="fetchedGame"></span>
+                </div>
+            </div>
+            
+            <div class="form-grid" style="margin-bottom:15px;">
+                <div class="form-group">
+                    <label>Seed Number (manual entry)</label>
+                    <input type="text" id="seedNumber" placeholder="e.g. 3180" maxlength="5">
+                </div>
+            </div>
+            
+            <button onclick="runPrediction()" id="runBtn" style="width:100%;">🔮 Run Prediction</button>
+        </div>
+        
+        <!-- Results -->
+        <div class="card" id="resultsCard" style="display:none;">
+            <h2>📊 Results</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="value" id="statNormalized">-</div><div class="label">Normalized</div></div>
+                <div class="stat-box"><div class="value" id="statCandidates">-</div><div class="label">Candidates</div></div>
+                <div class="stat-box"><div class="value" id="statHistory">-</div><div class="label">History</div></div>
+                <div class="stat-box"><div class="value" id="statAfter">-</div><div class="label">After</div></div>
+                <div class="stat-box"><div class="value" id="statBefore">-</div><div class="label">Before</div></div>
+                <div class="stat-box"><div class="value" id="statCommon">-</div><div class="label">Common</div></div>
+            </div>
+            <h3 style="color:#4ecdc4; margin: 15px 0 10px; font-size:0.95rem;">2DP Pairs</h3>
+            <div class="pairs-container" id="pairsContainer"></div>
+        </div>
+        
+        <div class="card" id="historyCard" style="display:none;">
+            <h2>📅 Seed History</h2>
+            <div class="table-container">
+                <table id="historyTable"><thead><tr><th>Date</th><th>Value</th><th>Days Diff</th></tr></thead><tbody></tbody></table>
+            </div>
+        </div>
+        
+        <div class="card" id="commonCard" style="display:none;">
+            <h2>🎯 Common Numbers <button class="copy-btn" onclick="copyNumbers('common')">📋 Copy</button></h2>
+            <p style="color:#888; margin-bottom:10px; font-size:0.85rem;">Numbers in BOTH After & Before lists</p>
+            <div class="numbers-grid" id="commonNumbers"></div>
+        </div>
+        
+        <div class="card" id="afterCard" style="display:none;">
+            <h2>📈 After Seed <button class="copy-btn" onclick="copyNumbers('after')">📋 Copy</button></h2>
+            <div class="table-container">
+                <table id="afterTable"><thead><tr><th>#</th><th>Number</th><th>Norm</th><th>Hits</th></tr></thead><tbody></tbody></table>
+            </div>
+            <h3 style="color:#888; margin: 15px 0 8px; font-size:0.85rem;">All (<span id="afterCount">0</span>)</h3>
+            <div class="numbers-grid" id="afterNumbers"></div>
+        </div>
+        
+        <div class="card" id="beforeCard" style="display:none;">
+            <h2>📉 Before Seed <button class="copy-btn" onclick="copyNumbers('before')">📋 Copy</button></h2>
+            <div class="table-container">
+                <table id="beforeTable"><thead><tr><th>#</th><th>Number</th><th>Norm</th><th>Hits</th></tr></thead><tbody></tbody></table>
+            </div>
+            <h3 style="color:#888; margin: 15px 0 8px; font-size:0.85rem;">All (<span id="beforeCount">0</span>)</h3>
+            <div class="numbers-grid" id="beforeNumbers"></div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'sqlite';
+        document.getElementById('dbBadge').textContent = dbMode;
+        document.getElementById('dbBadge').className = 'db-badge ' + dbMode;
+        
+        let currentTod = '';
+        let currentResults = null;
+        
+        function apiUrl(path) {
+            const sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStates();
+            setToday();
+        });
+        
+        function changeDate(days) {
+            const input = document.getElementById('seedDate');
+            const d = new Date(input.value);
+            d.setDate(d.getDate() + days);
+            input.value = d.toISOString().split('T')[0];
+            fetchLatest();
+        }
+        
+        function setToday() {
+            document.getElementById('seedDate').value = new Date().toISOString().split('T')[0];
+        }
+        
+        function setTod(tod) {
+            currentTod = tod;
+            document.querySelectorAll('.tod-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tod === tod);
+            });
+            if (document.getElementById('stateSelect').value) fetchLatest();
+        }
+        
+        async function loadStates() {
+            try {
+                const res = await fetch(apiUrl('/api/prediction/states'));
+                const states = await res.json();
+                document.getElementById('stateSelect').innerHTML = '<option value="">Select State</option>' +
+                    states.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (e) { console.error(e); }
+        }
+        
+        document.getElementById('stateSelect').addEventListener('change', async (e) => {
+            const state = e.target.value;
+            const gameSelect = document.getElementById('gameTypeSelect');
+            if (!state) { gameSelect.innerHTML = '<option value="">Select state first</option>'; return; }
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/games/${encodeURIComponent(state)}`));
+                const games = await res.json();
+                gameSelect.innerHTML = games.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                fetchLatest();
+            } catch (e) { console.error(e); }
+        });
+        
+        document.getElementById('gameTypeSelect').addEventListener('change', () => fetchLatest());
+        
+        async function fetchLatest() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameTypeSelect').value;
+            const seedDate = document.getElementById('seedDate').value;
+            if (!state || !gameType) return;
+            
+            try {
+                let url = `/api/prediction/draw-by-date/${encodeURIComponent(state)}/${encodeURIComponent(gameType)}/${seedDate}`;
+                if (currentTod) url += `?tod=${encodeURIComponent(currentTod)}`;
+                
+                let res = await fetch(apiUrl(url));
+                let data = await res.json();
+                
+                if (data.error) {
+                    url = `/api/prediction/latest/${encodeURIComponent(state)}/${encodeURIComponent(gameType)}`;
+                    if (currentTod) url += `?tod=${encodeURIComponent(currentTod)}`;
+                    res = await fetch(apiUrl(url));
+                    data = await res.json();
+                }
+                
+                if (data.error) {
+                    document.getElementById('fetchedInfo').classList.remove('show');
+                    return;
+                }
+                
+                document.getElementById('seedNumber').value = data.value.replace(/-/g, '');
+                document.getElementById('seedDate').value = data.date;
+                document.getElementById('fetchedNumber').textContent = data.value;
+                document.getElementById('fetchedDate').textContent = data.date;
+                document.getElementById('fetchedTod').textContent = data.tod || '-';
+                document.getElementById('fetchedGame').textContent = data.game || '';
+                document.getElementById('fetchedInfo').classList.add('show');
+            } catch (e) {
+                console.error(e);
+                document.getElementById('fetchedInfo').classList.remove('show');
+            }
+        }
+        
+        async function runPrediction() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameTypeSelect').value;
+            const seedNumber = document.getElementById('seedNumber').value.trim();
+            const seedDate = document.getElementById('seedDate').value;
+            const daysThreshold = document.getElementById('daysThreshold').value;
+            
+            if (!state || !gameType || !seedNumber || !seedDate) {
+                alert('Please fill in all fields'); return;
+            }
+            
+            const btn = document.getElementById('runBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Running...';
+            
+            try {
+                const res = await fetch(apiUrl('/api/prediction/2dp-ap'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state, game_type: gameType, seed_number: seedNumber, seed_date: seedDate, days_threshold: parseInt(daysThreshold) })
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
+                currentResults = data;
+                displayResults(data);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔮 Run Prediction';
+            }
+        }
+        
+        function displayResults(data) {
+            ['resultsCard', 'historyCard', 'commonCard', 'afterCard', 'beforeCard'].forEach(id => {
+                document.getElementById(id).style.display = 'block';
+            });
+            
+            document.getElementById('statNormalized').textContent = data.normalized_seed;
+            document.getElementById('statCandidates').textContent = data.total_2dp_candidates;
+            document.getElementById('statHistory').textContent = data.seed_historical_hits;
+            document.getElementById('statAfter').textContent = data.qualified_count;
+            document.getElementById('statBefore').textContent = data.qualified_before_count;
+            document.getElementById('statCommon').textContent = data.common_count;
+            
+            document.getElementById('pairsContainer').innerHTML = data.pairs_2dp.map(p => `<div class="pair">${p}</div>`).join('');
+            
+            document.querySelector('#historyTable tbody').innerHTML = data.seed_history.map(h => 
+                `<tr><td>${h.date}</td><td><code>${h.value}</code></td><td>${h.date_diff}d</td></tr>`
+            ).join('') || '<tr><td colspan="3">No history</td></tr>';
+            
+            const commonSet = new Set(data.common_numbers || []);
+            document.getElementById('commonNumbers').innerHTML = data.common_numbers.map(n => 
+                `<div class="number-tag common">${n}</div>`
+            ).join('') || '<span style="color:#888">None</span>';
+            
+            document.querySelector('#afterTable tbody').innerHTML = data.predictions.slice(0, 15).map((p, i) => 
+                `<tr><td>${i+1}</td><td><code>${p.number}</code></td><td>${p.normalized}</td><td>${p.hit_count}</td></tr>`
+            ).join('');
+            document.getElementById('afterCount').textContent = data.all_numbers.length;
+            document.getElementById('afterNumbers').innerHTML = data.all_numbers.map(n => 
+                `<div class="number-tag ${commonSet.has(n) ? 'common' : ''}">${n}</div>`
+            ).join('');
+            
+            document.querySelector('#beforeTable tbody').innerHTML = data.predictions_before.slice(0, 15).map((p, i) => 
+                `<tr><td>${i+1}</td><td><code>${p.number}</code></td><td>${p.normalized}</td><td>${p.hit_count}</td></tr>`
+            ).join('');
+            document.getElementById('beforeCount').textContent = data.all_numbers_before.length;
+            document.getElementById('beforeNumbers').innerHTML = data.all_numbers_before.map(n => 
+                `<div class="number-tag ${commonSet.has(n) ? 'common' : ''}">${n}</div>`
+            ).join('');
+        }
+        
+        function copyNumbers(type) {
+            if (!currentResults) return;
+            const nums = type === 'common' ? currentResults.common_numbers : 
+                         type === 'after' ? currentResults.all_numbers : currentResults.all_numbers_before;
+            if (nums?.length) {
+                navigator.clipboard.writeText(nums.join(' '));
+                alert(`Copied ${nums.length} numbers!`);
+            }
+        }
+    </script>
+</body>
+</html>

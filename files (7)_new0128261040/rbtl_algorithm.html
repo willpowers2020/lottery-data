@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 RBTL Algorithm - Historical Pattern Finder</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
+            padding: 20px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+        
+        .sidebar h2 {
+            color: #1a73e8;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1a73e8;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover { background: #1557b0; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        
+        .header {
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #1a73e8;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .past-winners {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .past-winners-label {
+            font-size: 0.85rem;
+            color: #1565c0;
+            margin-bottom: 5px;
+        }
+        
+        .past-winners-list {
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: #0d47a1;
+            font-weight: 600;
+        }
+        
+        /* Hot Months Section */
+        .hot-months {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .hot-months-title {
+            font-size: 0.9rem;
+            color: #e65100;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .hot-month-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .hot-month-item {
+            background: #fff;
+            border: 1px solid #ffcc80;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .hot-month-item:hover {
+            background: #ffe0b2;
+        }
+        
+        .hot-month-item.selected {
+            background: #ff9800;
+            color: #fff;
+            border-color: #ff9800;
+        }
+        
+        .hot-month-item .count {
+            background: #e65100;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+        
+        .hot-month-item.selected .count {
+            background: #fff;
+            color: #ff9800;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .tab:hover { background: #e3f2fd; }
+        .tab.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        
+        /* Stats */
+        .stats-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            background: #fff;
+            padding: 12px 18px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1a73e8;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        
+        /* Results Table */
+        .table-container {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        th:hover {
+            background: #e3f2fd;
+        }
+        
+        th .sort-icon {
+            margin-left: 5px;
+            font-size: 0.7rem;
+            color: #999;
+        }
+        
+        th.sorted-asc .sort-icon::after { content: '▲'; color: #1a73e8; }
+        th.sorted-desc .sort-icon::after { content: '▼'; color: #1a73e8; }
+        th:not(.sorted-asc):not(.sorted-desc) .sort-icon::after { content: '⇅'; }
+        
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tr:hover { background: #f8f9fa; }
+        
+        .mono {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        
+        .date-diff {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+        
+        .date-diff.same-day { background: #c8e6c9; color: #2e7d32; }
+        .date-diff.hot { background: #ffcc80; color: #e65100; }
+        
+        .actual-match {
+            background: #e3f2fd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #1565c0;
+        }
+        
+        .repeat-badge {
+            display: inline-block;
+            min-width: 24px;
+            text-align: center;
+            background: #4caf50;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        
+        .repeat-badge.zero { background: #e0e0e0; color: #666; }
+        .repeat-badge.high { background: #ff5722; }
+        
+        /* Group header rows */
+        .group-header {
+            background: #e8f5e9 !important;
+            font-weight: 600;
+        }
+        
+        .group-header td {
+            border-top: 2px solid #4caf50;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        /* Month highlight */
+        tr.month-highlight {
+            background: #fff8e1 !important;
+        }
+        
+        /* Filter input */
+        .filter-input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        /* Admin Info Section */
+        .admin-info {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 8px rgba(26, 35, 126, 0.3);
+        }
+        
+        .admin-badge {
+            font-weight: 600;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .admin-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .admin-stat {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        
+        .admin-stat .label {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .admin-stat .value {
+            font-family: monospace;
+            font-weight: 600;
+            color: #64ffda;
+        }
+        
+        .admin-stat .value.warning {
+            color: #ffab40;
+        }
+        
+        .admin-stat .value.danger {
+            color: #ff5252;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>🎯 RBTL Algorithm</h2>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">
+                Repeat By The Lookup - Find historical patterns and hot months
+            </p>
+            
+            <div class="form-group">
+                <label>Country</label>
+                <select id="countrySelect">
+                    <option value="United States">USA</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>State</label>
+                <select id="stateSelect">
+                    <option value="">Select State</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Game</label>
+                <select id="gameType">
+                    <option value="pick3">Pick 3</option>
+                    <option value="pick4" selected>Pick 4</option>
+                    <option value="pick5">Pick 5</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Start Date (Seed Range)</label>
+                <input type="date" id="startDate">
+            </div>
+            
+            <div class="form-group">
+                <label>End Date (Seed Range)</label>
+                <input type="date" id="endDate">
+            </div>
+            
+            <div class="form-group">
+                <label>Draw Time</label>
+                <select id="drawTime">
+                    <option value="">All</option>
+                    <option value="Midday">Midday</option>
+                    <option value="Evening">Evening</option>
+                </select>
+            </div>
+            
+            <button class="btn" id="analyzeBtn" onclick="runAnalysis()">
+                🔍 Analyze
+            </button>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+            
+            <div class="form-group">
+                <label>Filter by Month</label>
+                <input type="text" class="filter-input" id="monthFilter" placeholder="e.g., 2020-05" oninput="filterByMonth()">
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h1>Historical Pattern Analysis</h1>
+                    
+                    <!-- Admin Info - Top Right -->
+                    <div class="admin-info" id="adminInfo" style="display: none;">
+                        <div class="admin-badge">👤 Admin</div>
+                        <div class="admin-stats">
+                            <div class="admin-stat">
+                                <span class="label">Last Draw:</span>
+                                <span class="value" id="lastDrawDate">-</span>
+                            </div>
+                            <div class="admin-stat">
+                                <span class="label">Total Draws:</span>
+                                <span class="value" id="totalDraws">-</span>
+                            </div>
+                            <div class="admin-stat">
+                                <span class="label">Date Range:</span>
+                                <span class="value" id="dataDateRange">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="past-winners" id="pastWinners" style="display: none;">
+                <div class="past-winners-label">🎯 Current Winners (from seed date range):</div>
+                <div class="past-winners-list" id="pastWinnersList"></div>
+            </div>
+            
+            <div class="hot-months" id="hotMonths" style="display: none;">
+                <div class="hot-months-title">🔥 Hot Months (click to filter)</div>
+                <div class="hot-month-list" id="hotMonthList"></div>
+            </div>
+            
+            <div class="stats-bar" id="statsBar" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-value" id="statSeeds">0</div>
+                    <div class="stat-label">Seed Draws</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statHistory">0</div>
+                    <div class="stat-label">Historical Matches</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statUniquePerm">0</div>
+                    <div class="stat-label">Unique Perms</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statHotMonth">-</div>
+                    <div class="stat-label">Hottest Month</div>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" data-view="all" onclick="setView('all')">All Results</div>
+                <div class="tab" data-view="byMonth" onclick="setView('byMonth')">By Month</div>
+                <div class="tab" data-view="byPerm" onclick="setView('byPerm')">By Perm</div>
+            </div>
+            
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="month" onclick="sortTable('month')">Month <span class="sort-icon"></span></th>
+                            <th data-sort="date" onclick="sortTable('date')">Date <span class="sort-icon"></span></th>
+                            <th data-sort="date_diff" onclick="sortTable('date_diff')">Date-Diff <span class="sort-icon"></span></th>
+                            <th data-sort="value" onclick="sortTable('value')">Value <span class="sort-icon"></span></th>
+                            <th data-sort="actual" onclick="sortTable('actual')">Actual <span class="sort-icon"></span></th>
+                            <th data-sort="input_date" onclick="sortTable('input_date')">Input Date <span class="sort-icon"></span></th>
+                            <th data-sort="sums" onclick="sortTable('sums')">Sums <span class="sort-icon"></span></th>
+                            <th data-sort="times_drawn" onclick="sortTable('times_drawn')">#Times Drawn <span class="sort-icon"></span></th>
+                            <th data-sort="repeat_count" onclick="sortTable('repeat_count')">#Repeat <span class="sort-icon"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td colspan="9" class="loading">Select parameters and click Analyze</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'mongo_v2';
+        
+        let allResults = [];
+        let currentSort = { column: 'month', direction: 'desc' };
+        let selectedMonth = null;
+        let monthCounts = {};
+        
+        function apiUrl(path) {
+            const sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStates();
+            setDefaultDates();
+            checkAdminAndLoadData();
+        });
+        
+        // Check if admin and load data stats
+        async function checkAdminAndLoadData() {
+            // For now, always show admin info (in production, check auth)
+            const isAdmin = true;
+            
+            if (isAdmin) {
+                document.getElementById('adminInfo').style.display = 'block';
+            }
+        }
+        
+        // Load admin data stats when state/game changes
+        async function loadAdminStats() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameType').value;
+            
+            if (!state) {
+                document.getElementById('lastDrawDate').textContent = '-';
+                document.getElementById('totalDraws').textContent = '-';
+                document.getElementById('dataDateRange').textContent = '-';
+                return;
+            }
+            
+            try {
+                const res = await fetch(apiUrl(`/api/rbtl/data-stats/${encodeURIComponent(state)}/${gameType}`));
+                const data = await res.json();
+                
+                if (data.error) {
+                    document.getElementById('lastDrawDate').textContent = 'Error';
+                    return;
+                }
+                
+                // Check if data is stale (more than 2 days old)
+                const lastDate = new Date(data.last_draw_date);
+                const today = new Date();
+                const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+                
+                const lastDrawEl = document.getElementById('lastDrawDate');
+                lastDrawEl.textContent = data.last_draw_date;
+                
+                if (daysDiff > 7) {
+                    lastDrawEl.classList.add('danger');
+                    lastDrawEl.classList.remove('warning');
+                } else if (daysDiff > 2) {
+                    lastDrawEl.classList.add('warning');
+                    lastDrawEl.classList.remove('danger');
+                } else {
+                    lastDrawEl.classList.remove('warning', 'danger');
+                }
+                
+                document.getElementById('totalDraws').textContent = data.total_draws.toLocaleString();
+                document.getElementById('dataDateRange').textContent = `${data.first_draw_date} to ${data.last_draw_date}`;
+                
+            } catch (e) {
+                console.error('Error loading admin stats:', e);
+                document.getElementById('lastDrawDate').textContent = 'Error';
+            }
+        }
+        
+        // Add event listener for state change to load admin stats
+        document.getElementById('stateSelect').addEventListener('change', loadAdminStats);
+        
+        // Game type change
+        document.getElementById('gameType').addEventListener('change', loadStates);
+        
+        function setDefaultDates() {
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
+        }
+        
+        async function loadStates() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/${gameType}/states`));
+                const states = await res.json();
+                const select = document.getElementById('stateSelect');
+                select.innerHTML = '<option value="">Select State</option>' +
+                    states.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (e) {
+                console.error('Error loading states:', e);
+            }
+        }
+        
+        async function runAnalysis() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const drawTime = document.getElementById('drawTime').value;
+            
+            if (!state || !startDate || !endDate) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyzing...';
+            
+            document.getElementById('resultsBody').innerHTML = 
+                '<tr><td colspan="9" class="loading">Loading historical data...</td></tr>';
+            
+            try {
+                const res = await fetch(apiUrl('/api/rbtl/analyze'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        state,
+                        game_type: gameType,
+                        start_date: startDate,
+                        end_date: endDate,
+                        draw_time: drawTime
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    document.getElementById('resultsBody').innerHTML = 
+                        `<tr><td colspan="9" class="loading">${data.error}</td></tr>`;
+                    return;
+                }
+                
+                allResults = data.results;
+                displayResults(data);
+                
+            } catch (e) {
+                alert('Error: ' + e.message);
+                document.getElementById('resultsBody').innerHTML = 
+                    `<tr><td colspan="9" class="loading">Error: ${e.message}</td></tr>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Analyze';
+            }
+        }
+        
+        function displayResults(data) {
+            // Show past winners
+            document.getElementById('pastWinners').style.display = 'block';
+            document.getElementById('pastWinnersList').textContent = data.past_winners.join(' ');
+            
+            // Calculate hot months
+            monthCounts = {};
+            data.results.forEach(r => {
+                monthCounts[r.month] = (monthCounts[r.month] || 0) + 1;
+            });
+            
+            // Sort months by count
+            const sortedMonths = Object.entries(monthCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            // Show hot months
+            document.getElementById('hotMonths').style.display = 'block';
+            document.getElementById('hotMonthList').innerHTML = sortedMonths.map(([month, count]) => 
+                `<div class="hot-month-item" onclick="toggleMonthFilter('${month}')" data-month="${month}">
+                    ${month}<span class="count">${count}</span>
+                </div>`
+            ).join('');
+            
+            // Show stats
+            document.getElementById('statsBar').style.display = 'flex';
+            document.getElementById('statSeeds').textContent = data.seed_count;
+            document.getElementById('statHistory').textContent = data.total_historical_matches;
+            document.getElementById('statUniquePerm').textContent = data.unique_perms;
+            document.getElementById('statHotMonth').textContent = sortedMonths.length > 0 ? sortedMonths[0][0] : '-';
+            
+            // Render table
+            renderTable(data.results);
+        }
+        
+        function renderTable(results) {
+            const tbody = document.getElementById('resultsBody');
+            
+            if (!results || results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="loading">No historical matches found</td></tr>';
+                return;
+            }
+            
+            // Filter by selected month if any
+            let filteredResults = results;
+            if (selectedMonth) {
+                filteredResults = results.filter(r => r.month === selectedMonth);
+            }
+            
+            // Filter by month input
+            const monthFilterValue = document.getElementById('monthFilter').value.trim();
+            if (monthFilterValue) {
+                filteredResults = filteredResults.filter(r => 
+                    r.month.toLowerCase().includes(monthFilterValue.toLowerCase())
+                );
+            }
+            
+            tbody.innerHTML = filteredResults.map((r, i) => {
+                const repeatClass = r.repeat_count === 0 ? 'zero' : (r.repeat_count >= 3 ? 'high' : '');
+                const dateDiffClass = r.date_diff === 0 ? 'same-day' : '';
+                const dateDiffStr = r.date_diff === 0 ? '[0d]' : 
+                    (r.date_diff > 0 ? `[+${r.date_diff}d]` : `[${r.date_diff}d]`);
+                
+                const isHotMonth = monthCounts[r.month] >= (Object.values(monthCounts).sort((a,b) => b-a)[2] || 0);
+                const rowClass = isHotMonth ? 'month-highlight' : '';
+                
+                return `
+                    <tr class="${rowClass}">
+                        <td>${r.month}</td>
+                        <td>${r.date}</td>
+                        <td><span class="date-diff ${dateDiffClass}">${dateDiffStr}</span></td>
+                        <td class="mono">${r.value}</td>
+                        <td class="mono"><span class="actual-match">${r.actual}</span></td>
+                        <td>${r.input_date}</td>
+                        <td>${r.sums}</td>
+                        <td>${r.times_drawn}</td>
+                        <td><span class="repeat-badge ${repeatClass}">${r.repeat_count}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function toggleMonthFilter(month) {
+            const items = document.querySelectorAll('.hot-month-item');
+            
+            if (selectedMonth === month) {
+                // Deselect
+                selectedMonth = null;
+                items.forEach(item => item.classList.remove('selected'));
+            } else {
+                // Select
+                selectedMonth = month;
+                items.forEach(item => {
+                    item.classList.toggle('selected', item.dataset.month === month);
+                });
+            }
+            
+            renderTable(allResults);
+        }
+        
+        function filterByMonth() {
+            renderTable(allResults);
+        }
+        
+        function sortTable(column) {
+            // Update sort direction
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'desc';
+            }
+            
+            // Update header classes
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.sort === column) {
+                    th.classList.add(currentSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+            
+            // Sort results
+            allResults.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+                
+                // Handle numeric vs string sorting
+                if (typeof valA === 'number') {
+                    return currentSort.direction === 'asc' ? valA - valB : valB - valA;
+                } else {
+                    valA = String(valA || '');
+                    valB = String(valB || '');
+                    return currentSort.direction === 'asc' 
+                        ? valA.localeCompare(valB) 
+                        : valB.localeCompare(valA);
+                }
+            });
+            
+            renderTable(allResults);
+        }
+        
+        function setView(view) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[data-view="${view}"]`).classList.add('active');
+            
+            // TODO: Implement different view modes
+            renderTable(allResults);
+        }
+    </script>
+</body>
+</html>

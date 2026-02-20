@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Unified DP AP Predictions - MyLottoData</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #a855f7;
+        }
+        h1 { 
+            font-size: 2rem; 
+            color: #a855f7;
+            margin-bottom: 5px;
+        }
+        .subtitle { color: #888; font-size: 1rem; }
+        
+        .back-link {
+            display: inline-block;
+            color: #a855f7;
+            text-decoration: none;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { text-decoration: underline; }
+        
+        .db-badge {
+            display: inline-block;
+            background: #a855f7;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .card {
+            background: #2a2a4a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #a855f7;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #3a3a5a;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Step Pills */
+        .steps {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .step {
+            background: #3a3a5a;
+            color: #888;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .step.active { background: #a855f7; color: white; }
+        
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85rem; color: #aaa; }
+        select, input {
+            background: #1a1a2e;
+            border: 1px solid #3a3a5a;
+            color: #eee;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        select:focus, input:focus { outline: none; border-color: #a855f7; }
+        
+        /* DP Options */
+        .dp-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .dp-option {
+            padding: 10px 16px;
+            border: 2px solid #3a3a5a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .dp-option:hover { border-color: #a855f7; background: rgba(168,85,247,0.1); }
+        .dp-option.selected { border-color: #a855f7; background: #a855f7; color: white; }
+        .dp-option .label { font-weight: 600; font-size: 0.95rem; }
+        .dp-option .desc { font-size: 0.75rem; color: #888; margin-top: 2px; }
+        .dp-option.selected .desc { color: rgba(255,255,255,0.8); }
+        
+        /* TOD Toggle */
+        .tod-toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tod-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            background: #3a3a5a;
+            color: #aaa;
+        }
+        .tod-btn:hover { border-color: #a855f7; }
+        .tod-btn.active { background: #a855f7; color: white; }
+        
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        button {
+            background: #a855f7;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button:hover { background: #9333ea; transform: translateY(-1px); }
+        button:disabled { background: #3a3a5a; color: #666; cursor: not-allowed; transform: none; }
+        button.secondary { background: #4ecdc4; }
+        button.secondary:hover { background: #45b7aa; }
+        
+        /* Fetched Info */
+        .fetched-info {
+            display: none;
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-top: 15px;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .fetched-info.show { display: flex; }
+        .fetched-info .item { display: flex; flex-direction: column; gap: 2px; }
+        .fetched-info .label { font-size: 0.75rem; color: #666; }
+        .fetched-info .value { font-family: monospace; color: #4ecdc4; font-size: 1.1rem; font-weight: 600; }
+        .fetched-info .game-name { font-size: 0.8rem; color: #a855f7; }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        .stat-box {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-box .value { font-size: 1.5rem; font-weight: 700; color: #4ecdc4; }
+        .stat-box .label { font-size: 0.75rem; color: #888; margin-top: 4px; }
+        
+        /* Pairs Container */
+        .pairs-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .pair {
+            background: #1a1a2e;
+            color: #a855f7;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        /* Numbers Grid */
+        .numbers-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .number-tag {
+            background: #1a1a2e;
+            color: #eee;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .number-tag.common { background: #4ecdc4; color: #1a1a2e; font-weight: 600; }
+        
+        /* Tables */
+        .table-container { overflow-x: auto; max-height: 300px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #3a3a5a; padding: 10px; text-align: left; position: sticky; top: 0; }
+        td { padding: 8px 10px; border-bottom: 1px solid #3a3a5a; }
+        tr:hover { background: rgba(168,85,247,0.1); }
+        code { color: #4ecdc4; background: #1a1a2e; padding: 2px 6px; border-radius: 4px; }
+        
+        /* Copy Button */
+        .copy-btn {
+            background: #3a3a5a;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            margin-left: auto;
+        }
+        .copy-btn:hover { background: #4a4a6a; }
+        
+        /* Date-Diff Styles */
+        .date-diff {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #888;
+            background: #2a2a4a;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-right: 4px;
+        }
+        .date-diff-cell {
+            font-family: monospace;
+            color: #888;
+        }
+        
+        .hit-dates {
+            font-size: 0.8rem;
+        }
+        .hit-detail {
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 4px;
+        }
+        .hit-detail.hit-after { color: #4ecdc4; }
+        .hit-detail.hit-before { color: #f59e0b; }
+        .hit-detail.hit-same-day { color: #ff6b6b; font-weight: 600; }
+        
+        .more-hits {
+            color: #666;
+            font-size: 0.75rem;
+            font-style: italic;
+        }
+        
+        /* Hidden by default */
+        .hidden { display: none !important; }
+        
+        /* Algorithm Title */
+        .algo-title {
+            font-size: 1.3rem;
+            color: #a855f7;
+            margin-bottom: 15px;
+        }
+        .algo-title span { color: #4ecdc4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Query Tool</a>
+        
+        <header>
+            <h1>🎯 DP AP Predictions</h1>
+            <p class="subtitle">Unified Digit Pair - All Possibles Algorithm</p>
+            <span class="db-badge" id="dbBadge">mongo_v2</span>
+        </header>
+        
+        <!-- Configuration Card -->
+        <div class="card">
+            <h2 id="algoTitle">DP AP Algorithm</h2>
+            
+            <div class="steps">
+                <span class="step active">1. Seed</span>
+                <span class="step" id="stepPairs">2. DP Pairs</span>
+                <span class="step">2b. Candidates</span>
+                <span class="step">3. History</span>
+                <span class="step">4. Date-Diff</span>
+                <span class="step">5. Filter</span>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Pick Game</label>
+                    <select id="gameType">
+                        <option value="pick2">Pick 2</option>
+                        <option value="pick3">Pick 3</option>
+                        <option value="pick4" selected>Pick 4</option>
+                        <option value="pick5">Pick 5</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>State</label>
+                    <select id="stateSelect">
+                        <option value="">Select State</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>TOD (optional)</label>
+                    <div class="tod-toggle">
+                        <button type="button" class="tod-btn active" data-tod="" onclick="setTod('')">All</button>
+                        <button type="button" class="tod-btn" data-tod="Midday" onclick="setTod('Midday')">Midday</button>
+                        <button type="button" class="tod-btn" data-tod="Evening" onclick="setTod('Evening')">Evening</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Seed Date</label>
+                    <input type="date" id="seedDate">
+                </div>
+                
+                <div class="form-group">
+                    <label>Seed Number</label>
+                    <input type="text" id="seedNumber" placeholder="e.g., 1234">
+                </div>
+                
+                <div class="form-group">
+                    <label>Days Threshold</label>
+                    <input type="number" id="daysThreshold" value="30" min="1" max="365">
+                </div>
+                
+                <div class="form-group">
+                    <label>Min Hits</label>
+                    <input type="number" id="minHits" value="2" min="1" max="20">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Digit Pair Size</label>
+                <div class="dp-options" id="dpOptions">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <div class="btn-row">
+                <button onclick="fetchLatest()" class="secondary">🎲 Fetch Latest</button>
+                <button onclick="runPrediction()" id="runBtn">🎯 Run Prediction</button>
+            </div>
+            
+            <div class="fetched-info" id="fetchedInfo">
+                <div class="item">
+                    <span class="label">Number</span>
+                    <span class="value" id="fetchedNumber">-</span>
+                </div>
+                <div class="item">
+                    <span class="label">Date</span>
+                    <span class="value" id="fetchedDate">-</span>
+                </div>
+                <div class="item">
+                    <span class="label">TOD</span>
+                    <span class="value" id="fetchedTod">-</span>
+                </div>
+                <span class="game-name" id="fetchedGame"></span>
+            </div>
+        </div>
+        
+        <!-- Results Card -->
+        <div class="card hidden" id="resultsCard">
+            <h2>📊 Results</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="value" id="statNormalized">-</div><div class="label">Normalized</div></div>
+                <div class="stat-box"><div class="value" id="statPairSize">-</div><div class="label">Pair Size</div></div>
+                <div class="stat-box"><div class="value" id="statCandidates">-</div><div class="label">Candidates</div></div>
+                <div class="stat-box"><div class="value" id="statHistory">-</div><div class="label">Seed History</div></div>
+                <div class="stat-box"><div class="value" id="statAfter">-</div><div class="label">After</div></div>
+                <div class="stat-box"><div class="value" id="statBefore">-</div><div class="label">Before</div></div>
+                <div class="stat-box"><div class="value" id="statCommon">-</div><div class="label">Common</div></div>
+            </div>
+            <h3 style="color:#a855f7; margin: 15px 0 10px; font-size:0.95rem;" id="pairsTitle">Digit Pairs</h3>
+            <div class="pairs-container" id="pairsContainer"></div>
+        </div>
+        
+        <!-- Seed History Card -->
+        <div class="card hidden" id="historyCard">
+            <h2>📅 Seed History</h2>
+            <div class="table-container">
+                <table id="historyTable">
+                    <thead><tr><th>Date</th><th>Value</th><th>Days Diff</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Common Numbers Card -->
+        <div class="card hidden" id="commonCard">
+            <h2>🎯 Common Numbers <button class="copy-btn" onclick="copyNumbers('common')">📋 Copy</button></h2>
+            <p style="color:#888; margin-bottom:10px; font-size:0.85rem;">Numbers in BOTH After & Before lists</p>
+            <div class="numbers-grid" id="commonNumbers"></div>
+        </div>
+        
+        <!-- After Seed Card -->
+        <div class="card hidden" id="afterCard">
+            <h2>📈 After Seed <button class="copy-btn" onclick="copyNumbers('after')">📋 Copy</button></h2>
+            <div class="table-container">
+                <table id="afterTable">
+                    <thead><tr><th>#</th><th>Number</th><th>Norm</th><th>Hits</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <h3 style="color:#888; margin: 15px 0 8px; font-size:0.85rem;">All (<span id="afterCount">0</span>)</h3>
+            <div class="numbers-grid" id="afterNumbers"></div>
+        </div>
+        
+        <!-- Before Seed Card -->
+        <div class="card hidden" id="beforeCard">
+            <h2>📉 Before Seed <button class="copy-btn" onclick="copyNumbers('before')">📋 Copy</button></h2>
+            <div class="table-container">
+                <table id="beforeTable">
+                    <thead><tr><th>#</th><th>Number</th><th>Norm</th><th>Hits</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <h3 style="color:#888; margin: 15px 0 8px; font-size:0.85rem;">All (<span id="beforeCount">0</span>)</h3>
+            <div class="numbers-grid" id="beforeNumbers"></div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'mongo_v2';
+        document.getElementById('dbBadge').textContent = dbMode;
+        
+        let currentTod = '';
+        let currentResults = null;
+        let selectedPairSize = 2;
+        let gameConfig = {};
+        
+        function apiUrl(path) {
+            const sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setToday();
+            loadDpOptions();
+            loadStates();
+            
+            // Check URL params for game type
+            const game = urlParams.get('game');
+            if (game) {
+                document.getElementById('gameType').value = game;
+            }
+        });
+        
+        // Game type change
+        document.getElementById('gameType').addEventListener('change', () => {
+            loadDpOptions();
+            loadStates();
+            updateAlgoTitle();
+            clearResults();
+        });
+        
+        function updateAlgoTitle() {
+            const game = document.getElementById('gameType').value.toUpperCase();
+            const dpLabel = selectedPairSize + 'DP';
+            document.getElementById('algoTitle').innerHTML = `${dpLabel} AP (${selectedPairSize}-Digit Pair - All Possibles) - ${game}`;
+            document.getElementById('stepPairs').textContent = `2. ${dpLabel} Pairs`;
+        }
+        
+        function setToday() {
+            document.getElementById('seedDate').value = new Date().toISOString().split('T')[0];
+        }
+        
+        function setTod(tod) {
+            currentTod = tod;
+            document.querySelectorAll('.tod-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tod === tod);
+            });
+            // Auto-fetch when TOD changes
+            if (document.getElementById('stateSelect').value) {
+                fetchLatest();
+            }
+        }
+        
+        // Load DP options for current game
+        async function loadDpOptions() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/dp-options/${gameType}`));
+                const data = await res.json();
+                gameConfig = data;
+                
+                const container = document.getElementById('dpOptions');
+                container.innerHTML = data.options.map((opt, i) => `
+                    <div class="dp-option ${opt.size === data.default ? 'selected' : ''}" 
+                         onclick="selectDpOption(this, ${opt.size})">
+                        <div class="label">${opt.label}</div>
+                        <div class="desc">~${opt.estimated_candidates} candidates</div>
+                    </div>
+                `).join('');
+                
+                selectedPairSize = data.default;
+                updateAlgoTitle();
+                updateSeedPlaceholder();
+            } catch (e) {
+                console.error('Error loading DP options:', e);
+            }
+        }
+        
+        function selectDpOption(el, size) {
+            document.querySelectorAll('.dp-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedPairSize = size;
+            updateAlgoTitle();
+        }
+        
+        function updateSeedPlaceholder() {
+            const gameType = document.getElementById('gameType').value;
+            const digits = {pick2: 2, pick3: 3, pick4: 4, pick5: 5}[gameType] || 4;
+            const example = '0123456789'.slice(0, digits);
+            document.getElementById('seedNumber').placeholder = `e.g., ${example}`;
+            document.getElementById('seedNumber').maxLength = digits;
+        }
+        
+        // Load states for current game
+        async function loadStates() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/${gameType}/states`));
+                const states = await res.json();
+                const select = document.getElementById('stateSelect');
+                select.innerHTML = '<option value="">Select State</option>' +
+                    states.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (e) {
+                console.error('Error loading states:', e);
+            }
+        }
+        
+        // Auto-fetch when state changes
+        document.getElementById('stateSelect').addEventListener('change', () => {
+            if (document.getElementById('stateSelect').value) {
+                fetchLatest();
+            }
+        });
+        
+        // Auto-fetch when date changes
+        document.getElementById('seedDate').addEventListener('change', () => {
+            if (document.getElementById('stateSelect').value) {
+                fetchLatest();
+            }
+        });
+        
+        // Fetch latest draw
+        async function fetchLatest() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameType').value;
+            const seedDate = document.getElementById('seedDate').value;
+            
+            if (!state) {
+                alert('Please select a state');
+                return;
+            }
+            
+            try {
+                let url = `/api/prediction/draw-by-date/${encodeURIComponent(state)}/${gameType}/${seedDate}`;
+                if (currentTod) url += `?tod=${encodeURIComponent(currentTod)}`;
+                
+                let res = await fetch(apiUrl(url));
+                let data = await res.json();
+                
+                // Fallback to latest if specific date not found
+                if (data.error) {
+                    url = `/api/prediction/latest/${encodeURIComponent(state)}/${gameType}`;
+                    if (currentTod) url += `?tod=${encodeURIComponent(currentTod)}`;
+                    res = await fetch(apiUrl(url));
+                    data = await res.json();
+                }
+                
+                if (data.error) {
+                    document.getElementById('fetchedInfo').classList.remove('show');
+                    alert(data.error);
+                    return;
+                }
+                
+                document.getElementById('seedNumber').value = data.value.replace(/-/g, '');
+                document.getElementById('seedDate').value = data.date;
+                document.getElementById('fetchedNumber').textContent = data.value;
+                document.getElementById('fetchedDate').textContent = data.date;
+                document.getElementById('fetchedTod').textContent = data.tod || '-';
+                document.getElementById('fetchedGame').textContent = data.game || '';
+                document.getElementById('fetchedInfo').classList.add('show');
+            } catch (e) {
+                console.error(e);
+                alert('Error fetching draw: ' + e.message);
+            }
+        }
+        
+        // Run prediction
+        async function runPrediction() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameType').value;
+            const seedNumber = document.getElementById('seedNumber').value.trim();
+            const seedDate = document.getElementById('seedDate').value;
+            const daysThreshold = document.getElementById('daysThreshold').value;
+            const minHits = document.getElementById('minHits').value;
+            
+            const digits = {pick2: 2, pick3: 3, pick4: 4, pick5: 5}[gameType] || 4;
+            
+            if (!state || !seedNumber || !seedDate) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            if (seedNumber.length !== digits) {
+                alert(`Seed must be ${digits} digits for ${gameType.toUpperCase()}`);
+                return;
+            }
+            
+            const btn = document.getElementById('runBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Running...';
+            
+            try {
+                const res = await fetch(apiUrl('/api/prediction/unified-dp-ap'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        state,
+                        game_type: gameType,
+                        seed_number: seedNumber,
+                        seed_date: seedDate,
+                        pair_size: selectedPairSize,
+                        days_threshold: parseInt(daysThreshold),
+                        min_hits: parseInt(minHits)
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                currentResults = data;
+                displayResults(data);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎯 Run Prediction';
+            }
+        }
+        
+        function displayResults(data) {
+            // Show all result cards
+            ['resultsCard', 'historyCard', 'commonCard', 'afterCard', 'beforeCard'].forEach(id => {
+                document.getElementById(id).classList.remove('hidden');
+            });
+            
+            // Stats
+            document.getElementById('statNormalized').textContent = data.normalized_seed;
+            document.getElementById('statPairSize').textContent = data.pair_size + 'DP';
+            document.getElementById('statCandidates').textContent = data.total_candidates;
+            document.getElementById('statHistory').textContent = data.seed_historical_hits;
+            document.getElementById('statAfter').textContent = data.qualified_count;
+            document.getElementById('statBefore').textContent = data.qualified_before_count;
+            document.getElementById('statCommon').textContent = data.common_count;
+            
+            // Pairs
+            const pairLabel = data.pair_size + 'DP';
+            document.getElementById('pairsTitle').textContent = `${pairLabel} Pairs (${data.pairs.length})`;
+            document.getElementById('pairsContainer').innerHTML = data.pairs.map(p => 
+                `<div class="pair">${p}</div>`
+            ).join('');
+            
+            // Seed History
+            document.querySelector('#historyTable tbody').innerHTML = data.seed_history.map(h => 
+                `<tr><td>${h.date}</td><td><code>${h.value}</code></td><td class="date-diff-cell">[${h.date_diff > 0 ? '-' : ''}${Math.abs(h.date_diff)}d]</td></tr>`
+            ).join('') || '<tr><td colspan="3">No history</td></tr>';
+            
+            // Common Numbers with date info
+            const commonSet = new Set(data.common_numbers || []);
+            document.getElementById('commonNumbers').innerHTML = data.common_numbers.map(n => 
+                `<div class="number-tag common">${n}</div>`
+            ).join('') || '<span style="color:#888">None</span>';
+            
+            // Format hit details with date-diff
+            const formatHitDetails = (hits, direction) => {
+                if (!hits || hits.length === 0) return '';
+                return hits.slice(0, 3).map(h => {
+                    const days = direction === 'after' ? h.days_after : -h.days_before;
+                    const dateDiff = days === 0 ? '[0d]' : (days > 0 ? `[+${days}d]` : `[${days}d]`);
+                    const dirLabel = days === 0 ? 'SAME DAY' : (days > 0 ? 'AFTER' : 'BEFORE');
+                    const dirClass = days === 0 ? 'same-day' : (days > 0 ? 'after' : 'before');
+                    return `<span class="hit-detail hit-${dirClass}"><span class="date-diff">${dateDiff}</span> ${h.date}</span>`;
+                }).join('') + (hits.length > 3 ? `<span class="more-hits">+${hits.length - 3}</span>` : '');
+            };
+            
+            // After Seed - Updated table with hits column
+            document.querySelector('#afterTable thead tr').innerHTML = '<th>#</th><th>Number</th><th>Norm</th><th>Hits</th><th>Hit Dates</th>';
+            document.querySelector('#afterTable tbody').innerHTML = data.predictions.slice(0, 20).map((p, i) => 
+                `<tr>
+                    <td>${i+1}</td>
+                    <td><code>${p.number}</code></td>
+                    <td>${p.normalized}</td>
+                    <td>${p.hit_count}</td>
+                    <td class="hit-dates">${formatHitDetails(p.hits, 'after')}</td>
+                </tr>`
+            ).join('');
+            document.getElementById('afterCount').textContent = data.all_numbers.length;
+            document.getElementById('afterNumbers').innerHTML = data.all_numbers.map(n => 
+                `<div class="number-tag ${commonSet.has(n) ? 'common' : ''}">${n}</div>`
+            ).join('');
+            
+            // Before Seed - Updated table with hits column
+            document.querySelector('#beforeTable thead tr').innerHTML = '<th>#</th><th>Number</th><th>Norm</th><th>Hits</th><th>Hit Dates</th>';
+            document.querySelector('#beforeTable tbody').innerHTML = data.predictions_before.slice(0, 20).map((p, i) => 
+                `<tr>
+                    <td>${i+1}</td>
+                    <td><code>${p.number}</code></td>
+                    <td>${p.normalized}</td>
+                    <td>${p.hit_count}</td>
+                    <td class="hit-dates">${formatHitDetails(p.hits, 'before')}</td>
+                </tr>`
+            ).join('');
+            document.getElementById('beforeCount').textContent = data.all_numbers_before.length;
+            document.getElementById('beforeNumbers').innerHTML = data.all_numbers_before.map(n => 
+                `<div class="number-tag ${commonSet.has(n) ? 'common' : ''}">${n}</div>`
+            ).join('');
+        }
+        
+        function clearResults() {
+            ['resultsCard', 'historyCard', 'commonCard', 'afterCard', 'beforeCard'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            currentResults = null;
+        }
+        
+        function copyNumbers(type) {
+            if (!currentResults) return;
+            const nums = type === 'common' ? currentResults.common_numbers : 
+                         type === 'after' ? currentResults.all_numbers : currentResults.all_numbers_before;
+            if (nums?.length) {
+                navigator.clipboard.writeText(nums.join(' '));
+                alert(`Copied ${nums.length} numbers!`);
+            }
+        }
+    </script>
+</body>
+</html>

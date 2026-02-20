@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Backtest — Prediction Strategies</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        :root[data-theme="light"]{
+            --bg:#f5f7fa;--surface:#fff;--surface2:#f0f2f5;--border:#e0e4e8;--border2:#eaeef2;
+            --text:#1e293b;--text2:#64748b;--text3:#94a3b8;
+            --pri:#6366f1;--pri2:#4f46e5;--pri-g:rgba(99,102,241,.08);
+            --ok:#10b981;--ok-g:rgba(16,185,129,.1);
+            --warn:#f59e0b;--warn-g:rgba(245,158,11,.1);
+            --err:#ef4444;--err-g:rgba(239,68,68,.08);
+            --ora:#e65100;--ora-g:rgba(230,81,0,.08);
+            --blue:#3b82f6;--shadow:0 1px 3px rgba(0,0,0,.08);
+            --nav-bg:#1e1e2e;--nav-t:#cdd6f4;--nav-m:#6c7086;--nav-s:#313244;
+        }
+        :root[data-theme="dark"]{
+            --bg:#0f1117;--surface:#161922;--surface2:#1c1f2e;--border:#2a2d3e;--border2:#363952;
+            --text:#e8eaed;--text2:#9ca3af;--text3:#6b7280;
+            --pri:#818cf8;--pri2:#6366f1;--pri-g:rgba(99,102,241,.15);
+            --ok:#34d399;--ok-g:rgba(16,185,129,.15);
+            --warn:#fbbf24;--warn-g:rgba(245,158,11,.15);
+            --err:#f87171;--err-g:rgba(239,68,68,.15);
+            --ora:#fb923c;--ora-g:rgba(251,146,60,.15);
+            --blue:#60a5fa;--shadow:0 1px 3px rgba(0,0,0,.3);
+            --nav-bg:#0b0d14;--nav-t:#cdd6f4;--nav-m:#6c7086;--nav-s:#1c1f2e;
+        }
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        .navbar{background:var(--nav-bg);border-bottom:1px solid var(--nav-s);padding:0 20px;position:sticky;top:0;z-index:1000}
+        .nav-c{max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+        .nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--nav-t);font-weight:800;font-size:18px}
+        .nav-links{display:flex;gap:4px}.nav-link{color:var(--nav-m);text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;transition:.15s}
+        .nav-link:hover{color:var(--nav-t);background:rgba(255,255,255,.05)}.nav-link.active{color:#fff;background:var(--pri2)}
+        .theme-toggle{background:var(--nav-s);border:1px solid rgba(255,255,255,.1);color:var(--nav-t);padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+        .container{max-width:1400px;margin:0 auto;padding:20px}
+        .layout{display:flex;gap:20px;align-items:flex-start}
+        .sidebar{width:300px;flex-shrink:0}.main{flex:1;min-width:0}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+        .card h3{font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+        .card-ora{border-left:4px solid var(--ora)}
+
+        /* Profiles */
+        .profiles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+        .profile{padding:10px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:.15s;text-align:center;position:relative}
+        .profile:hover{border-color:var(--pri);transform:translateY(-1px)}
+        .profile.active{border-color:var(--pri);background:var(--pri-g);box-shadow:0 0 0 3px var(--pri-g)}
+        .profile .icon{font-size:1.4rem;display:block;margin-bottom:4px}
+        .profile .name{font-size:.78rem;font-weight:800;color:var(--text)}
+        .profile .tag{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:3px;position:absolute;top:4px;right:4px}
+        .tag-live{background:var(--ok-g);color:var(--ok)}.tag-soon{background:var(--surface2);color:var(--text3)}
+        .profile-desc{font-size:.72rem;color:var(--text3);margin-top:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;line-height:1.4}
+        .profile-desc strong{color:var(--text)}
+
+        /* Form */
+        .fg{margin-bottom:12px}.fg label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+        .fg select,.fg input[type=date]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.85rem}
+        .fg select:focus,.fg input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-g)}
+        .fg small{font-size:.68rem;color:var(--text3)}
+        .cb-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:.82rem}
+        .cb-row input{accent-color:var(--pri)}
+
+        /* Seed chips */
+        .seed-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+        .seed-chip{padding:5px 10px;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--surface);transition:.15s;font-family:'Courier New',monospace;letter-spacing:1px}
+        .seed-chip:hover{border-color:var(--pri)}
+        .seed-chip.selected{border-color:var(--ok);background:var(--ok-g);color:var(--ok)}
+        .seed-chip .tod{font-size:.6rem;font-weight:400;color:var(--text3);font-family:Arial,sans-serif;letter-spacing:0}
+        .seed-info{font-size:.72rem;color:var(--text3);margin-bottom:6px}
+        .norm-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+        .norm-tag{font-size:.68rem;padding:2px 7px;border-radius:5px;background:var(--pri-g);color:var(--pri);font-family:monospace;font-weight:700}
+
+        /* Hot Digits */
+        .hd-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+        .hd-chip{padding:3px 8px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface);font-family:monospace;transition:.15s}
+        .hd-chip:hover{border-color:var(--warn);background:var(--warn-g)}
+        .hd-chip.active{border-color:var(--warn);background:var(--warn-g);color:var(--warn)}
+        .hm-chip-click{transition:all .15s}.hm-chip-click:hover{opacity:.8;transform:scale(1.05)}
+        .hm-chip-click.active{outline:2px solid var(--pri);outline-offset:1px;box-shadow:0 0 6px rgba(99,102,241,.3)}
+        .hd-chip .cnt{font-size:.65rem;color:var(--text3);font-family:Arial;margin-left:2px}
+        .hd-label{font-size:.68rem;font-weight:700;color:var(--text2);margin-bottom:3px}
+        .band-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+        .band-group{border:1px solid var(--border);border-radius:8px;padding:5px 7px;background:var(--surface);cursor:pointer;transition:.15s;position:relative}
+        .band-group:hover{border-color:var(--pri);background:var(--pri-g)}
+        .band-group.active{border-color:var(--pri);background:var(--pri-g);box-shadow:0 0 6px rgba(99,102,241,.2)}
+        .band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
+        .band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .band-header{display:flex;align-items:center;gap:4px;margin-bottom:3px}
+        .band-name{font-size:.7rem;font-weight:800;color:var(--text1);font-family:monospace}
+        .band-count{font-size:.6rem;color:var(--text3);font-family:Arial}
+        .band-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:3px}
+        .band-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+        .band-pairs{display:flex;flex-wrap:wrap;gap:2px}
+        .band-pair{font-size:.62rem;font-family:monospace;color:var(--text2);padding:1px 3px;border-radius:3px;background:var(--surface2)}
+
+        /* Buttons */
+        .btn{width:100%;padding:11px;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s}
+        .btn-run{background:linear-gradient(90deg,var(--ora),var(--err));color:#fff}
+        .btn-run:hover{transform:translateY(-1px);box-shadow:0 4px 16px var(--ora-g)}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+        .presets{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+        .preset{padding:3px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text2);font-size:.7rem;font-weight:600;cursor:pointer}
+        .preset:hover{border-color:var(--pri);color:var(--pri)}
+        .hidden{display:none!important}
+
+        /* Results */
+        .loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:40px;color:var(--text2)}
+        .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--ora);border-radius:50%;animation:spin .8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:16px}
+        .stat{background:var(--surface);border:1px solid var(--border);padding:12px;border-radius:10px;text-align:center;box-shadow:var(--shadow)}
+        .stat .v{font-size:1.4rem;font-weight:800}.stat .l{font-size:.68rem;color:var(--text3);margin-top:2px}.stat .s{font-size:.62rem;color:var(--text3)}
+        .winner-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;margin-bottom:4px;font-size:.82rem}
+        .winner-item.hit{background:var(--ok-g);border:1px solid rgba(16,185,129,.2)}.winner-item.miss{background:var(--err-g);border:1px solid rgba(239,68,68,.15)}
+        .sp-table{width:100%;border-collapse:collapse;font-size:.78rem}
+        .sp-table th{background:var(--surface2);color:var(--text2);font-weight:700;text-transform:uppercase;font-size:.65rem;letter-spacing:.5px;padding:8px;text-align:left;border-bottom:2px solid var(--border)}
+        .sp-table td{padding:7px 8px;border-bottom:1px solid var(--border2)}
+        .sp-table tr:hover td{background:var(--pri-g)}.sp-table .wr{background:var(--ok-g)}
+        .sp-table .cand{font-family:'Courier New',monospace;font-weight:700;letter-spacing:1px}
+        .rb{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;border-radius:6px;font-size:.72rem;font-weight:700;background:var(--surface2);color:var(--text2);border:1px solid var(--border);padding:0 3px}
+        .rb.t3{background:var(--pri-g);color:var(--pri);border-color:rgba(99,102,241,.2)}
+        .seeds-banner{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;background:var(--warn-g);border:1px solid rgba(245,158,11,.2);margin-bottom:12px;flex-wrap:wrap;font-size:.82rem}
+        .sv{font-family:'Courier New',monospace;font-weight:800;letter-spacing:2px;font-size:.95rem}
+        .hm-chips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px}
+        .hm-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:.72rem;font-weight:600;background:var(--warn-g);color:var(--warn)}
+        .empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+        .empty-state .big{font-size:48px;margin-bottom:10px}
+
+        @media(max-width:900px){.layout{flex-direction:column}.sidebar{width:100%}.profiles{grid-template-columns:1fr 1fr 1fr}.nav-links{display:none}}
+    </style>
+</head>
+<body>
+<nav class="navbar"><div class="nav-c">
+    <a href="/" class="nav-brand"><span>🎰</span> MyLottoData</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">🏠 Home</a>
+        <a href="/predictions" class="nav-link">🎯 Predictions</a>
+        <a href="/analysis/rbtl" class="nav-link">🔥 RBTL</a>
+        <a href="/analysis/efficacy" class="nav-link">📊 Efficacy</a>
+        <a href="/backtest" class="nav-link active">🧪 Backtest</a>
+        <a href="/analysis/consecutive" class="nav-link">📈 Consecutive</a>
+        <a href="/settings" class="nav-link">⚙️</a>
+    </div>
+    <div><button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">🌙</span> <span id="themeLabel">Dark</span></button></div>
+</div></nav>
+
+<div class="container"><div class="layout">
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <!-- Strategy Profiles -->
+    <div class="card">
+        <h3>🧠 Strategy</h3>
+        <div class="profiles">
+            <div class="profile active" onclick="selectProfile('sniper')"><span class="tag tag-live">LIVE</span><span class="icon">🎯</span><span class="name">Sniper</span></div>
+            <div class="profile" onclick="selectProfile('widenet')"><span class="tag tag-live">LIVE</span><span class="icon">🕸️</span><span class="name">Wide Net</span></div>
+            <div class="profile" onclick="selectProfile('shadow')"><span class="tag tag-live">LIVE</span><span class="icon">👥</span><span class="name">Shadow</span></div>
+            <div class="profile" onclick="selectProfile('rewind')"><span class="tag tag-live">LIVE</span><span class="icon">⏪</span><span class="name">Rewind</span></div>
+            <div class="profile" onclick="selectProfile('focus')"><span class="tag tag-live">LIVE</span><span class="icon">🔬</span><span class="name">Focus</span></div>
+            <div class="profile" onclick="selectProfile('mld')"><span class="tag tag-live">LIVE</span><span class="icon">📊</span><span class="name">MLD Classic</span></div>
+            <div class="profile" onclick="selectProfile('truthtable')"><span class="tag tag-live">LIVE</span><span class="icon">🔢</span><span class="name">Truth Table</span></div>
+            <div class="profile" onclick="selectProfile('radar')"><span class="tag tag-soon">SOON</span><span class="icon">📡</span><span class="name">Radar</span></div>
+            <div class="profile" onclick="selectProfile('crossfire')"><span class="tag tag-soon">SOON</span><span class="icon">⚡</span><span class="name">Crossfire</span></div>
+        </div>
+        <div class="profile-desc" id="profileDesc"><strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list. <em>Win #1: Rank #18/226 → $8,100 (72x ROI)</em></div>
+    </div>
+
+    <!-- Config -->
+    <div class="card card-ora">
+        <h3>⚙️ Configuration</h3>
+        <div class="fg"><label>State</label><select id="stateSelect"><option value="">Select</option></select></div>
+        <div class="fg"><label>Game</label><select id="gameType"><option value="pick3">Pick 3</option><option value="pick4" selected>Pick 4</option><option value="pick5">Pick 5</option></select></div>
+        <div class="fg"><label>Target Date</label><input type="date" id="targetDate"></div>
+        <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
+        <div class="fg"><label>Grouping Method</label><select id="grouping"><option value="monthly">Calendar Month (YYYY-MM)</option><option value="cluster_30">±30 Day Cluster</option><option value="cluster_15">±15 Day Cluster</option><option value="cluster_60">±60 Day Cluster</option><option value="cluster_year">Calendar Year (YYYY)</option></select></div>
+        <div class="fg"><label>Top Groups <span title="Limit to top N groups by seed-hit count. 0 = use all qualifying groups. Useful with cluster_year to focus on the best year(s)." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><select id="topGroups"><option value="0" selected>All</option><option value="1">Top 1</option><option value="2">Top 2</option><option value="3">Top 3</option><option value="5">Top 5</option></select></div>
+        <div class="fg"><label style="color:#e67e22">Play Top-N <span title="Only play the top N ranked candidates. Key for cluster_year profitability: Top-20 gives 2247% ROI vs playing full list. Set to 0 for no limit (play all)." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#fdf2e9;color:#e67e22;font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><select id="playTopN" onchange="toggleSuppressSeeds()" style="border-color:#e67e22;background:#fdf2e9"><option value="0" selected>All</option><option value="10">Top 10</option><option value="20">Top 20</option><option value="30">Top 30</option><option value="50">Top 50</option><option value="75">Top 75</option><option value="100">Top 100</option></select></div>
+        <div class="cb-row"><input type="checkbox" id="duplicatesOnly"><label for="duplicatesOnly" style="margin:0;text-transform:none;font-size:.8rem">MLD Duplicates Only <span title="Only keep candidates that appear 2+ times (any permutation) within a single hot group. This matches the old MLD RBTL behavior where only 'Repeated' numbers are shown. Dramatically shrinks lists." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#fdf2e9;color:#e67e22;font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label></div>
+        <div class="fg"><label style="color:#ec4899">🔢 Truth Table <span title="Intersect RBTL candidates with ±1 digit combinations (81 combos) of this seed number. Leave empty to disable. The seed is typically the last drawn number. Dramatically narrows lists when combined with RBTL." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:rgba(236,72,153,.1);color:#ec4899;font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><input type="text" id="truthTableSeed" placeholder="e.g. 0371" maxlength="4" style="width:80px;border-color:#ec4899;background:rgba(236,72,153,.06);font-family:'Courier New',monospace;text-align:center;font-size:.9rem;letter-spacing:2px"></div>
+        <div class="fg"><label style="color:var(--warn)">Min Hits / Group <span title="Only include hot months/clusters where seed permutations appeared this many times or more. This filters the GROUPS, not individual candidates. Color-matched to the Months/Clusters column in results." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--warn-g);color:var(--warn);font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><select id="minCount" style="border-color:var(--warn);background:var(--warn-g)"><option value="1">≥ 1</option><option value="2">≥ 2</option><option value="3" selected>≥ 3</option><option value="4">≥ 4</option><option value="5">≥ 5</option><option value="6">≥ 6</option><option value="7">≥ 7</option><option value="8">≥ 8</option><option value="10">≥ 10</option></select></div>
+        <div class="fg"><label style="color:var(--pri)">Min Total Hits <span title="Client-side filter: only show candidates with at least this many total appearances across all hot groups. Color-matched to the Total Hits column in results." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><select id="minTotalHits" onchange="toggleSuppressSeeds()" style="border-color:var(--pri);background:var(--pri-g)"><option value="1" selected>≥ 1</option><option value="2">≥ 2</option><option value="3">≥ 3</option><option value="4">≥ 4</option><option value="5">≥ 5</option></select></div>
+        <div class="fg"><label>DP Filter</label><select id="dpSize"><option value="0">None</option><option value="2" selected>2DP on last seed</option><option value="3">3DP on last seed</option></select></div>
+        <div class="cb-row"><input type="checkbox" id="exclNonDupes"><label for="exclNonDupes" style="margin:0;text-transform:none;font-size:.8rem">Exclude non-duplicates</label></div>
+        <div class="fg"><label>🔥 Proximity (days) <span title="Flag candidates with 🔥 if they appeared within this many days of a seed draw in a hot month." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><select id="proxDays"><option value="1">±1 day</option><option value="2" selected>±2 days</option><option value="3">±3 days</option><option value="5">±5 days</option><option value="7">±7 days</option><option value="14">±14 days</option><option value="30">±30 days</option></select></div>
+        <div class="fg"><label>👁️ Look Forward <span title="Check if candidates appeared AFTER the seed date within this window. Validation signal — did the prediction come true?" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:2px;vertical-align:middle">?</span></label><select id="lookForward"><option value="0">Off</option><option value="7">7 days</option><option value="14">14 days</option><option value="30" selected>30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></div>
+        <div class="fg"><label>Show Top</label><select id="sugLimit"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="500">500</option></select></div>
+        <div class="fg"><label>Past Winners (days back)</label><select id="pwDays"><option value="1">1 day</option><option value="2">2 days</option><option value="3">3 days</option><option value="5" selected>5 days</option><option value="7">7 days</option><option value="10">10 days</option><option value="14">14 days</option><option value="20">20 days</option></select></div>
+        <div class="presets">
+            <button class="preset" onclick="setPreset('yesterday')">Yesterday</button>
+            <button class="preset" onclick="setPreset('win1')">Win #1</button>
+            <button class="preset" onclick="setPreset('win2')">Win #2</button>
+            <button class="preset" onclick="setPreset('random')">Random</button>
+        </div>
+        <button class="btn btn-run" id="runBtn" onclick="runBacktest()">🧪 Run Backtest</button>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+    <!-- Seed Selection -->
+    <div class="card" id="seedCard">
+        <h3>🌱 Seed Selection <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(click to select seeds for analysis)</span></h3>
+        <div class="seed-info" id="seedInfo">Select state & game to load recent draws</div>
+        <div class="seed-grid" id="seedGrid"></div>
+        <div class="norm-tags" id="normTags"></div>
+    </div>
+
+    <!-- Hot Digits -->
+    <div class="card hidden" id="hotDigitsCard">
+        <h3>🔥 Hot Digits <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(click to filter candidates)</span></h3>
+        <div id="hotDigitsContent"></div>
+    </div>
+
+    <!-- Empty / Loading / Results -->
+    <div id="emptyState" class="empty-state"><div class="big">🧪</div><div style="font-size:1rem;font-weight:600;margin-bottom:4px">Select a strategy, pick your seeds, and run</div><div style="font-size:.85rem">Results will appear here</div></div>
+    <div id="loadingDiv" class="hidden"><div class="loading"><div class="spinner"></div><div>Running backtest...</div></div></div>
+    <div id="resultArea" class="hidden"></div>
+</div>
+</div></div>
+
+<script>
+// Theme
+function toggleTheme(){var h=document.documentElement,c=h.getAttribute('data-theme'),n=c==='light'?'dark':'light';h.setAttribute('data-theme',n);document.getElementById('themeIcon').textContent=n==='light'?'🌙':'☀️';document.getElementById('themeLabel').textContent=n==='light'?'Dark':'Light';try{localStorage.setItem('mld-theme',n)}catch(e){}}
+try{var s=localStorage.getItem('mld-theme');if(s){document.documentElement.setAttribute('data-theme',s);document.getElementById('themeIcon').textContent=s==='light'?'🌙':'☀️';document.getElementById('themeLabel').textContent=s==='light'?'Dark':'Light'}}catch(e){}
+
+var urlParams=new URLSearchParams(window.location.search);
+var dbMode=urlParams.get('db')||'mongo_v2';
+var currentProfile='sniper';
+var recentDraws=[];
+var selectedSeeds=[];
+var activeFilters=[];
+
+function apiUrl(p){return p+(p.includes('?')?'&':'?')+'db='+dbMode}
+
+// Profile descriptions
+var PROFILES={
+    sniper:{name:'Sniper',icon:'🎯',desc:'<strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list. <em>Win #1: Rank #18/226 → $8,100 (72x ROI)</em>',
+        config:{minCount:'1',dpSize:'2',exclNonDupes:false,targetTOD:'evening'}},
+    widenet:{name:'Wide Net',icon:'🕸️',desc:'<strong>🕸️ Wide Net:</strong> Many seeds. Broad coverage. 2DP narrows it. <em>Win #1: Rank #161/230 — found but wider net.</em>',
+        config:{minCount:'2',dpSize:'2',exclNonDupes:false,targetTOD:'evening'}},
+    shadow:{name:'Shadow',icon:'👥',desc:'<strong>👥 Shadow:</strong> 2 seeds. NO digit-pair filter. Co-occurrence is the signal. <em>Win #2: 156 candidates → $24.</em>',
+        config:{minCount:'2',dpSize:'0',exclNonDupes:true,targetTOD:'midday'}},
+    mld:{name:'MLD Classic',icon:'📊',desc:'<strong>📊 MLD Classic:</strong> Replicates old MLD RBTL. Year grouping + duplicates-only filter. Only numbers appearing 2+ times in any hot year. <em>Win #2: Rank #10/104.</em>',
+        config:{minCount:'2',dpSize:'0',exclNonDupes:false,targetTOD:'midday',grouping:'cluster_year',topGroups:0,playTopN:'0',duplicatesOnly:true,truthTableSeed:''}},
+    truthtable:{name:'Truth Table',icon:'🔢',desc:'<strong>🔢 Truth Table:</strong> Intersect RBTL candidates with ±1 digit combos (81) of the last drawn number. Two algorithms agree = ultra-tight list. <em>7.9x above chance.</em>',
+        config:{minCount:'2',dpSize:'0',exclNonDupes:true,targetTOD:'',grouping:'monthly',topGroups:0,playTopN:'0',duplicatesOnly:false,truthTableSeed:'auto'}},
+    rewind:{name:'Rewind',icon:'⏪',desc:'<strong>⏪ Rewind:</strong> Post-hoc analysis. Include the winner to understand WHY it hit. <em>Not prediction — learning.</em>',
+        config:{minCount:'3',dpSize:'0',exclNonDupes:false,targetTOD:''}},
+    focus:{name:'Focus',icon:'🔬',desc:'<strong>🔬 Focus:</strong> Year-based clustering. 95% hit rate. Play Top-20 = 2247% ROI. Combined with monthly: +$19K profit. <em>Configurable Top-N.</em>',
+        config:{minCount:'2',dpSize:'0',exclNonDupes:true,targetTOD:'midday',grouping:'cluster_year',topGroups:0,playTopN:'20'}},
+    radar:{name:'Radar',icon:'📡',desc:'<strong>📡 Radar:</strong> 330 all-possibles from 2DP. Narrow by historical proximity. <em>Coming soon.</em>',
+        config:{}},
+    crossfire:{name:'Crossfire',icon:'⚡',desc:'<strong>⚡ Crossfire:</strong> RBTL ∩ DP-AP. Two algorithms agree = highest confidence. <em>Coming soon.</em>',
+        config:{}}
+};
+
+function selectProfile(p){
+    currentProfile=p;
+    document.querySelectorAll('.profile').forEach(function(el){el.classList.remove('active')});
+    document.querySelector('.profile[onclick*="'+p+'"]').classList.add('active');
+    document.getElementById('profileDesc').innerHTML=PROFILES[p].desc;
+    var cfg=PROFILES[p].config;
+    if(cfg.minCount)document.getElementById('minCount').value=cfg.minCount;
+    if(cfg.dpSize!==undefined)document.getElementById('dpSize').value=cfg.dpSize;
+    if(cfg.exclNonDupes!==undefined)document.getElementById('exclNonDupes').checked=cfg.exclNonDupes;
+    if(cfg.targetTOD!==undefined)document.getElementById('targetTOD').value=cfg.targetTOD;
+    if(cfg.grouping)document.getElementById('grouping').value=cfg.grouping;
+    else document.getElementById('grouping').value='monthly';
+    if(cfg.topGroups!==undefined)document.getElementById('topGroups').value=cfg.topGroups;
+    else document.getElementById('topGroups').value='0';
+    if(cfg.playTopN!==undefined)document.getElementById('playTopN').value=cfg.playTopN;
+    else document.getElementById('playTopN').value='0';
+    if(cfg.duplicatesOnly!==undefined)document.getElementById('duplicatesOnly').checked=cfg.duplicatesOnly;
+    else document.getElementById('duplicatesOnly').checked=false;
+    if(cfg.truthTableSeed!==undefined){
+        if(cfg.truthTableSeed==='auto'&&recentDraws&&recentDraws.length>0){
+            document.getElementById('truthTableSeed').value=recentDraws[0].value||recentDraws[0].actual||'';
+        } else {
+            document.getElementById('truthTableSeed').value=cfg.truthTableSeed;
+        }
+    } else document.getElementById('truthTableSeed').value='';
+    if(cfg.minTotalHits)document.getElementById('minTotalHits').value=cfg.minTotalHits;
+    else document.getElementById('minTotalHits').value='1';
+    // Auto-select seeds based on profile
+    if(p==='sniper'){autoSelectSeeds(1)}
+    else if(p==='shadow'){autoSelectSeeds(2)}
+    else if(p==='focus'){autoSelectSeeds(2)}
+    else if(p==='mld'){autoSelectSeeds(2)}
+    else if(p==='truthtable'){
+        autoSelectSeeds(1);
+        // Auto-fill TT seed from latest draw value
+        if(recentDraws.length>0){
+            var lastVal=recentDraws[0].value||recentDraws[0].actual||'';
+            document.getElementById('truthTableSeed').value=lastVal;
+        }
+    }
+    else if(p==='widenet'){autoSelectSeeds(10)}
+    else if(p==='rewind'){autoSelectSeeds(0)}
+}
+
+function autoSelectSeeds(n){
+    selectedSeeds=[];
+    if(n>0&&recentDraws.length>0){
+        for(var i=0;i<Math.min(n,recentDraws.length);i++){selectedSeeds.push(i)}
+    }
+    renderSeedChips();
+    updateHotDigits();
+}
+
+// Init
+document.addEventListener('DOMContentLoaded',function(){loadStates();setDefaults()});
+
+async function loadStates(){
+    var gt=document.getElementById('gameType').value;
+    try{
+        var res=await fetch(apiUrl('/api/prediction/'+gt+'/states'));
+        var states=await res.json();
+        var sel=document.getElementById('stateSelect');
+        sel.innerHTML='<option value="">Select</option>'+states.map(function(s){return'<option value="'+s+'">'+s+'</option>'}).join('');
+        sel.value='Florida';
+        loadRecentDraws();
+    }catch(e){console.error(e)}
+}
+
+document.getElementById('gameType').addEventListener('change',function(){loadStates()});
+document.getElementById('stateSelect').addEventListener('change',function(){loadRecentDraws()});
+document.getElementById('targetDate').addEventListener('change',function(){loadRecentDraws()});
+document.getElementById('pwDays').addEventListener('change',function(){loadRecentDraws()});
+document.getElementById('targetTOD').addEventListener('change',function(){loadRecentDraws()});
+
+function setDefaults(){
+    var y=new Date();y.setDate(y.getDate()-1);
+    document.getElementById('targetDate').value=fmt(y);
+}
+function fmt(d){return d.toISOString().split('T')[0]}
+
+function setPreset(p){
+    var t=new Date();
+    if(p==='yesterday'){t.setDate(t.getDate()-1);document.getElementById('targetDate').value=fmt(t);selectProfile('sniper')}
+    else if(p==='win1'){document.getElementById('targetDate').value='2019-09-15';selectProfile('sniper');document.getElementById('targetTOD').value='evening'}
+    else if(p==='win2'){document.getElementById('targetDate').value='2019-10-09';selectProfile('focus');document.getElementById('targetTOD').value='midday'}
+    else if(p==='random'){var s=new Date();s.setFullYear(s.getFullYear()-2);t=new Date(s.getTime()+Math.random()*(Date.now()-s.getTime()));document.getElementById('targetDate').value=fmt(t)}
+    loadRecentDraws();
+}
+
+// Load recent draws for seed selection
+async function loadRecentDraws(){
+    var state=document.getElementById('stateSelect').value;
+    var gameType=document.getElementById('gameType').value;
+    var targetDate=document.getElementById('targetDate').value;
+    var pwDays=parseInt(document.getElementById('pwDays').value)||5;
+    var targetTOD=(document.getElementById('targetTOD').value||'').toLowerCase();
+    if(!state||!targetDate)return;
+    try{
+        var td=new Date(targetDate);
+        var sd=new Date(td);sd.setDate(sd.getDate()-pwDays);
+        var startDate=fmt(sd);
+        var endDate=targetDate;
+        var res=await fetch(apiUrl('/api/draws/recent'),{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({state:state,game_type:gameType,start_date:startDate,end_date:endDate})});
+        var data=await res.json();
+        if(data.draws&&data.draws.length>0){
+            var draws=data.draws;
+            // Suppress target draw(s) — UNLESS Rewind mode (post-hoc analysis needs the winner as seed)
+            if(currentProfile!=='rewind'){
+                draws=draws.filter(function(d){
+                    if(d.date!==targetDate)return true;
+                    var dTod=(d.tod||'').toLowerCase();
+                    if(targetTOD&&targetTOD!=='all'){
+                        if(targetTOD==='midday'){return false}
+                        if(targetTOD==='evening'){return dTod==='midday'}
+                    }
+                    return false;
+                });
+            }
+            // Sort: most recent first
+            draws.sort(function(a,b){
+                if(b.date!==a.date)return b.date>a.date?1:-1;
+                var todOrd={evening:2,night:2,midday:1,day:1};
+                return(todOrd[(b.tod||'').toLowerCase()]||0)-(todOrd[(a.tod||'').toLowerCase()]||0);
+            });
+            // Show ALL draws in the date range — no artificial limit
+            recentDraws=draws;
+            var suppMsg=currentProfile==='rewind'?' (Rewind mode — target included)':
+                (targetTOD?' ('+targetDate+' '+targetTOD+' suppressed)':' ('+targetDate+' suppressed)');
+            document.getElementById('seedInfo').textContent=draws.length+' draws from '+pwDays+' days back'+suppMsg;
+        }else{
+            recentDraws=[];
+            document.getElementById('seedInfo').textContent='No draws found in range';
+        }
+        // Auto-select ALL displayed seeds
+        autoSelectSeeds(recentDraws.length);
+    }catch(e){console.error(e);document.getElementById('seedInfo').textContent='Error loading draws'}
+}
+
+function renderSeedChips(){
+    var grid=document.getElementById('seedGrid');
+    var html='';
+    recentDraws.forEach(function(d,i){
+        var sel=selectedSeeds.indexOf(i)!==-1;
+        var tod=(d.tod||d.draw_time||'');
+        var todShort=tod.charAt(0).toUpperCase()||'';
+        var dateStr=(d.date||d.input_date||'').slice(5); // MM-DD
+        html+='<div class="seed-chip'+(sel?' selected':'')+'" onclick="toggleSeed('+i+')">'
+            +'<span class="tod">'+dateStr+' '+todShort+'</span> '
+            +d.value+'</div>';
+    });
+    grid.innerHTML=html;
+    // Normalized tags
+    var norms={};
+    selectedSeeds.forEach(function(i){
+        var d=recentDraws[i];if(d)norms[d.actual||d.value]=true;
+    });
+    var tags=Object.keys(norms).map(function(n){return'<span class="norm-tag">'+n+'</span>'}).join('');
+    document.getElementById('normTags').innerHTML=tags?'<span style="font-size:.7rem;color:var(--text3);margin-right:4px">Normalized:</span>'+tags:'';
+}
+
+function toggleSeed(i){
+    var idx=selectedSeeds.indexOf(i);
+    if(idx===-1)selectedSeeds.push(i);else selectedSeeds.splice(idx,1);
+    selectedSeeds.sort(function(a,b){return a-b});
+    renderSeedChips();
+    updateHotDigits();
+}
+
+// Hot Digits
+function updateHotDigits(){
+    if(selectedSeeds.length===0){document.getElementById('hotDigitsCard').classList.add('hidden');return}
+    document.getElementById('hotDigitsCard').classList.remove('hidden');
+    var digits={},pairs={};
+    // Track which 2DP pairs belong to which 1DP digits
+    var pairsByDigit={};
+    selectedSeeds.forEach(function(i){
+        var d=recentDraws[i];if(!d)return;
+        var norm=(d.actual||d.value).split('');
+        var seenDigits={};
+        norm.forEach(function(c){if(!seenDigits[c]){seenDigits[c]=true;digits[c]=(digits[c]||0)+1}});
+        var seenPairs={};
+        for(var a=0;a<norm.length;a++)for(var b=a+1;b<norm.length;b++){
+            var pair=norm[a]+norm[b];
+            if(!seenPairs[pair]){seenPairs[pair]=true;pairs[pair]=(pairs[pair]||0)+1}
+        }
+    });
+    // Map each pair to its constituent digits
+    Object.keys(pairs).forEach(function(pair){
+        var d0=pair[0],d1=pair[1];
+        if(!pairsByDigit[d0])pairsByDigit[d0]=[];
+        if(!pairsByDigit[d1])pairsByDigit[d1]=[];
+        if(pairsByDigit[d0].indexOf(pair)===-1)pairsByDigit[d0].push(pair);
+        if(d0!==d1&&pairsByDigit[d1].indexOf(pair)===-1)pairsByDigit[d1].push(pair);
+    });
+    // Sort 1DP by freq desc
+    var d1sorted=Object.entries(digits).sort(function(a,b){return b[1]-a[1]||a[0]-b[0]});
+    // Build grouped HTML: 1DP row, then its 2DP pairs below
+    var html='<div class="hd-label">1DP Digits</div><div class="hd-row">';
+    d1sorted.forEach(function(e){
+        html+='<span class="hd-chip" onclick="applyHotFilter(\'1dp\',\''+e[0]+'\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    html+='</div>';
+    html+='<div class="hd-label" style="margin-top:8px">2DP Pairs</div>';
+    // Show ALL pairs sorted by freq desc
+    var d2sorted=Object.entries(pairs).sort(function(a,b){return b[1]-a[1]||a[0].localeCompare(b[0])});
+    html+='<div class="hd-row">';
+    d2sorted.forEach(function(e){
+        html+='<span class="hd-chip" onclick="applyHotFilter(\'2dp\',\''+e[0]+'\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    html+='</div>';
+
+    // === 2DP Bands: group pairs by first digit ===
+    var bands={};
+    var maxBandTotal=0;
+    // All possible bands 0-9
+    for(var b=0;b<=9;b++){bands[b]={pairs:[],total:0,label:b+'x'}}
+    d2sorted.forEach(function(e){
+        var firstDigit=parseInt(e[0][0]);
+        bands[firstDigit].pairs.push({pair:e[0],count:e[1]});
+        bands[firstDigit].total+=e[1];
+    });
+    // Find max for bar scaling
+    Object.values(bands).forEach(function(b){if(b.total>maxBandTotal)maxBandTotal=b.total});
+    // Sort bands by total ascending (coldest first) for the insight
+    var bandEntries=Object.entries(bands).filter(function(e){return e[1].pairs.length>0});
+    var bandsByCount=bandEntries.slice().sort(function(a,b){return a[1].total-b[1].total});
+    // Find the cold threshold (bottom third of active bands)
+    var coldThreshold=bandsByCount.length>2?bandsByCount[Math.floor(bandsByCount.length/3)][1].total:0;
+
+    html+='<div class="hd-label" style="margin-top:10px">2DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit · ❄️ = coldest — build candidates here)</span></div>';
+    html+='<div class="band-row">';
+    // Show in natural order 0-9
+    for(var i=0;i<=9;i++){
+        var band=bands[i];
+        if(band.pairs.length===0)continue;
+        var isCold=band.total<=coldThreshold&&coldThreshold>0;
+        var pct=maxBandTotal>0?Math.round(band.total/maxBandTotal*100):0;
+        // Color: hot=orange, warm=blue, cold=lightblue
+        var barColor=pct>70?'var(--ora)':pct>40?'var(--pri)':'rgba(99,195,255,.7)';
+        html+='<div class="band-group'+(isCold?' cold':'')+'" onclick="applyBandFilter(\''+i+'\')" title="Click to filter candidates to '+band.label+' pairs">';
+        html+='<div class="band-header"><span class="band-name">'+band.label+'</span><span class="band-count">'+band.total+' hits · '+band.pairs.length+' pairs</span></div>';
+        html+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>';
+        html+='<div class="band-pairs">';
+        band.pairs.forEach(function(p){
+            html+='<span class="band-pair">'+p.pair+'<sup>'+p.count+'</sup></span>';
+        });
+        html+='</div></div>';
+    }
+    html+='</div>';
+
+    document.getElementById('hotDigitsContent').innerHTML=html;
+    // Store for filtering
+    window._hotDigits=digits;
+    window._hotPairs=pairs;
+    window._hotBands=bands;
+}
+
+// Multi-filter system — all active filters are AND'd together
+var activeFilters=[]; // [{type:'1dp',val:'5'},{type:'year',val:'2019'}]
+
+function toggleFilter(type,val,el){
+    // Toggle: if this exact filter exists, remove it; otherwise add it
+    var idx=-1;
+    for(var i=0;i<activeFilters.length;i++){
+        if(activeFilters[i].type===type&&activeFilters[i].val===val){idx=i;break}
+    }
+    if(idx!==-1){
+        activeFilters.splice(idx,1);
+        el.classList.remove('active');
+    }else{
+        activeFilters.push({type:type,val:val});
+        el.classList.add('active');
+    }
+    updateFullCandidateList();
+}
+function applyHotFilter(type,val){
+    var el=event.target.closest('.hd-chip,.hm-chip-click');
+    toggleFilter(type,val,el);
+}
+function applyBandFilter(leadDigit){
+    // Toggle band filter — filters candidates that contain ANY 2DP pair from this band
+    var el=event.target.closest('.band-group');
+    toggleFilter('band',leadDigit,el);
+}
+function filterByMonth(month){
+    var el=event.target.closest('.hm-chip-click');
+    toggleFilter('month',month,el);
+}
+function filterByYear(year){
+    var el=event.target.closest('.hm-chip-click');
+    toggleFilter('year',year,el);
+}
+function clearFilter(){
+    activeFilters=[];
+    document.querySelectorAll('.hd-chip,.hm-chip-click').forEach(function(c){c.classList.remove('active')});
+    updateFullCandidateList();
+}
+function candidateMatchesFilter(p,f){
+    if(f.type==='1dp'){
+        return p.candidate.indexOf(f.val)!==-1;
+    }else if(f.type==='2dp'){
+        var sorted=p.candidate.split('');
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++){
+            if(sorted[a]+sorted[b]===f.val)return true;
+        }
+        return false;
+    }else if(f.type==='month'){
+        return(p.months||[]).indexOf(f.val)!==-1;
+    }else if(f.type==='year'){
+        return(p.months||[]).some(function(m){return m.startsWith(f.val)});
+    }else if(f.type==='band'){
+        // Match candidates that contain any 2DP pair starting with the band's lead digit
+        var sorted=p.candidate.split('');
+        var bandPairs=window._hotBands&&window._hotBands[parseInt(f.val)]?window._hotBands[parseInt(f.val)].pairs:[];
+        if(bandPairs.length===0)return false;
+        var pairSet={};
+        bandPairs.forEach(function(bp){pairSet[bp.pair]=true});
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++){
+            if(pairSet[sorted[a]+sorted[b]])return true;
+        }
+        return false;
+    }
+    return true;
+}
+function updateFullCandidateList(){
+    var area=document.getElementById('fullCandidateList');
+    if(!area||!window._allPlays)return;
+    var plays=window._allPlays;
+    var winSet=window._lastWinSet||{};
+    // Apply ALL active filters (AND logic)
+    if(activeFilters.length>0){
+        plays=plays.filter(function(p){
+            return activeFilters.every(function(f){return candidateMatchesFilter(p,f)});
+        });
+    }
+    // Build filter label
+    var filterLabel='';
+    if(activeFilters.length>0){
+        var tags=activeFilters.map(function(f){return f.type.toUpperCase()+': '+f.val}).join(' + ');
+        filterLabel=' — filtered by '+tags+' <a href="#" onclick="clearFilter();return false" style="color:var(--err);font-size:.7rem;margin-left:6px">✕ clear all</a>';
+    }
+    // Build play list (just numbers) for copy/email
+    var playNumbers=plays.map(function(p){return p.candidate});
+    // Build flat list of ALL actual drawn values (permutations) per candidate
+    // Mark any permutation matching an actual winner with 🔥
+    var winValSet=window._lastWinValSet||{};
+    var playAllValues=plays.map(function(p){
+        var allVals=[];
+        (p.draw_dates||[]).forEach(function(dd){
+            if(dd.value&&allVals.indexOf(dd.value)===-1)allVals.push(dd.value);
+        });
+        var valsDisplay=allVals.map(function(v){return winValSet[v]?'🔥'+v:v}).join('  ');
+        return p.candidate+' ['+valsDisplay+']';
+    });
+    // Plain copy = just the actual drawn values (no normalized), one candidate per line
+    var playActualsCopy=plays.map(function(p){
+        var allVals=[];
+        (p.draw_dates||[]).forEach(function(dd){
+            if(dd.value&&allVals.indexOf(dd.value)===-1)allVals.push(dd.value);
+        });
+        return allVals.join('  ');
+    });
+    var playListHtml='<div class="card" style="margin-top:12px"><h3>📝 Play List <span style="font-size:.72rem;font-weight:400;color:var(--text3)">('+playNumbers.length+' numbers)</span></h3>';
+    playListHtml+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">';
+    playListHtml+='<button class="btn" onclick="copyPlayList(\'actuals\')" style="font-size:.75rem;padding:4px 12px">📋 Copy Actual Values</button>';
+    playListHtml+='<button class="btn" onclick="emailPlayList()" style="font-size:.75rem;padding:4px 12px">✉️ Email</button>';
+    playListHtml+='</div>';
+    playListHtml+='<div id="playListNumbers" data-actuals="'+playActualsCopy.join('\\n').replace(/"/g,'&quot;')+'" data-allvalues="'+playAllValues.join('\\n').replace(/"/g,'&quot;')+'" style="font-family:\'Courier New\',monospace;font-size:.75rem;line-height:1.6;color:var(--text1);padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);max-height:250px;overflow-y:auto;user-select:all;white-space:pre-wrap">';
+    playListHtml+=playAllValues.join('\n');
+    playListHtml+='</div></div>';
+
+    area.innerHTML='<div class="card"><h3>📋 Full Candidate List <span style="font-size:.72rem;font-weight:400;color:var(--text3)">('+plays.length+' candidates'+filterLabel+')</span></h3>'+
+        renderCandidatesTable(plays,winSet)+'</div>'+playListHtml;
+}
+function copyPlayList(mode){
+    var el=document.getElementById('playListNumbers');
+    if(!el)return;
+    var text=(el.getAttribute('data-actuals')||el.textContent).trim();
+    navigator.clipboard.writeText(text).then(function(){
+        var btn=event.target;var orig=btn.textContent;btn.textContent='✅ Copied!';
+        setTimeout(function(){btn.textContent=orig},1500);
+    });
+}
+function emailPlayList(){
+    var el=document.getElementById('playListNumbers');
+    if(!el)return;
+    var text=(el.getAttribute('data-actuals')||el.textContent).trim();
+    var filterDesc=activeFilters.length>0?activeFilters.map(function(f){return f.type+':'+f.val}).join('+'):'unfiltered';
+    var subject='RBTL Play List ('+filterDesc+')';
+    var body='Play List:%0A%0A'+encodeURIComponent(text);
+    window.open('mailto:?subject='+encodeURIComponent(subject)+'&body='+body);
+}
+
+// Run Backtest
+async function runBacktest(){
+    if(currentProfile==='radar'||currentProfile==='crossfire'){alert('Coming soon!');return}
+    var state=document.getElementById('stateSelect').value;
+    var gameType=document.getElementById('gameType').value;
+    var targetDate=document.getElementById('targetDate').value;
+    if(!state||!targetDate){alert('Please select state and date');return}
+    if(selectedSeeds.length===0&&currentProfile!=='rewind'){alert('Please select at least one seed');return}
+
+    var btn=document.getElementById('runBtn');btn.disabled=true;btn.textContent='⏳ Running...';
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('loadingDiv').classList.remove('hidden');
+    document.getElementById('resultArea').classList.add('hidden');
+
+    // Determine lookback from selected seeds' date range
+    var lookback=5; // default fallback
+    if(selectedSeeds.length===0){
+        lookback=5;
+    }else if(selectedSeeds.length===1){
+        // Single seed = sniper mode
+        lookback=0;
+    }else{
+        // Multiple seeds: calculate days between target and earliest selected seed
+        var targetD=new Date(targetDate);
+        var dates=selectedSeeds.map(function(i){return new Date(recentDraws[i].date)});
+        var earliest=new Date(Math.min.apply(null,dates));
+        var latest=new Date(Math.max.apply(null,dates));
+        var daysDiff=Math.round((targetD-earliest)/(1000*60*60*24));
+        
+        // Check if all seeds are from the same day (mid+eve = shadow mode)
+        var uniqueDates={};
+        dates.forEach(function(d){uniqueDates[d.toISOString().split('T')[0]]=true});
+        var numUniqueDays=Object.keys(uniqueDates).length;
+        
+        if(numUniqueDays===1&&selectedSeeds.length<=3){
+            lookback=-1; // mid & eve seed mode (shadow)
+        }else{
+            lookback=daysDiff; // actual days back from target
+        }
+    }
+    // Override by profile if explicitly set
+    if(currentProfile==='sniper')lookback=0;
+    else if(currentProfile==='shadow')lookback=-1;
+
+    var body={
+        state:state,game_type:gameType,target_date:targetDate,
+        target_tod:document.getElementById('targetTOD').value,
+        lookback_days:lookback,
+        min_count:parseInt(document.getElementById('minCount').value),
+        dp_size:parseInt(document.getElementById('dpSize').value),
+        dp_seed_mode:'last',
+        suggested_limit:999,
+        include_same_day:true,
+        look_forward_days:parseInt(document.getElementById('lookForward').value)||0,
+        grouping:document.getElementById('grouping').value,
+        top_n_clusters:parseInt(document.getElementById('topGroups').value)||0,
+        duplicates_only:document.getElementById('duplicatesOnly').checked,
+        truth_table_seed:document.getElementById('truthTableSeed').value.trim()
+    };
+
+    try{
+        var res=await fetch(apiUrl('/api/rbtl/backtest-v2'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        var data=await res.json();
+        if(data.error){alert(data.error);return}
+        displayResult(data);
+    }catch(e){alert('Error: '+e.message)}
+    finally{btn.disabled=false;btn.textContent='🧪 Run Backtest';document.getElementById('loadingDiv').classList.add('hidden')}
+}
+
+function displayResult(d){
+    var area=document.getElementById('resultArea');area.classList.remove('hidden');
+    var html='';
+
+    // Stats — "Results Summary" grid (values from backtest API response)
+    html+='<div style="font-size:.72rem;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📊 Results Summary</div>';
+    html+='<div class="stats-grid">';
+    html+=sc('Seeds Used',d.seed_count,d.seed_values.join(', '),'var(--pri)');
+    html+=sc('Hit Rate',d.hit_rate+'%',d.winners_found+'/'+d.target_winner_count,d.hit_rate>0?'var(--ok)':'var(--err)');
+    var groupLabel=d.grouping&&d.grouping.startsWith('cluster')?'Hot Clusters':'Hot Months';
+    html+=sc(groupLabel,d.selected_month_count,'of '+d.total_hot_months,'var(--warn)');
+    html+=sc('Candidates',d.total_candidates,d.dp_filter&&d.dp_filter.dp_size>0?'Pre-DP: '+d.total_candidates_pre_dp:(d.duplicates_only?'Dups Only':(d.truth_table_seed?'∩ TT '+d.truth_table_seed:'No DP')),'var(--ok)');
+    html+=sc('Mode',d.lookback_mode.replace(/_/g,' '),d.duplicates_only?'📊 MLD':(d.truth_table_seed?'🔢 TT':''),'var(--text2)');
+    html+='</div>';
+
+    // Seeds banner
+    html+='<div class="seeds-banner"><span>🌱</span> <strong style="color:var(--warn)">Seeds:</strong> ';
+    d.seed_values.forEach(function(v){html+='<span class="sv">'+v+'</span> '});
+    html+='<span style="margin-left:auto;font-size:.72rem;color:var(--text3)">'+(d.lookback_period||'')+'</span></div>';
+
+    // Winners
+    if(d.winner_results&&d.winner_results.length){
+        html+='<div class="card"><h3>🎯 Target Winners — '+d.target_date+' '+(d.target_tod||'all')+'</h3>';
+        d.winner_results.forEach(function(w){
+            var found=w.found_in_candidates;
+            var monthsStr=(w.months||[]).join(', ');
+            var dpPairsStr=(w.dp_shared_pairs||[]).join(', ');
+            html+='<div class="winner-item '+(found?'hit':'miss')+'">'+(found?'✅':'❌')+
+                ' <strong style="font-family:monospace;letter-spacing:2px">'+w.target_value+'</strong> '+
+                '<span style="font-size:.78rem;color:var(--text2)">('+w.target_actual+') '+(w.target_tod||'')+
+                (found?' — Rank #'+w.rank+'/'+w.total_candidates:'')+'</span>';
+            // Always show details (hit or miss)
+            html+='<div style="margin-top:4px;font-size:.72rem;color:var(--text3)">';
+            if(monthsStr){html+='<strong style="color:var(--warn)">'+groupLabel+':</strong> '+monthsStr+' ';}
+            if(w.total_appearances){html+='<strong style="color:var(--pri)">Hits:</strong> '+w.total_appearances+' ';}
+            if(dpPairsStr){html+='<strong style="color:var(--ok)">DP Pairs:</strong> <span style="font-family:monospace">'+dpPairsStr+'</span> ';}
+            if(!found&&w.filter_reason){
+                html+='<br><span style="color:var(--err);font-weight:600">⚠️ '+w.filter_reason+'</span>';
+            }
+            html+='</div>';
+            html+='</div>';
+        });
+        html+='</div>';
+    }
+
+    // DP info
+    if(d.dp_filter&&d.dp_filter.dp_size>0){
+        html+='<div style="padding:8px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:.78rem;color:var(--text2);margin-bottom:12px">';
+        html+='<strong>DP Filter:</strong> '+d.dp_filter.dp_size+'DP on '+(d.dp_filter.dp_seed||'')+' — '+
+            d.dp_filter.candidates_before_dp+' → '+d.dp_filter.candidates_after_dp+' candidates';
+        html+='<br><span style="font-family:monospace;font-size:.72rem">Pairs: '+(d.dp_filter.dp_pairs||[]).join(', ')+'</span></div>';
+    }
+
+    // Hot months
+    if(d.top_months&&d.top_months.length){
+        // Build set of qualified month keys
+        var qualifiedSet={};
+        d.top_months.forEach(function(m){qualifiedSet[m.month]=m.count});
+
+        // Collect winner months that were NOT in qualified set
+        var winnerMissedMonths=[];
+        if(d.winner_results){
+            d.winner_results.forEach(function(w){
+                (w.months||[]).forEach(function(mo){
+                    if(!qualifiedSet[mo]&&winnerMissedMonths.indexOf(mo)===-1){
+                        winnerMissedMonths.push(mo);
+                    }
+                });
+            });
+        }
+
+        html+='<div class="card"><h3>🔥 Hot Months</h3><div class="hm-chips">';
+        d.top_months.forEach(function(m){html+='<span class="hm-chip hm-chip-click" onclick="filterByMonth(\''+m.month+'\')" style="cursor:pointer">'+m.month+' <strong>'+m.count+'</strong></span>'});
+        // Show winner's filtered-out months with distinct style
+        if(winnerMissedMonths.length>0){
+            winnerMissedMonths.forEach(function(mo){
+                html+='<span class="hm-chip" style="background:var(--err-g,#fef2f2);color:var(--err);border:1px dashed var(--err)" title="Winner appeared here but month filtered by Min Hits / Group">'+mo+' 🏆</span>';
+            });
+        }
+        html+='</div>';
+        // Hot Years — aggregate months by year (include winner months)
+        var yearCounts={};
+        d.top_months.forEach(function(m){
+            var yr=m.month.split('-')[0];
+            yearCounts[yr]=(yearCounts[yr]||0)+m.count;
+        });
+        winnerMissedMonths.forEach(function(mo){
+            var yr=mo.split('-')[0];
+            if(!yearCounts[yr])yearCounts[yr]=0;
+            yearCounts[yr]+=1; // count as 1 since we don't know exact count
+        });
+        var hotYears=Object.entries(yearCounts).sort(function(a,b){return b[1]-a[1]});
+        if(hotYears.length>0){
+            html+='<div style="margin-top:10px"><div style="font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:4px">📅 Hot Years</div><div class="hm-chips">';
+            hotYears.forEach(function(y){html+='<span class="hm-chip hm-chip-click" onclick="filterByYear(\''+y[0]+'\')" style="background:var(--pri-g);color:var(--pri);cursor:pointer">'+y[0]+' <strong>'+y[1]+'</strong></span>'});
+            html+='</div></div>';
+        }
+        html+='</div>';
+    }
+
+    // Candidates table
+    if(d.suggested_plays&&d.suggested_plays.length){
+        var winSet={};(d.target_winners||[]).forEach(function(w){winSet[w.actual]=true});
+        // Build set of selected seed normalized values
+        var seedNormSet={};
+        var seedNormList=[];
+        (d.seed_values||[]).forEach(function(v){var sorted=v.split('').sort().join('');seedNormSet[sorted]=true;seedNormList.push(sorted)});
+        (d.seed_actuals||[]).forEach(function(v){var clean=v.replace(/-/g,'');seedNormSet[clean]=true});
+        var seedCount=Object.keys(seedNormSet).length;
+
+        // Store data globally so checkbox can re-render
+        window._lastPlays=d.suggested_plays;
+        window._lastWinSet=winSet;
+        window._lastGrouping=d.grouping||'monthly';
+        // Store actual drawn winner values for 🔥 matching in play list
+        var winValSet={};
+        (d.target_winners||[]).forEach(function(w){if(w.value)winValSet[w.value]=true});
+        window._lastWinValSet=winValSet;
+        window._lastSeedNormSet=seedNormSet;
+        window._lastSeedCount=seedCount;
+
+        var suppressChecked=document.getElementById('suppressSeedsChk')?document.getElementById('suppressSeedsChk').checked:true;
+        var filteredPlays=suppressChecked?d.suggested_plays.filter(function(p){return !seedNormSet[p.candidate]}):d.suggested_plays;
+        var minTH=parseInt(document.getElementById('minTotalHits').value)||1;
+        if(minTH>1)filteredPlays=filteredPlays.filter(function(p){return p.total_appearances>=minTH});
+        var playTopN=parseInt(document.getElementById('playTopN').value)||0;
+        if(playTopN>0)filteredPlays=filteredPlays.slice(0,playTopN);
+        var topLimit=parseInt(document.getElementById('sugLimit').value)||50;
+        var topPlays=filteredPlays.slice(0,topLimit);
+
+        var playTopNLabel=playTopN>0?' · <span style="color:#e67e22;font-weight:600">Play Top-'+playTopN+'</span>':'';
+        html+='<div class="card" id="candidatesCard"><h3>🎯 Top Candidates <span style="font-size:.72rem;font-weight:400;color:var(--text3)" id="candidatesCount">('+topPlays.length+' of '+filteredPlays.length+' shown'+playTopNLabel+')</span></h3>';
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:.8rem"><input type="checkbox" id="suppressSeedsChk" checked onchange="toggleSuppressSeeds()"><label for="suppressSeedsChk" style="margin:0;cursor:pointer">Exclude seeds from candidates <span style="color:var(--text3);font-size:.72rem">('+seedCount+' seeds)</span></label></div>';
+        html+=renderCandidatesTable(topPlays,winSet);
+        html+='</div>';
+    }
+
+    // Add full candidate list container
+    html+='<div id="fullCandidateList"></div>';
+
+    area.innerHTML=html;
+
+    // Store ALL plays (not just top N) for full candidate list with filtering
+    // Use the filtered plays (seeds suppressed if checkbox checked)
+    if(d.suggested_plays){
+        var seedNormSet2={};
+        (d.seed_values||[]).forEach(function(v){var sorted=v.split('').sort().join('');seedNormSet2[sorted]=true});
+        (d.seed_actuals||[]).forEach(function(v){seedNormSet2[v.replace(/-/g,'')]=true});
+        var suppressChk=document.getElementById('suppressSeedsChk');
+        var suppress=suppressChk?suppressChk.checked:true;
+        var allFiltered=suppress?d.suggested_plays.filter(function(p){return !seedNormSet2[p.candidate]}):d.suggested_plays;
+        var minTH2=parseInt(document.getElementById('minTotalHits').value)||1;
+        if(minTH2>1)allFiltered=allFiltered.filter(function(p){return p.total_appearances>=minTH2});
+        var playTopN2=parseInt(document.getElementById('playTopN').value)||0;
+        if(playTopN2>0)allFiltered=allFiltered.slice(0,playTopN2);
+        window._allPlays=allFiltered;
+        window._lastWinSet=window._lastWinSet||{};
+        activeFilters=[];
+        updateFullCandidateList();
+    }
+}
+
+function renderCandidatesTable(plays,winSet){
+    var proxDays=parseInt(document.getElementById('proxDays').value)||2;
+    var lookFwd=parseInt(document.getElementById('lookForward').value)||0;
+    var isCluster=window._lastGrouping&&window._lastGrouping.startsWith('cluster');
+    var grpWord=isCluster?'Clusters':'Months';
+    var html='<div style="overflow-x:auto"><table class="sp-table"><thead><tr>';
+    html+='<th>Rank</th>';
+    html+='<th>PWs <span title="Past Winners — candidate numbers from hot historical periods" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:3px">?</span></th>';
+    html+='<th style="color:var(--warn)">'+grpWord+'</th>';
+    html+='<th>Hot '+grpWord+' / Actual Hits <span title="Hot '+grpWord.toLowerCase()+' and the actual drawn values (permutations) in each" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:3px">?</span></th>';
+    html+='<th>PW Seen <span title="Dates when this candidate was drawn in hot months. 🔥 = within ±'+proxDays+' days of a seed draw." style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:3px">?</span></th>';
+    if(lookFwd>0){
+        html+='<th>👁️ Forward <span title="Did this candidate appear within '+lookFwd+' days AFTER seed date? Validates prediction." style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--pri-g);color:var(--pri);font-size:.65rem;font-weight:700;cursor:help;margin-left:3px">?</span></th>';
+    }
+    html+='<th style="color:var(--pri)">Total Hits</th>';
+    html+='<th>DP Pairs</th>';
+    html+='<th>Result</th>';
+    html+='</tr></thead><tbody>';
+    var rank=0;
+    plays.forEach(function(p){
+        rank++;
+        var isW=winSet[p.candidate];
+        // Build Hot Months / Actual Hits — group draw values by month
+        var monthValues={};
+        (p.draw_dates||[]).forEach(function(dd){
+            if(!monthValues[dd.month])monthValues[dd.month]=[];
+            if(dd.value&&monthValues[dd.month].indexOf(dd.value)===-1)monthValues[dd.month].push(dd.value);
+        });
+        var hotMonthsHtml=(p.months||[]).map(function(mo){
+            var vals=monthValues[mo]||[];
+            var valsStr=vals.length>0?' <span style="color:var(--pri);font-weight:600;font-family:monospace">'+vals.join(', ')+'</span>':'';
+            return '<span style="white-space:nowrap">'+mo+valsStr+'</span>';
+        }).join(' ⏐ ');
+        var hotMonthsTitle=(p.months||[]).map(function(mo){
+            var vals=monthValues[mo]||[];
+            return mo+': '+(vals.length>0?vals.join(', '):'—');
+        }).join('  |  ');
+        // PW Seen with fire
+        var pwSeenHtml='';
+        if(p.draw_dates&&p.draw_dates.length>0){
+            var seenParts=[];
+            p.draw_dates.forEach(function(dd){
+                var hot=(dd.days_from_seed!==null&&dd.days_from_seed<=proxDays);
+                seenParts.push('<div style="white-space:nowrap">'+(hot?'🔥 ':'')+dd.date+'</div>');
+            });
+            pwSeenHtml=seenParts.join('');
+        }
+        var fwdHtml='';
+        if(lookFwd>0){
+            if(p.forward_dates&&p.forward_dates.length>0){
+                var fwdParts=[];
+                p.forward_dates.forEach(function(fd){
+                    var dayLabel=fd.days_after_seed===0?'same day':'+'+fd.days_after_seed+'d';
+                    fwdParts.push('✅'+fd.date.slice(5)+' ('+dayLabel+')');
+                });
+                fwdHtml='<span style="color:var(--ok);font-weight:600">'+fwdParts.join(', ')+'</span>';
+            }else{
+                fwdHtml='<span style="color:var(--text3)">—</span>';
+            }
+        }
+        html+='<tr class="'+(isW?'wr':'')+'">'+
+            '<td><span class="rb '+(rank<=3?'t3':'')+'">#'+rank+'</span></td>'+
+            '<td class="cand">'+p.candidate+(isW?' 🏆':'')+'</td>'+
+            '<td style="font-weight:700;color:var(--warn)">'+p.month_count+'</td>'+
+            '<td style="font-size:.66rem;color:var(--text3);max-width:300px" title="'+hotMonthsTitle+'">'+hotMonthsHtml+'</td>'+
+            '<td style="font-size:.66rem;color:var(--text2);max-width:130px"><div style="max-height:80px;overflow-y:auto;line-height:1.5">'+pwSeenHtml+'</div></td>'+
+            (lookFwd>0?'<td style="font-size:.66rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+fwdHtml+'</td>':'')+
+            '<td style="color:var(--pri);font-weight:600">'+p.total_appearances+'</td>'+
+            '<td style="font-family:monospace;font-size:.7rem;color:var(--text3)">'+(p.dp_shared_pairs||[]).slice(0,5).join(', ')+'</td>'+
+            '<td>'+(isW?'<span style="color:var(--ok);font-weight:700">✅ HIT</span>':'<span style="color:var(--text3)">—</span>')+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+    return html;
+}
+
+
+function toggleSuppressSeeds(){
+    if(!window._lastPlays)return;
+    var suppress=document.getElementById('suppressSeedsChk').checked;
+    var filtered=suppress?window._lastPlays.filter(function(p){return !window._lastSeedNormSet[p.candidate]}):window._lastPlays;
+    var minTH=parseInt(document.getElementById('minTotalHits').value)||1;
+    if(minTH>1)filtered=filtered.filter(function(p){return p.total_appearances>=minTH});
+    var playTopN=parseInt(document.getElementById('playTopN').value)||0;
+    if(playTopN>0)filtered=filtered.slice(0,playTopN);
+    var card=document.getElementById('candidatesCard');
+    // Update count
+    var playTopNLabel=playTopN>0?' · <span style="color:#e67e22;font-weight:600">Play Top-'+playTopN+'</span>':'';
+    document.getElementById('candidatesCount').innerHTML='('+filtered.length+' shown'+playTopNLabel+')';
+    // Re-render table only (keep header and checkbox)
+    var tableDiv=card.querySelector('.sp-table');
+    if(tableDiv)tableDiv.parentElement.outerHTML=renderCandidatesTable(filtered,window._lastWinSet);
+    // Also update full candidate list
+    window._allPlays=filtered;
+    if(typeof updateFullCandidateList==='function')updateFullCandidateList();
+}
+
+function sc(l,v,s,c){return'<div class="stat"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'}
+</script>
+</body>
+</html>

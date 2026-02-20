@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 RBTL Live Predictions</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .control-group label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .control-group select,
+        .control-group input {
+            padding: 10px 15px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 1rem;
+            min-width: 150px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(78, 205, 196, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+        }
+        
+        .btn-email {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            color: #fff;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4ecdc4;
+        }
+        
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        
+        /* Predictions Table */
+        .predictions-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .predictions-section h2 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .predictions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .predictions-table th {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+        
+        .predictions-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .predictions-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .rank-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            color: #1a1a2e;
+            text-align: center;
+            line-height: 30px;
+            font-weight: 700;
+        }
+        
+        .rank-badge.top3 {
+            background: linear-gradient(135deg, #f1c40f, #f39c12);
+        }
+        
+        .candidate {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .score {
+            color: #4ecdc4;
+            font-weight: 600;
+        }
+        
+        .pairs {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        
+        .hot-months {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .month-tag {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        
+        /* Email Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-content h3 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+        }
+        
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #16213e;
+            color: #fff;
+            margin-bottom: 15px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Hot Months Section */
+        .hot-months-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .hot-months-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .hot-month-card {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .hot-month-card .month {
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+        
+        .hot-month-card .count {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        /* Algorithm Info */
+        .algorithm-info {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        .algorithm-info strong {
+            color: #4ecdc4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 RBTL Live Predictions</h1>
+            <p>AI-Powered Lottery Number Predictions</p>
+        </div>
+        
+        <div class="algorithm-info">
+            <strong>Algorithm:</strong> RBTL + Hot Months + 3DP Matching | 
+            <strong>Backtest Results:</strong> 47.2% Top 3 Hit Rate (90-day test) | 
+            <strong>Method:</strong> Analyzes last 5 days, finds historical hot months, ranks by digit pair matches
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>State</label>
+                <select id="stateSelect">
+                    <option value="">Select State</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Game</label>
+                <select id="gameType">
+                    <option value="pick3">Pick 3</option>
+                    <option value="pick4" selected>Pick 4</option>
+                    <option value="pick5">Pick 5</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>DP Size</label>
+                <select id="dpSize">
+                    <option value="2">2DP</option>
+                    <option value="3" selected>3DP</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Lookback</label>
+                <select id="lookbackDays">
+                    <option value="3">3 days</option>
+                    <option value="5" selected>5 days</option>
+                    <option value="7">7 days</option>
+                </select>
+            </div>
+            
+            <div class="control-group" style="justify-content: flex-end;">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" id="generateBtn" onclick="generatePredictions()">
+                    🎯 Generate Predictions
+                </button>
+            </div>
+            
+            <div class="control-group" style="justify-content: flex-end;">
+                <label>&nbsp;</label>
+                <button class="btn btn-email" id="emailBtn" onclick="showEmailModal()" disabled>
+                    📧 Email Results
+                </button>
+            </div>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <div class="value" id="statLastDraw">-</div>
+                <div class="label">Last Draw Date</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statSeedCount">-</div>
+                <div class="label">Seed Draws</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statCandidates">-</div>
+                <div class="label">Hot Month Candidates</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="statPredictions">-</div>
+                <div class="label">Suggested Plays</div>
+            </div>
+        </div>
+        
+        <div class="hot-months-section" id="hotMonthsSection" style="display: none;">
+            <h2>🔥 Hot Months</h2>
+            <div class="hot-months-grid" id="hotMonthsGrid"></div>
+        </div>
+        
+        <div class="predictions-section" id="predictionsSection" style="display: none;">
+            <h2>🎯 Top Suggested Plays</h2>
+            <table class="predictions-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Play</th>
+                        <th>Score</th>
+                        <th>Seeds Matched</th>
+                        <th>DP Pairs</th>
+                        <th>Hot Months</th>
+                        <th>Sample Values</th>
+                    </tr>
+                </thead>
+                <tbody id="predictionsBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="loading" id="loadingDiv" style="display: none;">
+            ⏳ Generating predictions...
+        </div>
+    </div>
+    
+    <!-- Email Modal -->
+    <div class="modal" id="emailModal">
+        <div class="modal-content">
+            <h3>📧 Email Predictions</h3>
+            <input type="email" id="emailInput" placeholder="Enter your email address">
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="sendEmail()">Send</button>
+                <button class="btn btn-secondary" onclick="closeEmailModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'mongo_v2';
+        
+        let currentPredictions = null;
+        
+        function apiUrl(path) {
+            const sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStates();
+        });
+        
+        async function loadStates() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/prediction/${gameType}/states`));
+                const states = await res.json();
+                const select = document.getElementById('stateSelect');
+                select.innerHTML = '<option value="">Select State</option>' +
+                    states.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (e) {
+                console.error('Error loading states:', e);
+            }
+        }
+        
+        document.getElementById('gameType').addEventListener('change', loadStates);
+        
+        async function generatePredictions() {
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameType').value;
+            const dpSize = parseInt(document.getElementById('dpSize').value);
+            const lookbackDays = parseInt(document.getElementById('lookbackDays').value);
+            
+            if (!state) {
+                alert('Please select a state');
+                return;
+            }
+            
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+            
+            document.getElementById('loadingDiv').style.display = 'block';
+            document.getElementById('predictionsSection').style.display = 'none';
+            document.getElementById('hotMonthsSection').style.display = 'none';
+            document.getElementById('statsGrid').style.display = 'none';
+            
+            try {
+                const res = await fetch(apiUrl('/api/rbtl/live-predictions'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        state,
+                        game_type: gameType,
+                        dp_size: dpSize,
+                        lookback_days: lookbackDays,
+                        top_n: 20
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                currentPredictions = data;
+                displayPredictions(data);
+                document.getElementById('emailBtn').disabled = false;
+                
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎯 Generate Predictions';
+                document.getElementById('loadingDiv').style.display = 'none';
+            }
+        }
+        
+        function displayPredictions(data) {
+            // Stats
+            document.getElementById('statsGrid').style.display = 'grid';
+            document.getElementById('statLastDraw').textContent = data.last_draw_date;
+            document.getElementById('statSeedCount').textContent = data.seed_count;
+            document.getElementById('statCandidates').textContent = data.hot_month_candidate_count;
+            document.getElementById('statPredictions').textContent = data.suggested_plays_count;
+            
+            // Hot Months
+            document.getElementById('hotMonthsSection').style.display = 'block';
+            document.getElementById('hotMonthsGrid').innerHTML = data.hot_months.map(m => `
+                <div class="hot-month-card">
+                    <div class="month">${m.month}</div>
+                    <div class="count">${m.count} hits</div>
+                </div>
+            `).join('');
+            
+            // Predictions Table
+            document.getElementById('predictionsSection').style.display = 'block';
+            document.getElementById('predictionsBody').innerHTML = data.suggested_plays.map(play => {
+                const rankClass = play.rank <= 3 ? 'top3' : '';
+                const pairs = play.unique_pairs.slice(0, 4).join(', ');
+                const months = play.hot_months.slice(0, 2).join(', ');
+                const samples = play.sample_values.slice(0, 3).join(', ');
+                
+                return `
+                    <tr>
+                        <td><span class="rank-badge ${rankClass}">${play.rank}</span></td>
+                        <td class="candidate">${play.candidate}</td>
+                        <td class="score">${play.score}</td>
+                        <td>${play.seeds_matched}</td>
+                        <td class="pairs">${pairs}</td>
+                        <td>
+                            <div class="hot-months">
+                                ${play.hot_months.slice(0, 2).map(m => `<span class="month-tag">${m}</span>`).join('')}
+                            </div>
+                        </td>
+                        <td class="pairs">${samples}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function showEmailModal() {
+            document.getElementById('emailModal').classList.add('active');
+        }
+        
+        function closeEmailModal() {
+            document.getElementById('emailModal').classList.remove('active');
+        }
+        
+        async function sendEmail() {
+            const email = document.getElementById('emailInput').value;
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+            
+            const state = document.getElementById('stateSelect').value;
+            const gameType = document.getElementById('gameType').value;
+            const dpSize = parseInt(document.getElementById('dpSize').value);
+            
+            try {
+                const res = await fetch(apiUrl('/api/rbtl/email-predictions'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email,
+                        state,
+                        game_type: gameType,
+                        dp_size: dpSize
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.status === 'sent') {
+                    alert('Predictions sent to ' + email);
+                } else if (data.status === 'saved_to_file') {
+                    alert('Email not configured. Predictions saved to file:\n' + data.file);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+                
+                closeEmailModal();
+                
+            } catch (e) {
+                alert('Error sending email: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

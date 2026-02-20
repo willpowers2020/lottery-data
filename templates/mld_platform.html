@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyLottoData — Predictions Platform</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+:root {
+  --bg:#0f1117;--surface:#161922;--card:#1c1f2e;--border:#2a2d3e;--border-light:#363952;
+  --accent:#6366f1;--accent-light:#818cf8;--accent-glow:rgba(99,102,241,0.12);
+  --amber:#f59e0b;--amber-glow:rgba(245,158,11,0.12);
+  --green:#10b981;--green-glow:rgba(16,185,129,0.12);
+  --red:#ef4444;--cyan:#06b6d4;--orange:#f97316;
+  --text:#e8eaed;--text-sec:#9ca3af;--text-dim:#6b7280;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+select,input[type="date"],input[type="text"]{padding:5px 8px;border-radius:6px;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;outline:none;font-family:'Inter',sans-serif}
+select{cursor:pointer}input::placeholder{color:var(--text-dim)}button{font-family:'Inter',sans-serif;cursor:pointer}
+.mono{font-family:'JetBrains Mono',monospace}
+
+.top-nav{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:48px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:7px}
+.logo-icon{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-light));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff}
+.logo-text{font-size:15px;font-weight:800;letter-spacing:-0.3px}.logo-text span{color:var(--accent)}
+.nav-tabs{display:flex;gap:1px;margin-left:20px}
+.nav-tab{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:none;background:transparent;color:var(--text-dim);font-size:12px;font-weight:600}
+.nav-tab.active{background:var(--accent-glow);color:var(--accent-light)}.nav-tab:hover:not(.active){color:var(--text-sec)}
+.badge-pro{display:inline-flex;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;background:var(--amber-glow);border:1px solid rgba(245,158,11,0.3);color:var(--amber)}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff}
+.config-bar{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.config-group{display:flex;flex-direction:column;gap:3px}
+.config-label{font-size:9px;font-weight:600;color:var(--text-dim);letter-spacing:0.5px;text-transform:uppercase}
+.divider{width:1px;height:28px;background:var(--border)}
+.algo-trigger{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:var(--accent-glow);border:1px solid rgba(99,102,241,0.27);color:var(--text);font-size:13px;font-weight:600}
+.algo-dropdown{position:absolute;top:calc(100% + 4px);left:0;width:360px;max-height:500px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.5);z-index:200;padding:6px;display:none}
+.algo-dropdown.open{display:block}
+.algo-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;border:none;background:transparent;text-align:left;color:var(--text-sec);font-size:12px;font-weight:600}
+.algo-item.active{background:var(--accent-glow);color:var(--text)}.algo-item.disabled{opacity:0.4;cursor:not-allowed}
+.algo-profiles{margin-left:20px;border-left:2px solid rgba(99,102,241,0.2);padding-left:12px;margin-bottom:4px}
+.profile-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:8px;border:none;background:transparent;text-align:left}
+.profile-item.active{background:rgba(99,102,241,0.08)}
+.profile-tag{font-size:8px;font-weight:700;color:var(--amber);background:var(--amber-glow);padding:2px 6px;border-radius:4px;letter-spacing:0.5px;margin-left:auto}
+.filter-panel{background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;transition:max-height 0.3s;max-height:0;flex-shrink:0}.filter-panel.open{max-height:200px}
+.filter-inner{display:flex;gap:16px;padding:12px 20px;flex-wrap:wrap;align-items:flex-end}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);color:var(--text-dim);cursor:pointer}
+.chip.active{background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.27);color:var(--cyan)}
+.chip.green{background:var(--green-glow);border-color:rgba(16,185,129,0.27);color:var(--green)}
+.chip.accent{background:var(--accent-glow);border-color:rgba(99,102,241,0.27);color:var(--accent-light)}
+.filter-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-sec);font-size:11px;font-weight:600}
+.filter-btn.active{border-color:rgba(99,102,241,0.27);background:var(--accent-glow);color:var(--accent-light)}
+.run-btn{padding:7px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent-light));color:#fff;font-size:12px;font-weight:700;margin-left:auto}
+.run-btn.backtest{background:linear-gradient(135deg,var(--orange),#ea580c)}.run-btn:disabled{opacity:0.5;cursor:not-allowed}
+.main-layout{display:flex;flex:1;overflow:hidden}
+.main-content{flex:1;padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.stats-row{display:flex;gap:10px;flex-wrap:wrap}
+.stat-card{padding:12px 14px;border-radius:10px;background:var(--card);border:1px solid var(--border);flex:1 1 0;min-width:100px}
+.stat-value{font-size:20px;font-weight:800;letter-spacing:-0.5px}.stat-label{font-size:10px;color:var(--text-sec);margin-top:2px}.stat-sub{font-size:9px;color:var(--text-dim);margin-top:1px}
+.seeds-banner{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:8px;background:var(--amber-glow);border:1px solid rgba(245,158,11,0.2);flex-wrap:wrap}
+.hm-table{border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--card)}
+.hm-header,.hm-row{display:grid;grid-template-columns:32px 50px 80px 44px 1fr 50px;padding:8px 14px;align-items:center}
+.hm-header{background:var(--surface);font-size:9px;font-weight:700;color:var(--text-dim);letter-spacing:0.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.hm-row{border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;transition:background 0.1s}.hm-row:hover{background:rgba(255,255,255,0.02)}.hm-row.selected{background:rgba(99,102,241,0.04)}
+.hm-row input[type="checkbox"]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
+.hm-expand{padding:10px 14px 10px 46px;background:rgba(99,102,241,0.03);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-sec);line-height:2;font-family:'JetBrains Mono',monospace;word-break:break-all}
+.candidates-box{padding:14px;border-radius:10px;background:var(--card);border:1px solid var(--border)}
+.candidates-grid{display:flex;flex-wrap:wrap;gap:3px;max-height:280px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px}
+.cand-num{padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid transparent;cursor:pointer}
+.cand-num.winner{color:var(--green);font-weight:800;background:var(--green-glow);border-color:rgba(16,185,129,0.27)}
+.cand-num.seed{color:var(--amber);font-weight:800;background:var(--amber-glow);border-color:rgba(245,158,11,0.27)}
+.wt-table{border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--card)}
+.wt-head-wrap{padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.wt-cols,.wt-row{display:grid;grid-template-columns:90px 55px 75px 65px 55px 90px 1fr;padding:8px 14px;align-items:center;font-size:12px}
+.wt-cols{font-size:9px;font-weight:700;color:var(--text-dim);letter-spacing:0.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.wt-row{border-bottom:1px solid var(--border)}.wt-row.found{background:rgba(16,185,129,0.05)}
+.sp-table{border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--card)}
+.sp-cols,.sp-row{display:grid;grid-template-columns:50px 80px 55px 65px 1fr 70px;padding:8px 14px;align-items:center;font-size:12px}
+.sp-cols{font-size:9px;font-weight:700;color:var(--text-dim);letter-spacing:0.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sp-row{border-bottom:1px solid var(--border)}.sp-row.winner{background:rgba(16,185,129,0.08)}
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.04);color:var(--text-sec);border:1px solid transparent;padding:0 4px}
+.rank-badge.top3{background:var(--accent-glow);color:var(--accent-light);border-color:rgba(99,102,241,0.27)}
+.show-more{padding:10px;text-align:center;font-size:11px;color:var(--accent);font-weight:600;cursor:pointer}
+.cart-panel{width:250px;background:var(--surface);border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;overflow-y:auto}
+.cart-panel.closed{width:0;padding:0;border:none;overflow:hidden}
+.cart-box{padding:10px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:11px}
+.cart-row{display:flex;justify-content:space-between;margin-bottom:6px}
+.export-btn{padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--green),#059669);color:#fff;font-size:12px;font-weight:700;margin-top:auto;width:100%}
+.copy-btn{padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-sec);font-size:10px;font-weight:600}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.error-box{padding:12px 16px;border-radius:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<header class="top-nav">
+  <div style="display:flex;align-items:center">
+    <div class="logo"><div class="logo-icon">M</div><div class="logo-text">My<span>Lotto</span>Data</div></div>
+    <nav class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" onclick="switchPage('predict')">🎯 Predictions</button>
+      <button class="nav-tab" onclick="switchPage('backtest')">🧪 Backtest</button>
+      <button class="nav-tab" onclick="switchPage('results')">📊 Results</button>
+      <button class="nav-tab" onclick="switchPage('reports')">📋 Reports</button>
+    </nav>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px"><span class="badge-pro">PRO</span><div class="avatar">WP</div></div>
+</header>
+
+<!-- CONFIG BAR -->
+<div class="config-bar" id="configBar">
+  <div style="position:relative" id="algoWrap">
+    <button class="algo-trigger" onclick="toggleAlgoDD()">
+      <span id="algoIcon">🔥</span><span id="algoName">RBTL</span>
+      <span style="font-size:10px;color:var(--accent-light)" id="profileLabel">› Sniper</span>
+      <span style="margin-left:8px;font-size:10px;color:var(--text-dim)">▼</span>
+    </button>
+    <div class="algo-dropdown" id="algoDD"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="config-group"><span class="config-label">State</span><select id="cfgState"><option>Florida</option><option>Georgia</option><option>Texas</option><option>New York</option></select></div>
+  <div class="config-group"><span class="config-label">Game</span><select id="cfgGame"><option value="pick4">Pick 4</option><option value="pick3">Pick 3</option><option value="pick5">Pick 5</option></select></div>
+  <div class="config-group"><span class="config-label">Draw Time</span><select id="cfgTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening">Evening</option></select></div>
+  <div class="config-group" id="grpSeedDate"><span class="config-label">Seed Date</span><input type="date" id="cfgSeedDate" value="2019-09-14"></div>
+  <div class="config-group" id="grpTargetDate" style="display:none"><span class="config-label">Target Date</span><input type="date" id="cfgTargetDate" value="2019-09-15"></div>
+  <div class="config-group" id="grpTargetTOD" style="display:none"><span class="config-label">Target TOD</span><select id="cfgTargetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
+  <button class="filter-btn" id="filterToggle" onclick="toggleFilters()">⚙️ Filters ▼</button>
+  <button class="run-btn" id="runBtn" onclick="runAnalysis()">▶ Run</button>
+</div>
+
+<!-- FILTER PANEL -->
+<div class="filter-panel" id="filterPanel">
+  <div class="filter-inner">
+    <div class="config-group"><span class="config-label">Min Count</span><select id="fMinCount"><option value="1">≥ 1</option><option value="2">≥ 2</option><option value="3" selected>≥ 3</option><option value="4">≥ 4</option><option value="5">≥ 5</option></select></div>
+    <div class="config-group"><span class="config-label">DP Filter</span><select id="fDPSize"><option value="0">None</option><option value="2" selected>2DP</option><option value="3">3DP</option></select></div>
+    <div class="config-group"><span class="config-label">DP Seed</span><select id="fDPSeedMode"><option value="last" selected>Last seed</option><option value="all">All seeds</option></select></div>
+    <div class="config-group"><span class="config-label">Lookback</span><select id="fLookback"><option value="-1">Mid&Eve (-1)</option><option value="0" selected>Single (0)</option><option value="3">3 days</option><option value="5">5 days</option><option value="7">7 days</option><option value="14">14 days</option></select></div>
+    <div class="config-group"><span class="config-label">Show Top</span><select id="fSugLimit"><option value="30">30</option><option value="50" selected>50</option><option value="100">100</option><option value="250">250</option><option value="9999">All</option></select></div>
+    <div class="config-group"><span class="config-label">Top Months</span><select id="fTopMonths"><option value="0" selected>All qualifying</option><option value="5">Top 5</option><option value="10">Top 10</option><option value="20">Top 20</option></select></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-layout">
+  <div class="main-content" id="mainContent">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:8px;color:var(--text-dim)" id="emptyState">
+      <div style="font-size:40px">🎯</div>
+      <div style="font-size:14px;font-weight:600">Select parameters and click Run</div>
+      <div style="font-size:12px">Connect to your Flask API at the configured URL</div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <span class="config-label">API Base URL</span>
+        <input type="text" id="apiBaseUrl" value="http://localhost:5001" style="width:240px" placeholder="http://localhost:5001">
+      </div>
+    </div>
+  </div>
+  <div class="cart-panel" id="cartPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:700">🛒 Cart</span><button style="background:none;border:none;color:var(--text-dim);font-size:14px" onclick="toggleCart()">✕</button></div>
+    <div class="cart-box" id="cartBox">
+      <div class="cart-row"><span style="color:var(--text-dim)">Candidates</span><span style="color:var(--text);font-weight:600" id="cartCount">0</span></div>
+      <div class="cart-row" style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><span style="font-weight:700">Est. Cost</span><span style="font-size:14px;font-weight:800;color:var(--amber)" id="cartCost">$0</span></div>
+    </div>
+    <div class="config-group"><span class="config-label">Play Type</span><select id="cartPlayType" onchange="updateCart()"><option value="box">Box ($0.50)</option><option value="combo">Combo</option><option value="straight">Straight ($0.50)</option></select></div>
+    <button class="export-btn" onclick="exportPlays()">📤 Export Play List</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentPage = 'predict';
+let currentAlgo = 'rbtl';
+let currentProfile = 'sniper';
+let lastData = null; // Store last API response
+let allCandidates = []; // All candidate actuals from last run
+let cartItems = [];
+
+const PROFILES = {
+  sniper:  { icon:'🎯', name:'Sniper',    lookback:0,  minCount:1, dpSize:2, dpSeed:'last',  desc:'Single seed + 2DP', tag:'EVENING' },
+  dual:    { icon:'🔄', name:'Dual Seed',  lookback:-1, minCount:2, dpSize:0, dpSeed:'last',  desc:'Mid & Eve, co-occurrence', tag:'MIDDAY' },
+  full:    { icon:'📊', name:'Full RBTL',  lookback:5,  minCount:3, dpSize:2, dpSeed:'last',  desc:'5-day lookback + 2DP', tag:'COVERAGE' },
+  custom:  { icon:'⚙️', name:'Custom',     lookback:null, minCount:null, dpSize:null, dpSeed:null, desc:'Manual config' },
+};
+
+const ALGOS = [
+  { id:'rbtl', name:'RBTL (Hots)', icon:'🔥', profiles:Object.keys(PROFILES) },
+  { id:'dpap', name:'DP-AP Efficacy', icon:'🔗', profiles:[] },
+  { id:'consec_sums', name:'Consecutive Sums', icon:'➕', soon:true },
+  { id:'consec_td', name:'Consecutive TDs', icon:'📈', soon:true },
+  { id:'delta_sums', name:'Consecutive ΔSumsTD', icon:'Δ', soon:true },
+  { id:'consec_pairs', name:'Consecutive Pairs', icon:'🔢', soon:true },
+  { id:'sums_ranges', name:'Sums Ranges', icon:'📐', soon:true },
+  { id:'td_ranges', name:'Times Drawn Ranges', icon:'⏱️', soon:true },
+  { id:'lts45', name:'LTS45', icon:'🕐', soon:true },
+  { id:'top_digits', name:'Top Digits', icon:'🏆', soon:true },
+];
+
+// ══════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════
+function apiUrl(path) {
+  // If served by Flask, use same origin. If opened as file://, use the input field.
+  if (window.location.protocol === 'file:') {
+    const base = document.getElementById('apiBaseUrl')?.value || 'http://localhost:5001';
+    return base.replace(/\/+$/, '') + path;
+  }
+  return path; // Same-origin when served by Flask
+}
+
+// ══════════════════════════════════════════════
+// PAGE SWITCHING
+// ══════════════════════════════════════════════
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-tab').forEach((t, i) => {
+    const pages = ['predict','backtest','results','reports'];
+    t.classList.toggle('active', pages[i] === page);
+  });
+
+  const isBacktest = page === 'backtest';
+  const isPredOrBT = page === 'predict' || page === 'backtest';
+
+  document.getElementById('configBar').style.display = isPredOrBT ? 'flex' : 'none';
+  document.getElementById('filterPanel').style.display = isPredOrBT ? '' : 'none';
+  document.getElementById('cartPanel').className = isPredOrBT ? 'cart-panel' : 'cart-panel closed';
+
+  document.getElementById('grpSeedDate').style.display = isBacktest ? 'none' : '';
+  document.getElementById('grpTargetDate').style.display = isBacktest ? '' : 'none';
+  document.getElementById('grpTargetTOD').style.display = isBacktest ? '' : 'none';
+
+  const btn = document.getElementById('runBtn');
+  btn.textContent = isBacktest ? '🧪 Backtest' : '▶ Run';
+  btn.className = isBacktest ? 'run-btn backtest' : 'run-btn';
+
+  if (!isPredOrBT) {
+    document.getElementById('mainContent').innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:8px;color:var(--text-dim)"><div style="font-size:40px">${page==='results'?'📊':'📋'}</div><div style="font-size:14px;font-weight:600">${page==='results'?'Game Results':'Reports'}</div><div style="font-size:12px">Coming soon</div></div>`;
+  } else if (!lastData) {
+    showEmpty();
+  }
+}
+
+// ══════════════════════════════════════════════
+// ALGORITHM DROPDOWN
+// ══════════════════════════════════════════════
+let algoExpanded = 'rbtl';
+
+function buildAlgoDD() {
+  const dd = document.getElementById('algoDD');
+  let html = '';
+  for (const a of ALGOS) {
+    const isActive = currentAlgo === a.id;
+    const isExp = algoExpanded === a.id && a.profiles?.length;
+    html += `<button class="algo-item ${isActive?'active':''} ${a.soon?'disabled':''}" onclick="${a.soon?'':'selectAlgo(\''+a.id+'\')'}">
+      <span style="font-size:15px;width:22px;text-align:center">${a.icon}</span>
+      <span style="flex:1">${a.name}</span>
+      ${a.soon?'<span style="font-size:9px;color:var(--text-dim);background:var(--card);padding:2px 8px;border-radius:4px">Soon</span>':''}
+      ${a.profiles?.length?`<span style="font-size:10px;color:var(--text-dim);transform:rotate(${isExp?180:0}deg);transition:transform 0.2s">▼</span>`:''}
+    </button>`;
+    if (isExp) {
+      html += '<div class="algo-profiles">';
+      for (const pid of a.profiles) {
+        const p = PROFILES[pid];
+        html += `<button class="profile-item ${currentProfile===pid?'active':''}" onclick="selectProfile('${pid}')">
+          <span style="font-size:13px">${p.icon}</span>
+          <div style="flex:1"><div style="font-size:12px;font-weight:600;color:${currentProfile===pid?'var(--text)':'var(--text-sec)'}">${p.name}</div><div style="font-size:10px;color:var(--text-dim)">${p.desc}</div></div>
+          ${p.tag?`<span class="profile-tag">${p.tag}</span>`:''}
+        </button>`;
+      }
+      html += '</div>';
+    }
+  }
+  dd.innerHTML = html;
+}
+
+function toggleAlgoDD() {
+  const dd = document.getElementById('algoDD');
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) buildAlgoDD();
+}
+
+function selectAlgo(id) {
+  const a = ALGOS.find(x => x.id === id);
+  currentAlgo = id;
+  if (a.profiles?.length) {
+    algoExpanded = algoExpanded === id ? null : id;
+    buildAlgoDD();
+  } else {
+    currentProfile = null;
+    document.getElementById('algoDD').classList.remove('open');
+  }
+  updateAlgoLabel();
+}
+
+function selectProfile(pid) {
+  currentProfile = pid;
+  document.getElementById('algoDD').classList.remove('open');
+  updateAlgoLabel();
+  applyProfile(pid);
+}
+
+function updateAlgoLabel() {
+  const a = ALGOS.find(x => x.id === currentAlgo);
+  document.getElementById('algoIcon').textContent = a.icon;
+  document.getElementById('algoName').textContent = a.name;
+  const pl = document.getElementById('profileLabel');
+  if (currentProfile && PROFILES[currentProfile]) {
+    pl.textContent = '› ' + PROFILES[currentProfile].name;
+    pl.style.display = '';
+  } else {
+    pl.style.display = 'none';
+  }
+}
+
+function applyProfile(pid) {
+  const p = PROFILES[pid];
+  if (!p || pid === 'custom') return;
+  if (p.lookback !== null) document.getElementById('fLookback').value = p.lookback;
+  if (p.minCount !== null) document.getElementById('fMinCount').value = p.minCount;
+  if (p.dpSize !== null) document.getElementById('fDPSize').value = p.dpSize;
+  if (p.dpSeed !== null) document.getElementById('fDPSeedMode').value = p.dpSeed;
+}
+
+// Close dropdown on outside click
+document.addEventListener('mousedown', e => {
+  const w = document.getElementById('algoWrap');
+  if (!w.contains(e.target)) document.getElementById('algoDD').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+// FILTERS
+// ══════════════════════════════════════════════
+function toggleFilters() {
+  const p = document.getElementById('filterPanel');
+  const b = document.getElementById('filterToggle');
+  p.classList.toggle('open');
+  b.classList.toggle('active');
+  b.textContent = p.classList.contains('open') ? '⚙️ Filters ▲' : '⚙️ Filters ▼';
+}
+
+function toggleCart() {
+  document.getElementById('cartPanel').classList.toggle('closed');
+}
+
+// ══════════════════════════════════════════════
+// RUN ANALYSIS
+// ══════════════════════════════════════════════
+async function runAnalysis() {
+  const btn = document.getElementById('runBtn');
+  const mc = document.getElementById('mainContent');
+  btn.disabled = true;
+  btn.textContent = '⏳ Running...';
+  mc.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px"><div class="spinner"></div><div style="font-size:13px;color:var(--text-sec)">Querying database...</div></div>';
+
+  const state = document.getElementById('cfgState').value;
+  const gameType = document.getElementById('cfgGame').value;
+  const lookback = parseInt(document.getElementById('fLookback').value);
+  const minCount = parseInt(document.getElementById('fMinCount').value);
+  const dpSize = parseInt(document.getElementById('fDPSize').value);
+  const dpSeedMode = document.getElementById('fDPSeedMode').value;
+  const sugLimit = parseInt(document.getElementById('fSugLimit').value);
+  const topMonths = parseInt(document.getElementById('fTopMonths').value);
+
+  let targetDate, targetTod;
+  if (currentPage === 'backtest') {
+    targetDate = document.getElementById('cfgTargetDate').value;
+    targetTod = document.getElementById('cfgTargetTOD').value;
+  } else {
+    // For predictions, the seed date IS the target date (predict what comes after)
+    targetDate = document.getElementById('cfgSeedDate').value;
+    targetTod = document.getElementById('cfgTOD').value;
+  }
+
+  const body = {
+    state, game_type: gameType,
+    target_date: targetDate,
+    target_tod: targetTod,
+    lookback_days: lookback,
+    min_count: minCount,
+    dp_size: dpSize,
+    dp_seed_mode: dpSeedMode,
+    suggested_limit: sugLimit,
+    top_n_clusters: topMonths,
+    include_same_day: true,
+  };
+
+  try {
+    const res = await fetch(apiUrl('/api/rbtl/backtest-v2'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.error) {
+      mc.innerHTML = `<div class="error-box">❌ ${data.error}</div>`;
+      return;
+    }
+    lastData = data;
+    renderResults(data);
+  } catch (e) {
+    mc.innerHTML = `<div class="error-box">❌ Connection failed: ${e.message}<br><br>Make sure your Flask server is running at <strong>${apiUrl('')}</strong> with CORS enabled.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = currentPage === 'backtest' ? '🧪 Backtest' : '▶ Run';
+  }
+}
+
+// ══════════════════════════════════════════════
+// RENDER RESULTS
+// ══════════════════════════════════════════════
+function renderResults(d) {
+  const mc = document.getElementById('mainContent');
+  const isBacktest = currentPage === 'backtest';
+  let html = '';
+
+  // ── Stats Row ──
+  html += '<div class="stats-row">';
+  html += statCard('Seeds', d.seed_count, d.seed_values?.join(', '), 'var(--accent)');
+  if (isBacktest) {
+    html += statCard('Hit Rate', d.hit_rate + '%', `${d.winners_found}/${d.target_winner_count} found`, d.hit_rate > 0 ? 'var(--green)' : 'var(--red)');
+  }
+  html += statCard('Hot Months', d.selected_month_count, `of ${d.total_hot_months} total (≥${d.min_count})`, 'var(--amber)');
+  html += statCard('Candidates', d.total_candidates, d.dp_filter?.dp_size > 0 ? `Pre-DP: ${d.total_candidates_pre_dp}` : 'No DP filter', 'var(--green)');
+  html += statCard('Lookback', d.lookback_mode?.replace('_',' '), d.lookback_period?.substring(0,40), 'var(--text-sec)');
+  html += '</div>';
+
+  // ── Seeds Banner ──
+  html += '<div class="seeds-banner">';
+  html += '<span style="font-size:12px">🌱</span><span style="font-size:11px;font-weight:600;color:var(--amber)">Seeds:</span>';
+  for (const sv of d.seed_values || []) {
+    html += `<span class="mono" style="font-size:13px;font-weight:800;letter-spacing:2px">${sv}</span>`;
+  }
+  html += `<span style="font-size:10px;color:var(--text-dim);margin-left:auto">${d.lookback_period || ''}</span>`;
+  html += '</div>';
+
+  // ── Winner Results (backtest) ──
+  if (isBacktest && d.winner_results?.length) {
+    html += '<div class="wt-table">';
+    html += `<div class="wt-head-wrap"><span class="section-title">🧪 Target Winners</span><span style="font-size:10px;color:var(--text-dim)">${d.target_date} ${d.target_tod || 'all'}</span></div>`;
+    html += '<div class="wt-cols"><span>Date</span><span>TOD</span><span>Winner</span><span>Actual</span><span>Found</span><span>Method</span><span>Rank</span></div>';
+    for (const w of d.winner_results) {
+      const found = w.found_in_candidates;
+      html += `<div class="wt-row ${found?'found':''}">
+        <span style="color:var(--text-sec)">${d.target_date}</span>
+        <span class="chip ${w.target_tod?.toLowerCase().includes('mid')?'active':''}" style="font-size:10px">${w.target_tod||'?'}</span>
+        <span class="mono" style="font-weight:800;letter-spacing:2px;color:${found?'var(--green)':'var(--text)'}">${w.target_value}</span>
+        <span class="mono" style="font-size:11px;color:var(--text-dim)">${w.target_actual}</span>
+        <span>${found?'✅':'❌'}</span>
+        <span style="font-size:11px;color:${found?'var(--green)':'var(--text-dim)'}">${w.dp_shared_pairs?.length ? 'DP: '+w.dp_shared_pairs.slice(0,3).join(',') : (found?'In candidates':'—')}</span>
+        <span style="font-size:11px;color:${w.rank?'var(--amber)':'var(--text-dim)'};font-weight:${w.rank?700:400}">${w.rank ? '#'+w.rank+' of '+w.total_candidates : (w.filtered_by_dp?'Filtered by DP':'—')}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  // ── Hot Months ──
+  if (d.top_months?.length) {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center"><span class="section-title">🔥 Hot Months</span><div style="display:flex;gap:4px"><span class="chip accent">${d.selected_month_count} selected</span></div></div>`;
+    html += '<div class="hm-table"><div class="hm-header"><span></span><span>Year</span><span>Month</span><span>Cnt</span><span>Seeds Found</span><span>Draws</span></div>';
+
+    // Build seed actual set for highlighting
+    const seedActSet = new Set(d.seed_actuals || []);
+    const winnerActSet = new Set((d.target_winners || []).map(w => w.actual));
+
+    for (let i = 0; i < d.top_months.length; i++) {
+      const m = d.top_months[i];
+      const year = m.month.substring(0, 4);
+      html += `<div class="hm-row selected" onclick="toggleMonthExpand(${i})">
+        <input type="checkbox" checked>
+        <span style="color:var(--text-dim)">${year}</span>
+        <span style="font-weight:600">${m.month} <span style="font-size:9px;color:var(--text-dim)">▼</span></span>
+        <span style="font-weight:800;color:${m.count>=3?'var(--amber)':'var(--text-dim)'}">${m.count}</span>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">`;
+      for (const iv of m.input_values || []) {
+        const isSeed = seedActSet.has(iv.split('').sort().join(''));
+        html += `<span class="mono" style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;${isSeed?'color:var(--green);background:var(--green-glow)':'color:var(--text);background:rgba(255,255,255,0.05)'}">${iv}</span>`;
+      }
+      html += `</div><span style="color:var(--text-sec)">${m.total_draws||'?'}</span></div>`;
+
+      // Expandable: repeated values
+      html += `<div class="hm-expand" id="hmExpand${i}" style="display:none">`;
+      if (m.repeated_values?.length) {
+        for (const rv of m.repeated_values) {
+          const rvSorted = rv.split('').sort().join('');
+          const isW = winnerActSet.has(rvSorted);
+          const isS = seedActSet.has(rvSorted);
+          html += `<span style="${isW?'color:var(--green);font-weight:800;background:var(--green-glow);padding:1px 4px;border-radius:3px;':isS?'color:var(--amber);font-weight:800;background:var(--amber-glow);padding:1px 4px;border-radius:3px;':''}margin-right:3px">${rv} </span>`;
+        }
+      } else {
+        html += '<span style="color:var(--text-dim);font-style:italic">No repeated values (try reducing min count)</span>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // ── Suggested Plays Table ──
+  if (d.suggested_plays?.length) {
+    const winnerActSet = new Set((d.target_winners || []).map(w => w.actual));
+    const seedActSet = new Set(d.seed_actuals || []);
+
+    html += '<div class="sp-table">';
+    html += `<div class="wt-head-wrap"><span class="section-title">🎯 Ranked Candidates</span><span class="chip green">${d.total_candidates} total</span></div>`;
+    html += '<div class="sp-cols"><span>Rank</span><span>Number</span><span>Months</span><span>Apps</span><span>DP Pairs</span><span>Winner</span></div>';
+
+    for (const p of d.suggested_plays) {
+      const isW = winnerActSet.has(p.candidate);
+      const isS = p.is_seed;
+      html += `<div class="sp-row ${isW?'winner':''}">
+        <span class="rank-badge ${p.rank<=3?'top3':''}">#${p.rank}</span>
+        <span class="mono" style="font-weight:800;letter-spacing:2px;color:${isW?'var(--green)':isS?'var(--amber)':'var(--text)'}">
+          ${p.candidate}${isW?' 🏆':''}${isS?' 🌱':''}
+        </span>
+        <span style="font-weight:600;color:var(--amber)">${p.month_count}</span>
+        <span style="color:var(--text-sec)">${p.total_appearances}</span>
+        <span class="mono" style="font-size:10px;color:var(--text-dim)">${(p.dp_shared_pairs||[]).slice(0,5).join(', ')}</span>
+        <span>${isW?'<span style="color:var(--green);font-weight:700">✅ HIT</span>':'<span style="color:var(--text-dim)">—</span>'}</span>
+      </div>`;
+    }
+
+    if (d.total_candidates > d.suggested_plays.length) {
+      html += `<div class="show-more" onclick="loadMore()">Show all ${d.total_candidates} candidates ▼</div>`;
+    }
+    html += '</div>';
+  }
+
+  // ── DP Filter Info ──
+  if (d.dp_filter?.dp_size > 0) {
+    html += `<div style="padding:10px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:11px;color:var(--text-sec)">
+      <strong style="color:var(--text)">DP Filter Applied:</strong> ${d.dp_filter.dp_size}DP on ${d.dp_filter.dp_seed_mode} seed (${d.dp_filter.dp_seed}) — 
+      ${d.dp_filter.candidates_before_dp} → ${d.dp_filter.candidates_after_dp} candidates (${d.dp_filter.filtered_out} filtered out)
+      <br><span class="mono" style="font-size:10px">Pairs: ${(d.dp_filter.dp_pairs||[]).join(', ')}</span>
+    </div>`;
+  }
+
+  mc.innerHTML = html;
+
+  // Update cart
+  allCandidates = (d.suggested_plays || []).map(p => p.candidate);
+  updateCart();
+}
+
+function statCard(label, value, sub, color) {
+  return `<div class="stat-card"><div class="stat-value" style="color:${color}">${value}</div><div class="stat-label">${label}</div>${sub?`<div class="stat-sub">${sub}</div>`:''}</div>`;
+}
+
+function showEmpty() {
+  document.getElementById('mainContent').innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:8px;color:var(--text-dim)">
+    <div style="font-size:40px">🎯</div><div style="font-size:14px;font-weight:600">Select parameters and click Run</div>
+    <div style="font-size:12px">Connect to your Flask API</div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+      <span class="config-label">API Base URL</span>
+      <input type="text" id="apiBaseUrl" value="${document.getElementById('apiBaseUrl')?.value||'http://localhost:5001'}" style="width:240px" placeholder="http://localhost:5001">
+    </div></div>`;
+}
+
+// ══════════════════════════════════════════════
+// INTERACTIONS
+// ══════════════════════════════════════════════
+function toggleMonthExpand(i) {
+  const el = document.getElementById('hmExpand' + i);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function updateCart() {
+  const count = allCandidates.length;
+  document.getElementById('cartCount').textContent = count;
+  // Rough estimate: assume 50% singles ($1 combo24), 40% doubles ($0.50 combo12), 10% other ($0.50)
+  const estCost = Math.round(count * 0.5 * 1 + count * 0.4 * 0.5 + count * 0.1 * 0.5);
+  document.getElementById('cartCost').textContent = '$' + estCost.toFixed(0);
+}
+
+function exportPlays() {
+  if (!allCandidates.length) { alert('No candidates to export. Run analysis first.'); return; }
+  const text = allCandidates.join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `plays_${document.getElementById('cfgState').value}_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function loadMore() {
+  if (!lastData) return;
+  // Re-run with higher limit
+  document.getElementById('fSugLimit').value = '9999';
+  runAnalysis();
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+applyProfile('sniper');
+buildAlgoDD();
+updateAlgoLabel();
+</script>
+</body>
+</html>

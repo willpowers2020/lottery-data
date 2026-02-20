@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Consecutive Draws - MyLottoData</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        /* Top Control Bar */
+        .control-bar {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .control-bar h1 {
+            font-size: 1.1rem;
+            color: #1a73e8;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .control-group label {
+            font-size: 0.8rem;
+            color: #666;
+            white-space: nowrap;
+        }
+        .control-group select,
+        .control-group input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            background: #fff;
+        }
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+        .control-group select[multiple] {
+            height: 32px;
+            min-width: 120px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn:hover { background: #1557b0; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .btn-secondary:hover { background: #e8e8e8; }
+        
+        /* Main Content */
+        .main-content {
+            padding: 15px 20px;
+        }
+        
+        /* Past Winners - Compact */
+        .past-winners {
+            background: #fff;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .past-winners h3 {
+            color: #1a73e8;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .winners-list {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #333;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .winners-list span {
+            padding: 2px 6px;
+            background: #f0f4f8;
+            border-radius: 3px;
+        }
+        .winners-list span.highlight {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Options Row */
+        .options-row {
+            background: #fff;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .options-row label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .options-row select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        /* Filter Builder - Compact Horizontal */
+        .filter-builder {
+            background: #fff;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .filter-header h3 {
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .filter-conditions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 6px 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #e8e8e8;
+        }
+        .filter-row select,
+        .filter-row input {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .filter-row .field-select { width: 110px; }
+        .filter-row .operator-select { width: 120px; }
+        .filter-row .value-input { width: 100px; }
+        .filter-row .logic-select { width: 65px; }
+        .filter-row .remove-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: #ffebee;
+            color: #d32f2f;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .filter-row .remove-btn:hover { background: #d32f2f; color: #fff; }
+        .filter-footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .filter-summary {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .no-conditions {
+            text-align: center;
+            padding: 10px;
+            color: #999;
+            font-size: 0.85rem;
+        }
+        
+        /* Data Table - Full Width */
+        .table-container {
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .table-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-header h3 {
+            font-size: 0.95rem;
+            color: #333;
+        }
+        .table-stats {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: calc(100vh - 350px);
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        th {
+            background: #f8f9fa;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.75rem;
+        }
+        th:hover { background: #e9ecef; }
+        td {
+            padding: 6px;
+            border-bottom: 1px solid #f0f0f0;
+            white-space: nowrap;
+        }
+        tr:hover { background: #f8f9fa; }
+        .value-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        .highlight-cell {
+            background: #ffebee;
+            color: #c62828;
+            font-weight: 600;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal h3 { color: #d32f2f; margin-bottom: 10px; }
+        .modal p { color: #666; margin-bottom: 15px; }
+        .modal-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .modal-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .modal-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .modal-btn.primary { background: #1a73e8; color: #fff; }
+        .modal-btn.secondary { background: #f5f5f5; color: #333; border: 1px solid #ddd; }
+        .email-input-group { display: none; margin: 10px 0; text-align: left; }
+        .email-input-group.show { display: block; }
+        .email-input-group label { font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px; }
+        .email-input-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        /* TOD Radio buttons inline */
+        .tod-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tod-group label {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .tod-group input[type="radio"] {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Control Bar -->
+    <div class="control-bar">
+        <h1>🎯 Consecutive Draws</h1>
+        
+        <div class="control-group">
+            <label>Game:</label>
+            <select id="gameType">
+                <option value="pick5">Pick5</option>
+                <option value="pick4">Pick4</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>States:</label>
+            <select id="stateSelect" multiple title="Hold Ctrl/Cmd to multi-select">
+                <option value="All" selected>All</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>Date:</label>
+            <input type="date" id="startDate" value="2026-01-01">
+            <span style="color:#999;">to</span>
+            <input type="date" id="endDate" value="2026-01-01">
+        </div>
+        
+        <div class="tod-group">
+            <label>TOD:</label>
+            <label><input type="radio" name="tod" value="All" checked> All</label>
+            <label><input type="radio" name="tod" value="Midday"> Mid</label>
+            <label><input type="radio" name="tod" value="Evening"> Eve</label>
+            <label><input type="radio" name="tod" value="Day"> Day</label>
+            <label><input type="radio" name="tod" value="Night"> Night</label>
+        </div>
+        
+        <button class="btn" id="runBtn" onclick="runAnalysis()">🔍 Analyze</button>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Past Winners -->
+        <div class="past-winners">
+            <h3>Past winners:</h3>
+            <div class="winners-list" id="winnersList">
+                <span style="color: #999;">Run analysis to see results</span>
+            </div>
+        </div>
+        
+        <!-- Options Row -->
+        <div class="options-row">
+            <div class="control-group">
+                <label>Filter by number:</label>
+                <select id="numberFilter">
+                    <option value="">All numbers</option>
+                </select>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="exportCSV()">📥 CSV</button>
+            <button class="btn btn-sm btn-secondary" onclick="requestEmailReport()">📧 Email</button>
+        </div>
+        
+        <!-- Filter Builder -->
+        <div class="filter-builder">
+            <div class="filter-header">
+                <h3>🔍 Filter Records</h3>
+                <div class="filter-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="addCondition()">+ Add Filter</button>
+                    <button class="btn btn-sm btn-secondary" onclick="clearFilters()">Clear</button>
+                </div>
+            </div>
+            <div class="filter-conditions" id="filterConditions">
+                <div class="no-conditions">No filters. Click "+ Add Filter" to filter records.</div>
+            </div>
+            <div class="filter-footer">
+                <button class="btn btn-sm" onclick="applyFilters()">Apply Filter</button>
+                <span class="filter-summary" id="filterSummary"></span>
+            </div>
+        </div>
+        
+        <!-- Data Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Historical Occurrences</h3>
+                <div class="table-stats" id="tableStats">0 records</div>
+            </div>
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="date">Date</th>
+                            <th data-sort="value">Value</th>
+                            <th data-sort="norm">Norm</th>
+                            <th data-sort="state">State</th>
+                            <th data-sort="tod">TOD</th>
+                            <th data-sort="group">Grp</th>
+                            <th data-sort="hit_count">Hits</th>
+                            <th data-sort="hit_ratio">Hit%</th>
+                            <th data-sort="repeat">#Rep</th>
+                            <th data-sort="month">Month</th>
+                            <th data-sort="input_date">Input</th>
+                            <th data-sort="perm">Perm</th>
+                            <th data-sort="state2">State2</th>
+                            <th data-sort="tod2">TOD2</th>
+                            <th data-sort="date_diff">Diff</th>
+                            <th data-sort="sums">Sum</th>
+                            <th data-sort="td">TD</th>
+                            <th data-sort="delta_sums_td">ΔSum</th>
+                            <th data-sort="sdt">SDT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="19" class="empty-state">
+                                <p>Select filters and click "Analyze" to load data</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Timeout Modal -->
+    <div class="modal-overlay" id="timeoutModal">
+        <div class="modal">
+            <div class="modal-icon">⏱️</div>
+            <h3>Query Taking Too Long</h3>
+            <p>Would you like to receive results via email?</p>
+            <div class="email-input-group" id="emailInputGroup">
+                <label>Email:</label>
+                <input type="email" id="emailInput" placeholder="your@email.com">
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="submitEmailReport()">📧 Email Results</button>
+                <button class="modal-btn secondary" onclick="continueWaiting()">Keep Waiting</button>
+                <button class="modal-btn secondary" onclick="cancelQuery()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Email Success Modal -->
+    <div class="modal-overlay" id="emailSuccessModal">
+        <div class="modal">
+            <div class="modal-icon">✅</div>
+            <h3>Report Requested</h3>
+            <p>You'll receive an email shortly.</p>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="closeEmailSuccess()">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'mongo_v2';
+        
+        let allData = [];
+        let filteredData = [];
+        let sortField = 'date_diff';
+        let sortDir = 1;
+        let filterConditions = [];
+        
+        const fieldDefinitions = {
+            date: { label: 'Date', type: 'date' },
+            value: { label: 'Value', type: 'text' },
+            norm: { label: 'Norm', type: 'text' },
+            state: { label: 'State', type: 'text' },
+            tod: { label: 'TOD', type: 'text' },
+            group: { label: 'Group', type: 'number' },
+            hit_count: { label: 'Hit Count', type: 'number' },
+            hit_ratio: { label: 'Hit Ratio', type: 'number' },
+            repeat: { label: '#Repeat', type: 'number' },
+            month: { label: 'Month', type: 'text' },
+            input_date: { label: 'Input Date', type: 'date' },
+            perm: { label: 'Perm', type: 'text' },
+            state2: { label: 'State2', type: 'text' },
+            tod2: { label: 'TOD2', type: 'text' },
+            date_diff: { label: 'Date Diff', type: 'number' },
+            sums: { label: 'Sums', type: 'number' },
+            td: { label: 'TD', type: 'number' },
+            delta_sums_td: { label: 'Δ Sums', type: 'number' },
+            sdt: { label: 'SDT', type: 'text' }
+        };
+        
+        const operatorsByType = {
+            text: [
+                { value: 'is', label: 'is' },
+                { value: 'is_not', label: 'is not' },
+                { value: 'contains', label: 'contains' },
+                { value: 'starts_with', label: 'starts with' },
+                { value: 'is_empty', label: 'is empty' }
+            ],
+            number: [
+                { value: 'equals', label: '=' },
+                { value: 'not_equals', label: '≠' },
+                { value: 'greater', label: '>' },
+                { value: 'greater_equal', label: '≥' },
+                { value: 'less', label: '<' },
+                { value: 'less_equal', label: '≤' },
+                { value: 'between', label: 'between' }
+            ],
+            date: [
+                { value: 'is', label: 'is' },
+                { value: 'before', label: 'before' },
+                { value: 'after', label: 'after' },
+                { value: 'between', label: 'between' }
+            ]
+        };
+        
+        function apiUrl(path) {
+            const sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+        
+        // Load states
+        async function loadStates() {
+            const gameType = document.getElementById('gameType').value;
+            try {
+                const res = await fetch(apiUrl(`/api/consecutive/states?game_type=${gameType}`));
+                const states = await res.json();
+                const select = document.getElementById('stateSelect');
+                select.innerHTML = '<option value="All" selected>All</option>' +
+                    states.map(s => `<option value="${s}">${s}</option>`).join('');
+            } catch (e) {
+                console.error('Error loading states:', e);
+            }
+        }
+        
+        document.getElementById('gameType').addEventListener('change', loadStates);
+        
+        // Query handling
+        let queryController = null;
+        let queryTimeout = null;
+        const QUERY_TIMEOUT_MS = 15000;
+        
+        async function runAnalysis() {
+            const btn = document.getElementById('runBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Loading...';
+            
+            const gameType = document.getElementById('gameType').value;
+            const stateSelect = document.getElementById('stateSelect');
+            const selectedStates = Array.from(stateSelect.selectedOptions).map(o => o.value);
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const tod = document.querySelector('input[name="tod"]:checked').value;
+            
+            window.lastQueryParams = { game_type: gameType, states: selectedStates, start_date: startDate, end_date: endDate, tod: tod };
+            
+            queryController = new AbortController();
+            queryTimeout = setTimeout(() => showTimeoutModal(), QUERY_TIMEOUT_MS);
+            
+            try {
+                const res = await fetch(apiUrl('/api/consecutive/draws'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(window.lastQueryParams),
+                    signal: queryController.signal
+                });
+                
+                clearTimeout(queryTimeout);
+                hideTimeoutModal();
+                
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
+                
+                allData = data.draws || [];
+                filteredData = allData;
+                displayWinners(data.past_winners || []);
+                populateNumberFilter(data.past_winners || []);
+                displayTable(filteredData);
+                document.getElementById('tableStats').textContent = `${allData.length} records`;
+                updateFilterSummary(0);
+                
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.error('Error:', e);
+                    alert('Error: ' + e.message);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Analyze';
+                queryController = null;
+            }
+        }
+        
+        function displayWinners(winners) {
+            const container = document.getElementById('winnersList');
+            if (!winners.length) {
+                container.innerHTML = '<span style="color:#999;">No winners found</span>';
+                return;
+            }
+            container.innerHTML = winners.map((w, i) => 
+                `<span${i === winners.length - 1 ? ' class="highlight"' : ''}>${w}</span>`
+            ).join('');
+        }
+        
+        function populateNumberFilter(winners) {
+            const select = document.getElementById('numberFilter');
+            select.innerHTML = '<option value="">All numbers</option>' +
+                winners.map(w => `<option value="${w}">${w}</option>`).join('');
+        }
+        
+        function displayTable(data) {
+            const tbody = document.getElementById('tableBody');
+            document.getElementById('tableStats').textContent = `${data.length} records`;
+            
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="19" class="empty-state"><p>No data found</p></td></tr>';
+                return;
+            }
+            
+            const sorted = [...data].sort((a, b) => {
+                let aVal = a[sortField], bVal = b[sortField];
+                if (typeof aVal === 'string') return sortDir * aVal.localeCompare(bVal);
+                return sortDir * ((aVal || 0) - (bVal || 0));
+            });
+            
+            tbody.innerHTML = sorted.slice(0, 1000).map(row => `
+                <tr>
+                    <td>${row.date}</td>
+                    <td class="value-cell">${row.value}</td>
+                    <td class="value-cell">${row.norm}</td>
+                    <td>${row.state}</td>
+                    <td>${row.tod || '-'}</td>
+                    <td>${row.group}</td>
+                    <td>${row.hit_count}</td>
+                    <td>${row.hit_ratio}</td>
+                    <td>${row.repeat}</td>
+                    <td>${row.month}</td>
+                    <td class="highlight-cell">${row.input_date}</td>
+                    <td class="value-cell">${row.perm}</td>
+                    <td>${row.state2}</td>
+                    <td>${row.tod2 || '-'}</td>
+                    <td>${row.date_diff}</td>
+                    <td>${row.sums}</td>
+                    <td>${row.td}</td>
+                    <td>${row.delta_sums_td}</td>
+                    <td>${row.sdt}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // Sorting
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.sort;
+                if (sortField === field) sortDir *= -1;
+                else { sortField = field; sortDir = 1; }
+                displayTable(filteredData);
+            });
+        });
+        
+        // Number filter
+        document.getElementById('numberFilter').addEventListener('change', (e) => {
+            const norm = e.target.value;
+            filteredData = norm ? allData.filter(d => d.norm === norm) : allData;
+            displayTable(filteredData);
+            updateFilterSummary(filterConditions.length);
+        });
+        
+        // Filter Builder
+        function addCondition() {
+            filterConditions.push({ id: Date.now(), field: 'date_diff', operator: 'between', value: '', value2: '', logic: 'AND' });
+            renderConditions();
+        }
+        
+        function removeCondition(id) {
+            filterConditions = filterConditions.filter(c => c.id !== id);
+            renderConditions();
+        }
+        
+        function updateCondition(id, prop, value) {
+            const cond = filterConditions.find(c => c.id === id);
+            if (cond) {
+                cond[prop] = value;
+                if (prop === 'field') {
+                    const type = fieldDefinitions[value]?.type || 'text';
+                    cond.operator = operatorsByType[type][0].value;
+                    cond.value = ''; cond.value2 = '';
+                }
+                renderConditions();
+            }
+        }
+        
+        function renderConditions() {
+            const container = document.getElementById('filterConditions');
+            if (!filterConditions.length) {
+                container.innerHTML = '<div class="no-conditions">No filters. Click "+ Add Filter"</div>';
+                return;
+            }
+            
+            container.innerHTML = filterConditions.map((cond, i) => {
+                const type = fieldDefinitions[cond.field]?.type || 'text';
+                const ops = operatorsByType[type];
+                const showVal2 = cond.operator === 'between';
+                const hideVal = cond.operator === 'is_empty';
+                const isLast = i === filterConditions.length - 1;
+                
+                return `<div class="filter-row">
+                    <select class="field-select" onchange="updateCondition(${cond.id},'field',this.value)">
+                        ${Object.entries(fieldDefinitions).map(([k,v]) => `<option value="${k}"${cond.field===k?' selected':''}>${v.label}</option>`).join('')}
+                    </select>
+                    <select class="operator-select" onchange="updateCondition(${cond.id},'operator',this.value)">
+                        ${ops.map(o => `<option value="${o.value}"${cond.operator===o.value?' selected':''}>${o.label}</option>`).join('')}
+                    </select>
+                    ${hideVal ? '' : `<input type="${type==='date'?'date':type==='number'?'number':'text'}" class="value-input" value="${cond.value}" placeholder="Value" onchange="updateCondition(${cond.id},'value',this.value)">`}
+                    ${showVal2 ? `<span>and</span><input type="${type==='date'?'date':'number'}" class="value-input" value="${cond.value2}" placeholder="Value2" onchange="updateCondition(${cond.id},'value2',this.value)">` : ''}
+                    ${!isLast ? `<select class="logic-select" onchange="updateCondition(${cond.id},'logic',this.value)"><option value="AND"${cond.logic==='AND'?' selected':''}>AND</option><option value="OR"${cond.logic==='OR'?' selected':''}>OR</option></select>` : ''}
+                    <button class="remove-btn" onclick="removeCondition(${cond.id})">×</button>
+                </div>`;
+            }).join('');
+        }
+        
+        function clearFilters() {
+            filterConditions = [];
+            renderConditions();
+            filteredData = allData;
+            displayTable(filteredData);
+            updateFilterSummary(0);
+        }
+        
+        function applyFilters() {
+            if (!filterConditions.length) { filteredData = allData; displayTable(filteredData); updateFilterSummary(0); return; }
+            
+            filteredData = allData.filter(row => {
+                let result = evalCondition(row, filterConditions[0]);
+                for (let i = 1; i < filterConditions.length; i++) {
+                    const logic = filterConditions[i-1].logic;
+                    const r = evalCondition(row, filterConditions[i]);
+                    result = logic === 'AND' ? result && r : result || r;
+                }
+                return result;
+            });
+            displayTable(filteredData);
+            updateFilterSummary(filterConditions.length);
+        }
+        
+        function evalCondition(row, cond) {
+            const { field, operator, value, value2 } = cond;
+            const type = fieldDefinitions[field]?.type || 'text';
+            let rv = row[field];
+            
+            if (operator === 'is_empty') return !rv || rv === '';
+            
+            if (type === 'number') {
+                rv = parseFloat(rv) || 0;
+                const cv = parseFloat(value) || 0, cv2 = parseFloat(value2) || 0;
+                switch(operator) {
+                    case 'equals': return rv === cv;
+                    case 'not_equals': return rv !== cv;
+                    case 'greater': return rv > cv;
+                    case 'greater_equal': return rv >= cv;
+                    case 'less': return rv < cv;
+                    case 'less_equal': return rv <= cv;
+                    case 'between': return rv >= cv && rv <= cv2;
+                }
+            } else if (type === 'date') {
+                const rd = new Date(rv), cd = new Date(value), cd2 = value2 ? new Date(value2) : null;
+                switch(operator) {
+                    case 'is': return rv === value;
+                    case 'before': return rd < cd;
+                    case 'after': return rd > cd;
+                    case 'between': return cd2 && rd >= cd && rd <= cd2;
+                }
+            } else {
+                const rs = (rv||'').toString().toLowerCase(), cs = (value||'').toLowerCase();
+                switch(operator) {
+                    case 'is': return rs === cs;
+                    case 'is_not': return rs !== cs;
+                    case 'contains': return rs.includes(cs);
+                    case 'starts_with': return rs.startsWith(cs);
+                }
+            }
+            return true;
+        }
+        
+        function updateFilterSummary(count) {
+            document.getElementById('filterSummary').textContent = count ? `${count} filter(s) • ${filteredData.length}/${allData.length}` : `${filteredData.length} records`;
+        }
+        
+        // Modal functions
+        function showTimeoutModal() { document.getElementById('timeoutModal').classList.add('show'); document.getElementById('emailInputGroup').classList.add('show'); }
+        function hideTimeoutModal() { document.getElementById('timeoutModal').classList.remove('show'); }
+        function continueWaiting() { hideTimeoutModal(); queryTimeout = setTimeout(showTimeoutModal, 30000); }
+        function cancelQuery() { if (queryController) queryController.abort(); clearTimeout(queryTimeout); hideTimeoutModal(); document.getElementById('runBtn').disabled = false; document.getElementById('runBtn').textContent = '🔍 Analyze'; }
+        
+        async function submitEmailReport() {
+            const email = document.getElementById('emailInput').value;
+            if (!email || !email.includes('@')) { alert('Enter valid email'); return; }
+            if (queryController) queryController.abort();
+            clearTimeout(queryTimeout);
+            try {
+                await fetch(apiUrl('/api/consecutive/email-report'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...window.lastQueryParams, email })
+                });
+                hideTimeoutModal();
+                document.getElementById('emailSuccessModal').classList.add('show');
+            } catch (e) { alert('Error: ' + e.message); }
+            document.getElementById('runBtn').disabled = false;
+            document.getElementById('runBtn').textContent = '🔍 Analyze';
+        }
+        
+        function closeEmailSuccess() { document.getElementById('emailSuccessModal').classList.remove('show'); }
+        function requestEmailReport() { if (!window.lastQueryParams) { alert('Run a query first'); return; } document.getElementById('emailInputGroup').classList.add('show'); document.getElementById('timeoutModal').classList.add('show'); }
+        
+        function exportCSV() {
+            if (!filteredData?.length) { alert('No data'); return; }
+            const headers = ['Date','Value','Norm','State','TOD','Group','Hit Count','Hit%','#Repeat','Month','Input Date','Perm','State2','TOD2','Date Diff','Sums','TD','ΔSums','SDT'];
+            const fields = ['date','value','norm','state','tod','group','hit_count','hit_ratio','repeat','month','input_date','perm','state2','tod2','date_diff','sums','td','delta_sums_td','sdt'];
+            let csv = headers.join(',') + '\n';
+            filteredData.forEach(row => { csv += fields.map(f => `"${String(row[f]||'').replace(/"/g,'""')}"`).join(',') + '\n'; });
+            const blob = new Blob([csv], {type:'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `consecutive_draws_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+        
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStates();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+        });
+    </script>
+</body>
+</html>

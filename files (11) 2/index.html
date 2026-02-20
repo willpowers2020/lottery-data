@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎱 MyLottoData</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 40px;
+        }
+        .db-badge {
+            display: inline-block;
+            background: #4ecdc4;
+            color: #1a1a2e;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        .db-badge.mongo { background: #ff6b6b; color: white; }
+        .db-badge.mongo_v2 { background: #a855f7; color: white; }
+        
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .nav-card {
+            background: #2a2a4a;
+            border-radius: 16px;
+            padding: 30px 20px;
+            text-decoration: none;
+            color: #eee;
+            transition: all 0.3s;
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .nav-card.pick4 { border-top: 4px solid #4ecdc4; }
+        .nav-card.pick5 { border-top: 4px solid #a855f7; }
+        .nav-card.status { border-top: 4px solid #f59e0b; }
+        
+        .nav-card .icon { font-size: 2.5rem; margin-bottom: 15px; }
+        .nav-card h2 { font-size: 1.3rem; margin-bottom: 8px; }
+        .nav-card p { color: #888; font-size: 0.9rem; }
+        
+        .db-toggle {
+            margin-top: 40px;
+            padding: 20px;
+            background: #2a2a4a;
+            border-radius: 12px;
+        }
+        .db-toggle h3 {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        .db-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .db-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .db-btn.sqlite { background: #4ecdc4; color: #1a1a2e; }
+        .db-btn.mongo { background: #ff6b6b; color: white; }
+        .db-btn.mongo_v2 { background: #a855f7; color: white; }
+        .db-btn:hover { opacity: 0.8; transform: scale(1.05); }
+        .db-btn.active { box-shadow: 0 0 0 3px rgba(255,255,255,0.5); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎱 MyLottoData</h1>
+        <p class="subtitle">Lottery Prediction & Analysis Tools</p>
+        
+        <span class="db-badge" id="dbBadge">sqlite</span>
+        
+        <div class="nav-grid">
+            <a href="/predictions" class="nav-card pick4" id="pick4Link">
+                <div class="icon">🔮</div>
+                <h2>2DP AP (Pick 4)</h2>
+                <p>2-Digit Pair All Possibles prediction algorithm</p>
+            </a>
+            
+            <a href="/predictions/pick5" class="nav-card pick5" id="pick5Link">
+                <div class="icon">🎯</div>
+                <h2>3DP AP (Pick 5)</h2>
+                <p>3-Digit Pair All Possibles prediction algorithm</p>
+            </a>
+            
+            <a href="/api/db-status" class="nav-card status" id="statusLink">
+                <div class="icon">📊</div>
+                <h2>Database Status</h2>
+                <p>Check connection and record counts</p>
+            </a>
+        </div>
+        
+        <div class="db-toggle">
+            <h3>Switch Database Mode</h3>
+            <div class="db-buttons">
+                <a href="?db=sqlite" class="db-btn sqlite">SQLite (Local)</a>
+                <a href="?db=mongo" class="db-btn mongo">MongoDB (Original)</a>
+                <a href="?db=mongo_v2" class="db-btn mongo_v2">MongoDB (Optimized)</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const dbMode = urlParams.get('db') || 'sqlite';
+        
+        // Update badge
+        const badge = document.getElementById('dbBadge');
+        badge.textContent = dbMode;
+        badge.className = 'db-badge ' + dbMode;
+        
+        // Update nav links to include db param
+        ['pick4Link', 'pick5Link', 'statusLink'].forEach(id => {
+            const link = document.getElementById(id);
+            const href = link.getAttribute('href');
+            link.href = href + (href.includes('?') ? '&' : '?') + 'db=' + dbMode;
+        });
+        
+        // Highlight active db button
+        document.querySelectorAll('.db-btn').forEach(btn => {
+            if (btn.classList.contains(dbMode)) {
+                btn.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shadow Strategy Viability — 2019-10 to 2019-10</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0c0e14;color:#e4e8f1;padding:20px;line-height:1.5}
+.c{max-width:1400px;margin:0 auto}
+h1{font-size:1.6rem;font-weight:800;background:linear-gradient(135deg,#f0b634,#f09544);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.sub{font-size:.82rem;color:#8b93a8;margin-bottom:24px}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:24px}
+.s{background:#13161f;border:1px solid #2a3042;border-radius:10px;padding:14px;text-align:center}
+.s .v{font-size:1.4rem;font-weight:800;font-family:'Courier New',monospace}
+.s .l{font-size:.64rem;color:#5c6478;margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+.s .x{font-size:.58rem;color:#5c6478}
+.cd{background:#13161f;border:1px solid #2a3042;border-radius:12px;padding:16px;margin-bottom:16px;overflow-x:auto}
+.cd h2{font-size:.92rem;font-weight:700;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:.74rem}
+th{background:#1a1e2a;color:#8b93a8;font-weight:700;text-transform:uppercase;font-size:.62rem;letter-spacing:.5px;padding:8px 6px;text-align:left;border-bottom:2px solid #2a3042;position:sticky;top:0}
+td{padding:6px;border-bottom:1px solid #222736}
+tr:hover td{background:rgba(240,182,52,.03)}
+tr.hit td{background:rgba(45,212,160,.08)}
+.m{font-family:'Courier New',monospace;font-weight:700;letter-spacing:2px}
+.b{display:inline-block;padding:2px 7px;border-radius:5px;font-size:.66rem;font-weight:700}
+.bh{background:rgba(45,212,160,.15);color:#2dd4a0}
+.bx{background:rgba(240,86,74,.1);color:#f0564a}
+.bmd{background:rgba(91,140,240,.1);color:#5b8cf0}
+.be{background:rgba(167,139,250,.1);color:#a78bfa}
+.sy{max-height:600px;overflow-y:auto}
+.tabs{display:flex;gap:2px;margin-bottom:14px;background:#1a1e2a;border-radius:10px;padding:3px;border:1px solid #2a3042;flex-wrap:wrap}
+.tab{padding:8px 14px;border-radius:8px;font-size:.74rem;font-weight:700;cursor:pointer;color:#5c6478;border:none;background:transparent}
+.tab:hover{color:#e4e8f1}.tab.active{background:#f0b634;color:#0c0e14}
+.tc{display:none}.tc.active{display:block}
+.yg{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.yc{padding:6px 12px;border-radius:8px;font-size:.72rem;font-weight:700;font-family:'Courier New',monospace;border:1px solid #2a3042;background:#1a1e2a}
+.rg{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.rc{padding:8px 14px;border-radius:8px;font-size:.78rem;font-weight:700;font-family:'Courier New',monospace;background:#1a1e2a;border:1px solid #2a3042;text-align:center}
+.rc .rv{font-size:1.1rem;color:#f0b634}.rc .rl{font-size:.6rem;color:#5c6478;margin-top:2px}
+.ft{margin-top:24px;text-align:center;font-size:.7rem;color:#5c6478;padding:16px}
+</style></head><body>
+<div class="c">
+<h1>🔬 Shadow Strategy — Viability Report</h1>
+<div class="sub">Every draw tested as a target | API auto-selects seeds (shadow mode) | 2019-10 → 2019-10 | 2026-02-18 04:10</div>
+
+<div class="sg">
+<div class="s"><div class="v" style="color:#5b8cf0">62</div><div class="l">Draws Tested</div></div>
+<div class="s"><div class="v" style="color:#2dd4a0">22</div><div class="l">Hits</div></div>
+<div class="s"><div class="v" style="color:#f0b634">35.5%</div><div class="l">Hit Rate</div></div>
+<div class="s"><div class="v" style="color:#a78bfa">228</div><div class="l">Avg Candidates</div></div>
+<div class="s"><div class="v" style="color:#f09544">141</div><div class="l">Avg Hit Rank</div></div>
+<div class="s"><div class="v" style="color:#5b8cf0">7/31</div><div class="l">Midday</div><div class="x">22.6%</div></div>
+<div class="s"><div class="v" style="color:#a78bfa">15/31</div><div class="l">Evening</div><div class="x">48.4%</div></div>
+<div class="s"><div class="v" style="color:#f0564a">10</div><div class="l">Max Dry Streak</div></div>
+</div>
+
+<!-- Rank distribution -->
+<div class="cd"><h2>🎯 Hit Rank Distribution</h2>
+<div class="rg">
+<div class="rc"><div class="rv">1</div><div class="rl">Rank 1-10</div></div>
+<div class="rc"><div class="rv">4</div><div class="rl">Rank 11-50</div></div>
+<div class="rc"><div class="rv">2</div><div class="rl">Rank 51-100</div></div>
+<div class="rc"><div class="rv">9</div><div class="rl">Rank 101-200</div></div>
+<div class="rc"><div class="rv">6</div><div class="rl">Rank 200+</div></div>
+</div></div>
+<div class="cd"><h2>📅 By Year</h2><div class="yg">
+<div class="yc" style="color:#2dd4a0;border-color:#2dd4a033">2019 22/62 (35.5%)</div>
+</div></div>
+<div class="tabs"><button class="tab active" onclick="sw('h',this)">🏆 Hits (22)</button><button class="tab" onclick="sw('a',this)">📋 All (62)</button><button class="tab" onclick="sw('m',this)">📆 Monthly</button></div>
+<div class="tc active" id="tab-h">
+<div class="cd" style="border-left:3px solid #2dd4a0"><h2>🏆 Hits</h2>
+<div class="sy"><table><thead><tr><th>Date</th><th>TOD</th><th>Value</th><th>Seeds</th><th>Hot Mo.</th><th>Cand.</th><th>Rank</th><th>Result</th></tr></thead><tbody>
+<tr class="hit"><td>2019-10-03</td><td><span class="b bmd">MID</span></td><td class="m">9279</td><td style="font-size:.65rem;color:#8b93a8">9641, 5067</td><td style="color:#5b8cf0;font-weight:700">10</td><td>327</td><td class="m">#276/327</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-04</td><td><span class="b be">EVE</span></td><td class="m">5920</td><td style="font-size:.65rem;color:#8b93a8">9279, 5775, 9818</td><td style="color:#5b8cf0;font-weight:700">4</td><td>161</td><td class="m">#103/161</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-05</td><td><span class="b be">EVE</span></td><td class="m">7168</td><td style="font-size:.65rem;color:#8b93a8">9818, 5920, 7510</td><td style="color:#5b8cf0;font-weight:700">12</td><td>387</td><td class="m">#178/387</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-05</td><td><span class="b bmd">MID</span></td><td class="m">7510</td><td style="font-size:.65rem;color:#8b93a8">9818, 5920</td><td style="color:#5b8cf0;font-weight:700">3</td><td>136</td><td class="m">#120/136</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-06</td><td><span class="b be">EVE</span></td><td class="m">0376</td><td style="font-size:.65rem;color:#8b93a8">7510, 7168, 6281</td><td style="color:#5b8cf0;font-weight:700">17</td><td>442</td><td class="m">#108/442</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-06</td><td><span class="b bmd">MID</span></td><td class="m">6281</td><td style="font-size:.65rem;color:#8b93a8">7510, 7168</td><td style="color:#5b8cf0;font-weight:700">5</td><td>226</td><td class="m">#204/226</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-09</td><td><span class="b bmd">MID</span></td><td class="m">0985</td><td style="font-size:.65rem;color:#8b93a8">4426, 9373</td><td style="color:#5b8cf0;font-weight:700">3</td><td>129</td><td class="m">#3/129</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-10</td><td><span class="b be">EVE</span></td><td class="m">9353</td><td style="font-size:.65rem;color:#8b93a8">0985, 4794, 5841</td><td style="color:#5b8cf0;font-weight:700">10</td><td>335</td><td class="m">#112/335</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-11</td><td><span class="b be">EVE</span></td><td class="m">8271</td><td style="font-size:.65rem;color:#8b93a8">5841, 9353, 3668</td><td style="color:#5b8cf0;font-weight:700">7</td><td>230</td><td class="m">#186/230</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-12</td><td><span class="b be">EVE</span></td><td class="m">5439</td><td style="font-size:.65rem;color:#8b93a8">3668, 8271, 8763</td><td style="color:#5b8cf0;font-weight:700">9</td><td>297</td><td class="m">#117/297</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-13</td><td><span class="b be">EVE</span></td><td class="m">0410</td><td style="font-size:.65rem;color:#8b93a8">8763, 5439, 3674</td><td style="color:#5b8cf0;font-weight:700">13</td><td>397</td><td class="m">#341/397</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-18</td><td><span class="b bmd">MID</span></td><td class="m">5844</td><td style="font-size:.65rem;color:#8b93a8">6074, 0768</td><td style="color:#5b8cf0;font-weight:700">7</td><td>295</td><td class="m">#92/295</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-20</td><td><span class="b be">EVE</span></td><td class="m">5309</td><td style="font-size:.65rem;color:#8b93a8">0840, 4095, 5091</td><td style="color:#5b8cf0;font-weight:700">10</td><td>336</td><td class="m">#38/336</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-20</td><td><span class="b bmd">MID</span></td><td class="m">5091</td><td style="font-size:.65rem;color:#8b93a8">0840, 4095</td><td style="color:#5b8cf0;font-weight:700">2</td><td>82</td><td class="m">#64/82</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-21</td><td><span class="b be">EVE</span></td><td class="m">2631</td><td style="font-size:.65rem;color:#8b93a8">5091, 5309, 1713</td><td style="color:#5b8cf0;font-weight:700">15</td><td>446</td><td class="m">#33/446</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-22</td><td><span class="b be">EVE</span></td><td class="m">3593</td><td style="font-size:.65rem;color:#8b93a8">1713, 2631, 9711</td><td style="color:#5b8cf0;font-weight:700">7</td><td>267</td><td class="m">#257/267</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-22</td><td><span class="b bmd">MID</span></td><td class="m">9711</td><td style="font-size:.65rem;color:#8b93a8">1713, 2631</td><td style="color:#5b8cf0;font-weight:700">3</td><td>159</td><td class="m">#133/159</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-23</td><td><span class="b be">EVE</span></td><td class="m">0674</td><td style="font-size:.65rem;color:#8b93a8">9711, 3593, 0296</td><td style="color:#5b8cf0;font-weight:700">7</td><td>264</td><td class="m">#17/264</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-24</td><td><span class="b be">EVE</span></td><td class="m">4694</td><td style="font-size:.65rem;color:#8b93a8">0296, 0674, 5289</td><td style="color:#5b8cf0;font-weight:700">16</td><td>432</td><td class="m">#202/432</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-28</td><td><span class="b be">EVE</span></td><td class="m">2820</td><td style="font-size:.65rem;color:#8b93a8">0448, 4142, 5821</td><td style="color:#5b8cf0;font-weight:700">9</td><td>321</td><td class="m">#283/321</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-29</td><td><span class="b be">EVE</span></td><td class="m">0185</td><td style="font-size:.65rem;color:#8b93a8">5821, 2820, 8640</td><td style="color:#5b8cf0;font-weight:700">10</td><td>357</td><td class="m">#37/357</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-31</td><td><span class="b be">EVE</span></td><td class="m">8751</td><td style="font-size:.65rem;color:#8b93a8">1588, 1032, 8100</td><td style="color:#5b8cf0;font-weight:700">8</td><td>305</td><td class="m">#192/305</td><td><span class="b bh">✅</span></td></tr>
+</tbody></table>
+</div></div></div>
+<div class="tc" id="tab-a"><div class="cd"><h2>📋 All Draws</h2>
+<div class="sy"><table><thead><tr><th>Date</th><th>TOD</th><th>Value</th><th>Seeds</th><th>Hot Mo.</th><th>Cand.</th><th>Rank</th><th>Result</th></tr></thead><tbody>
+<tr class=""><td>2019-10-01</td><td><span class="b be">EVE</span></td><td class="m">9409</td><td style="font-size:.65rem;color:#8b93a8">0085, 5993, 2943</td><td style="color:#5b8cf0;font-weight:700">10</td><td>371</td><td class="m">—/371</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-01</td><td><span class="b bmd">MID</span></td><td class="m">2943</td><td style="font-size:.65rem;color:#8b93a8">0085, 5993</td><td style="color:#5b8cf0;font-weight:700">3</td><td>160</td><td class="m">—/160</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-02</td><td><span class="b be">EVE</span></td><td class="m">5067</td><td style="font-size:.65rem;color:#8b93a8">2943, 9409, 9641</td><td style="color:#5b8cf0;font-weight:700">12</td><td>362</td><td class="m">—/362</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-02</td><td><span class="b bmd">MID</span></td><td class="m">9641</td><td style="font-size:.65rem;color:#8b93a8">2943, 9409</td><td style="color:#5b8cf0;font-weight:700">2</td><td>109</td><td class="m">—/109</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-03</td><td><span class="b be">EVE</span></td><td class="m">5775</td><td style="font-size:.65rem;color:#8b93a8">9641, 5067, 9279</td><td style="color:#5b8cf0;font-weight:700">17</td><td>447</td><td class="m">—/447</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-03</td><td><span class="b bmd">MID</span></td><td class="m">9279</td><td style="font-size:.65rem;color:#8b93a8">9641, 5067</td><td style="color:#5b8cf0;font-weight:700">10</td><td>327</td><td class="m">#276/327</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-04</td><td><span class="b be">EVE</span></td><td class="m">5920</td><td style="font-size:.65rem;color:#8b93a8">9279, 5775, 9818</td><td style="color:#5b8cf0;font-weight:700">4</td><td>161</td><td class="m">#103/161</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-04</td><td><span class="b bmd">MID</span></td><td class="m">9818</td><td style="font-size:.65rem;color:#8b93a8">9279, 5775</td><td style="color:#5b8cf0;font-weight:700">3</td><td>157</td><td class="m">—/157</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-05</td><td><span class="b be">EVE</span></td><td class="m">7168</td><td style="font-size:.65rem;color:#8b93a8">9818, 5920, 7510</td><td style="color:#5b8cf0;font-weight:700">12</td><td>387</td><td class="m">#178/387</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-05</td><td><span class="b bmd">MID</span></td><td class="m">7510</td><td style="font-size:.65rem;color:#8b93a8">9818, 5920</td><td style="color:#5b8cf0;font-weight:700">3</td><td>136</td><td class="m">#120/136</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-06</td><td><span class="b be">EVE</span></td><td class="m">0376</td><td style="font-size:.65rem;color:#8b93a8">7510, 7168, 6281</td><td style="color:#5b8cf0;font-weight:700">17</td><td>442</td><td class="m">#108/442</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-06</td><td><span class="b bmd">MID</span></td><td class="m">6281</td><td style="font-size:.65rem;color:#8b93a8">7510, 7168</td><td style="color:#5b8cf0;font-weight:700">5</td><td>226</td><td class="m">#204/226</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-07</td><td><span class="b be">EVE</span></td><td class="m">0366</td><td style="font-size:.65rem;color:#8b93a8">6281, 0376, 0458</td><td style="color:#5b8cf0;font-weight:700">13</td><td>372</td><td class="m">—/372</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-07</td><td><span class="b bmd">MID</span></td><td class="m">0458</td><td style="font-size:.65rem;color:#8b93a8">6281, 0376</td><td style="color:#5b8cf0;font-weight:700">6</td><td>212</td><td class="m">—/212</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-08</td><td><span class="b be">EVE</span></td><td class="m">9373</td><td style="font-size:.65rem;color:#8b93a8">0458, 0366, 4426</td><td style="color:#5b8cf0;font-weight:700">10</td><td>318</td><td class="m">—/318</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-08</td><td><span class="b bmd">MID</span></td><td class="m">4426</td><td style="font-size:.65rem;color:#8b93a8">0458, 0366</td><td style="color:#5b8cf0;font-weight:700">4</td><td>149</td><td class="m">—/149</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-09</td><td><span class="b be">EVE</span></td><td class="m">4794</td><td style="font-size:.65rem;color:#8b93a8">4426, 9373, 0985</td><td style="color:#5b8cf0;font-weight:700">8</td><td>257</td><td class="m">—/257</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-09</td><td><span class="b bmd">MID</span></td><td class="m">0985</td><td style="font-size:.65rem;color:#8b93a8">4426, 9373</td><td style="color:#5b8cf0;font-weight:700">3</td><td>129</td><td class="m">#3/129</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-10</td><td><span class="b be">EVE</span></td><td class="m">9353</td><td style="font-size:.65rem;color:#8b93a8">0985, 4794, 5841</td><td style="color:#5b8cf0;font-weight:700">10</td><td>335</td><td class="m">#112/335</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-10</td><td><span class="b bmd">MID</span></td><td class="m">5841</td><td style="font-size:.65rem;color:#8b93a8">0985, 4794</td><td style="color:#5b8cf0;font-weight:700">2</td><td>86</td><td class="m">—/86</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-11</td><td><span class="b be">EVE</span></td><td class="m">8271</td><td style="font-size:.65rem;color:#8b93a8">5841, 9353, 3668</td><td style="color:#5b8cf0;font-weight:700">7</td><td>230</td><td class="m">#186/230</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-11</td><td><span class="b bmd">MID</span></td><td class="m">3668</td><td style="font-size:.65rem;color:#8b93a8">5841, 9353</td><td style="color:#5b8cf0;font-weight:700">2</td><td>53</td><td class="m">—/53</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-12</td><td><span class="b be">EVE</span></td><td class="m">5439</td><td style="font-size:.65rem;color:#8b93a8">3668, 8271, 8763</td><td style="color:#5b8cf0;font-weight:700">9</td><td>297</td><td class="m">#117/297</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-12</td><td><span class="b bmd">MID</span></td><td class="m">8763</td><td style="font-size:.65rem;color:#8b93a8">3668, 8271</td><td style="color:#5b8cf0;font-weight:700">2</td><td>83</td><td class="m">—/83</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-13</td><td><span class="b be">EVE</span></td><td class="m">0410</td><td style="font-size:.65rem;color:#8b93a8">8763, 5439, 3674</td><td style="color:#5b8cf0;font-weight:700">13</td><td>397</td><td class="m">#341/397</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-13</td><td><span class="b bmd">MID</span></td><td class="m">3674</td><td style="font-size:.65rem;color:#8b93a8">8763, 5439</td><td style="color:#5b8cf0;font-weight:700">2</td><td>81</td><td class="m">—/81</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-14</td><td><span class="b be">EVE</span></td><td class="m">5406</td><td style="font-size:.65rem;color:#8b93a8">3674, 0410, 7407</td><td style="color:#5b8cf0;font-weight:700">8</td><td>275</td><td class="m">—/275</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-14</td><td><span class="b bmd">MID</span></td><td class="m">7407</td><td style="font-size:.65rem;color:#8b93a8">3674, 0410</td><td style="color:#5b8cf0;font-weight:700">4</td><td>175</td><td class="m">—/175</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-15</td><td><span class="b be">EVE</span></td><td class="m">2855</td><td style="font-size:.65rem;color:#8b93a8">7407, 5406, 1922</td><td style="color:#5b8cf0;font-weight:700">6</td><td>229</td><td class="m">—/229</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-15</td><td><span class="b bmd">MID</span></td><td class="m">1922</td><td style="font-size:.65rem;color:#8b93a8">7407, 5406</td><td style="color:#5b8cf0;font-weight:700">2</td><td>108</td><td class="m">—/108</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-16</td><td><span class="b be">EVE</span></td><td class="m">3342</td><td style="font-size:.65rem;color:#8b93a8">1922, 2855, 6136</td><td style="color:#5b8cf0;font-weight:700">4</td><td>156</td><td class="m">—/156</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-16</td><td><span class="b bmd">MID</span></td><td class="m">6136</td><td style="font-size:.65rem;color:#8b93a8">1922, 2855</td><td style="color:#5b8cf0;font-weight:700">3</td><td>134</td><td class="m">—/134</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-17</td><td><span class="b be">EVE</span></td><td class="m">0768</td><td style="font-size:.65rem;color:#8b93a8">6136, 3342, 6074</td><td style="color:#5b8cf0;font-weight:700">12</td><td>366</td><td class="m">—/366</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-17</td><td><span class="b bmd">MID</span></td><td class="m">6074</td><td style="font-size:.65rem;color:#8b93a8">6136, 3342</td><td style="color:#5b8cf0;font-weight:700">3</td><td>108</td><td class="m">—/108</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-18</td><td><span class="b be">EVE</span></td><td class="m">0069</td><td style="font-size:.65rem;color:#8b93a8">6074, 0768, 5844</td><td style="color:#5b8cf0;font-weight:700">12</td><td>388</td><td class="m">—/388</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-18</td><td><span class="b bmd">MID</span></td><td class="m">5844</td><td style="font-size:.65rem;color:#8b93a8">6074, 0768</td><td style="color:#5b8cf0;font-weight:700">7</td><td>295</td><td class="m">#92/295</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-19</td><td><span class="b be">EVE</span></td><td class="m">4095</td><td style="font-size:.65rem;color:#8b93a8">5844, 0069, 0840</td><td style="color:#5b8cf0;font-weight:700">3</td><td>137</td><td class="m">—/137</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-19</td><td><span class="b bmd">MID</span></td><td class="m">0840</td><td style="font-size:.65rem;color:#8b93a8">5844, 0069</td><td style="color:#5b8cf0;font-weight:700">1</td><td>55</td><td class="m">—/55</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-20</td><td><span class="b be">EVE</span></td><td class="m">5309</td><td style="font-size:.65rem;color:#8b93a8">0840, 4095, 5091</td><td style="color:#5b8cf0;font-weight:700">10</td><td>336</td><td class="m">#38/336</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-20</td><td><span class="b bmd">MID</span></td><td class="m">5091</td><td style="font-size:.65rem;color:#8b93a8">0840, 4095</td><td style="color:#5b8cf0;font-weight:700">2</td><td>82</td><td class="m">#64/82</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-21</td><td><span class="b be">EVE</span></td><td class="m">2631</td><td style="font-size:.65rem;color:#8b93a8">5091, 5309, 1713</td><td style="color:#5b8cf0;font-weight:700">15</td><td>446</td><td class="m">#33/446</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-21</td><td><span class="b bmd">MID</span></td><td class="m">1713</td><td style="font-size:.65rem;color:#8b93a8">5091, 5309</td><td style="color:#5b8cf0;font-weight:700">12</td><td>397</td><td class="m">—/397</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-22</td><td><span class="b be">EVE</span></td><td class="m">3593</td><td style="font-size:.65rem;color:#8b93a8">1713, 2631, 9711</td><td style="color:#5b8cf0;font-weight:700">7</td><td>267</td><td class="m">#257/267</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-22</td><td><span class="b bmd">MID</span></td><td class="m">9711</td><td style="font-size:.65rem;color:#8b93a8">1713, 2631</td><td style="color:#5b8cf0;font-weight:700">3</td><td>159</td><td class="m">#133/159</td><td><span class="b bh">✅</span></td></tr>
+<tr class="hit"><td>2019-10-23</td><td><span class="b be">EVE</span></td><td class="m">0674</td><td style="font-size:.65rem;color:#8b93a8">9711, 3593, 0296</td><td style="color:#5b8cf0;font-weight:700">7</td><td>264</td><td class="m">#17/264</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-23</td><td><span class="b bmd">MID</span></td><td class="m">0296</td><td style="font-size:.65rem;color:#8b93a8">9711, 3593</td><td style="color:#5b8cf0;font-weight:700">1</td><td>55</td><td class="m">—/55</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-24</td><td><span class="b be">EVE</span></td><td class="m">4694</td><td style="font-size:.65rem;color:#8b93a8">0296, 0674, 5289</td><td style="color:#5b8cf0;font-weight:700">16</td><td>432</td><td class="m">#202/432</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-24</td><td><span class="b bmd">MID</span></td><td class="m">5289</td><td style="font-size:.65rem;color:#8b93a8">0296, 0674</td><td style="color:#5b8cf0;font-weight:700">10</td><td>340</td><td class="m">—/340</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-25</td><td><span class="b be">EVE</span></td><td class="m">7866</td><td style="font-size:.65rem;color:#8b93a8">5289, 4694, 0003</td><td style="color:#5b8cf0;font-weight:700">2</td><td>99</td><td class="m">—/99</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-25</td><td><span class="b bmd">MID</span></td><td class="m">0003</td><td style="font-size:.65rem;color:#8b93a8">5289, 4694</td><td style="color:#5b8cf0;font-weight:700">1</td><td>59</td><td class="m">—/59</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-26</td><td><span class="b be">EVE</span></td><td class="m">3007</td><td style="font-size:.65rem;color:#8b93a8">0003, 7866, 5991</td><td style="color:#5b8cf0;font-weight:700">4</td><td>146</td><td class="m">—/146</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-26</td><td><span class="b bmd">MID</span></td><td class="m">5991</td><td style="font-size:.65rem;color:#8b93a8">0003, 7866</td><td style="color:#5b8cf0;font-weight:700">1</td><td>61</td><td class="m">—/61</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-27</td><td><span class="b be">EVE</span></td><td class="m">4142</td><td style="font-size:.65rem;color:#8b93a8">5991, 3007, 0448</td><td style="color:#5b8cf0;font-weight:700">5</td><td>189</td><td class="m">—/189</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-27</td><td><span class="b bmd">MID</span></td><td class="m">0448</td><td style="font-size:.65rem;color:#8b93a8">5991, 3007</td><td style="color:#5b8cf0;font-weight:700">3</td><td>108</td><td class="m">—/108</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-28</td><td><span class="b be">EVE</span></td><td class="m">2820</td><td style="font-size:.65rem;color:#8b93a8">0448, 4142, 5821</td><td style="color:#5b8cf0;font-weight:700">9</td><td>321</td><td class="m">#283/321</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-28</td><td><span class="b bmd">MID</span></td><td class="m">5821</td><td style="font-size:.65rem;color:#8b93a8">0448, 4142</td><td style="color:#5b8cf0;font-weight:700">2</td><td>99</td><td class="m">—/99</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-29</td><td><span class="b be">EVE</span></td><td class="m">0185</td><td style="font-size:.65rem;color:#8b93a8">5821, 2820, 8640</td><td style="color:#5b8cf0;font-weight:700">10</td><td>357</td><td class="m">#37/357</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-29</td><td><span class="b bmd">MID</span></td><td class="m">8640</td><td style="font-size:.65rem;color:#8b93a8">5821, 2820</td><td style="color:#5b8cf0;font-weight:700">4</td><td>157</td><td class="m">—/157</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-30</td><td><span class="b be">EVE</span></td><td class="m">1032</td><td style="font-size:.65rem;color:#8b93a8">8640, 0185, 1588</td><td style="color:#5b8cf0;font-weight:700">10</td><td>370</td><td class="m">—/370</td><td><span class="b bx">❌</span></td></tr>
+<tr class=""><td>2019-10-30</td><td><span class="b bmd">MID</span></td><td class="m">1588</td><td style="font-size:.65rem;color:#8b93a8">8640, 0185</td><td style="color:#5b8cf0;font-weight:700">6</td><td>257</td><td class="m">—/257</td><td><span class="b bx">❌</span></td></tr>
+<tr class="hit"><td>2019-10-31</td><td><span class="b be">EVE</span></td><td class="m">8751</td><td style="font-size:.65rem;color:#8b93a8">1588, 1032, 8100</td><td style="color:#5b8cf0;font-weight:700">8</td><td>305</td><td class="m">#192/305</td><td><span class="b bh">✅</span></td></tr>
+<tr class=""><td>2019-10-31</td><td><span class="b bmd">MID</span></td><td class="m">8100</td><td style="font-size:.65rem;color:#8b93a8">1588, 1032</td><td style="color:#5b8cf0;font-weight:700">2</td><td>113</td><td class="m">—/113</td><td><span class="b bx">❌</span></td></tr>
+</tbody></table>
+</div></div></div>
+<div class="tc" id="tab-m"><div class="cd"><h2>📆 Monthly Summary</h2>
+<table><thead><tr><th>Month</th><th>Draws</th><th>Hits</th><th>Rate</th></tr></thead><tbody>
+<tr><td>2019-10</td><td>62</td><td style="color:#2dd4a0;font-weight:700">22</td><td style="color:#2dd4a0">35.5%</td></tr>
+</tbody></table></div></div>
+<div class="ft">Florida pick4 | shadow min≥2 dp=0 | 62 draws 22 hits (35.5%) | 0 errors | 144s (2.4min)</div>
+</div>
+<script>function sw(id,b){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+id).classList.add('active')}</script>
+</body></html>

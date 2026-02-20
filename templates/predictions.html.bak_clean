@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyLottoData - Prediction Algorithms</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 20px; text-align: center; }
+        .header a { color: #4ecdc4; text-decoration: none; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .card h2 { margin-bottom: 15px; color: #1a1a2e; border-bottom: 2px solid #4ecdc4; padding-bottom: 10px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 150px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; }
+        .btn-primary { background: #4ecdc4; color: white; }
+        .btn-fetch { background: #ff6b6b; color: white; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-box { background: #f8f9fa; border-radius: 5px; padding: 15px; text-align: center; }
+        .stat-box .value { font-size: 24px; font-weight: bold; color: #4ecdc4; }
+        .stat-box .label { font-size: 12px; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+        .recent-hit { background: #ffd700; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+        .numbers-output { background: #1a1a2e; color: #4ecdc4; padding: 20px; border-radius: 5px; font-family: monospace; max-height: 300px; overflow-y: auto; word-wrap: break-word; line-height: 1.8; }
+        .pairs-display { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+        .pair-badge { background: #4ecdc4; color: white; padding: 5px 12px; border-radius: 20px; }
+        .hidden { display: none; }
+        .step-indicator { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+        .step { background: #e0e0e0; padding: 8px 15px; border-radius: 20px; font-size: 12px; }
+        .step.complete { background: #4ecdc4; color: white; }
+    
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 220px;
+        height: 100vh;
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px 0;
+        z-index: 1000;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    }
+    .sidebar-header {
+        padding: 0 20px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 20px;
+    }
+    .sidebar-header h3 {
+        color: #4ecdc4;
+        margin: 0;
+        font-size: 18px;
+    }
+    .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+    }
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: #aaa;
+        text-decoration: none;
+        transition: all 0.3s;
+        border-left: 3px solid transparent;
+    }
+    .nav-item:hover {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+    .nav-item.active {
+        background: rgba(78,205,196,0.2);
+        color: #4ecdc4;
+        border-left-color: #4ecdc4;
+    }
+    .nav-icon {
+        font-size: 18px;
+        margin-right: 12px;
+    }
+    .nav-text {
+        font-size: 14px;
+    }
+    .main-content {
+        margin-left: 220px;
+    }
+    .header {
+        margin-left: 0 !important;
+    }
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 60px;
+        }
+        .sidebar-header h3, .nav-text {
+            display: none;
+        }
+        .nav-item {
+            justify-content: center;
+            padding: 15px;
+        }
+        .nav-icon {
+            margin: 0;
+            font-size: 22px;
+        }
+        .main-content {
+            margin-left: 60px;
+        }
+    }
+
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>🎱 MyLottoData</h3>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-text">Query Tool</span>
+            </a>
+            <a href="/predictions" class="nav-item active">
+                <span class="nav-icon">🔮</span>
+                <span class="nav-text">2DP AP (Pick 4)</span>
+            </a>
+            <a href="/predictions/pick5" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-text">3DP AP (Pick 5)</span>
+            </a>
+            <a href="/report/efficacy" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Efficacy (Pick 4)</span>
+            </a>
+            <a href="/report/efficacy-pick5" class="nav-item">
+                <span class="nav-icon">📈</span>
+                <span class="nav-text">Efficacy (Pick 5)</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+    <div class="header">
+        <h1>🎱 MyLottoData - Prediction Algorithms</h1>
+        <p><a href="/">← Back to Query Tool</a></p>
+    </div>
+    <div class="container">
+        <div class="card">
+            <h2>2DP AP (2-Digit Pair - All Possibles) Algorithm</h2>
+            <div class="step-indicator">
+                <span class="step" id="step1">1. Seed</span>
+                <span class="step" id="step2">2. 2DP Pairs</span>
+                <span class="step" id="step2b">2b. Candidates</span>
+                <span class="step" id="step3">3. History</span>
+                <span class="step" id="step4">4. Date-Diff</span>
+                <span class="step" id="step5">5. Filter</span>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>State</label><select id="pred-state"><option value="">Loading...</option></select></div>
+                <div class="form-group"><label>Game Type</label><select id="pred-game-type"><option value="">Select state first</option></select></div>
+                <div class="form-group"><label>TOD (optional)</label><select id="pred-tod"><option value="">All Draws</option><option value="Midday">Midday</option><option value="Evening">Evening</option><option value="Day">Day</option><option value="Night">Night</option></select></div>
+                <div class="form-group"><label>Seed Number</label><input type="text" id="pred-seed-number" placeholder="e.g., 3180"></div>
+                <div class="form-group"><label>Seed Date</label><input type="date" id="pred-seed-date" min="2000-01-01" max="2099-12-31"></div>
+                <div class="form-group"><label>Days Threshold</label><input type="number" id="pred-days-threshold" value="30" min="1" max="365"></div>
+                <div class="form-group"><label>Min Hits</label><input type="number" id="pred-min-hits" value="2" min="1" max="100" onchange="applyMinHitsFilter()"></div>
+            </div>
+            <div class="form-row">
+                <button class="btn btn-fetch" onclick="fetchLatestDraw()">📥 Fetch Latest</button>
+                <button class="btn btn-primary" onclick="runPrediction()">🔮 Run Prediction</button>
+            </div>
+        </div>
+        <div id="prediction-results" class="hidden">
+            <div class="card">
+                <h2>Results</h2>
+                <div class="results-grid">
+                    <div class="stat-box"><div class="value" id="res-seed">-</div><div class="label">Normalized Seed</div></div>
+                    <div class="stat-box"><div class="value" id="res-candidates">-</div><div class="label">2DP Candidates</div></div>
+                    <div class="stat-box"><div class="value" id="res-historical">-</div><div class="label">Historical Hits</div></div>
+                    <div class="stat-box"><div class="value" id="res-qualified">-</div><div class="label">Qualified (After)</div></div>
+                    <div class="stat-box"><div class="value" id="res-qualified-before">-</div><div class="label">Qualified (Before)</div></div>
+                    <div class="stat-box" style="background:#d4edda;"><div class="value" id="res-common-count">-</div><div class="label">Common (After|Before)</div></div>
+                </div>
+                <h3>2DP Pairs</h3>
+                <div class="pairs-display" id="res-pairs"></div>
+                <h3>Seed History</h3>
+                <table><thead><tr><th>Date</th><th>Value</th><th>TOD</th><th>Date-Diff</th></tr></thead><tbody id="res-seed-history"></tbody></table>
+            </div>
+            <div class="card">
+                <h2>Top Predictions AFTER Seed <button onclick="copyNumbers()" style="float:right;padding:5px 10px;cursor:pointer;">📋 Copy</button></h2>
+                <table><thead><tr><th>Rank</th><th>Number</th><th>Norm</th><th>Hits</th><th>DateDiff</th></tr></thead><tbody id="res-predictions"></tbody></table>
+            </div>
+            <div class="card">
+                <h2>All Numbers (<span id="res-total-count">0</span>)</h2>
+                <div class="numbers-output" id="res-all-numbers"></div>
+            </div>
+            <div class="card">
+                <h2>Top Predictions BEFORE Seed <button onclick="copyNumbersBefore()" style="float:right;padding:5px 10px;cursor:pointer;">📋 Copy</button></h2>
+                <p style="color:#666;margin-bottom:10px;">Numbers that hit within 30 days BEFORE the seed (what preceded it)</p>
+                <div class="predictions-table-wrapper"><table><thead><tr><th>Rank</th><th style="cursor:pointer" onclick="sortTableBefore('number')">Number ⇅</th><th>Norm</th><th style="cursor:pointer" onclick="sortTableBefore('hits')">Hits ⇅</th><th>DateDiff (Before)</th></tr></thead><tbody id="res-predictions-before"></tbody></table></div>
+            </div>
+            <div class="card">
+                <h2>All Numbers Before (<span id="res-total-count-before">0</span>)</h2>
+                <div class="numbers-output" id="res-all-numbers-before"></div>
+            </div>
+            <div class="card" style="border: 2px solid #4ecdc4;">
+                <h2>🎯 Common Numbers (<span id="res-common-count">0</span>) — Appear in BOTH Before & After</h2>
+                <p style="color:#666;margin-bottom:10px;">These numbers show stronger correlation - they appear near the seed in both directions</p>
+                <div class="numbers-output" id="res-common-numbers" style="background: #1a4a2e;"></div>
+            </div>
+            <div class="card" style="border: 2px solid #ff6b6b;">
+                <h2>🔥 Common Numbers Hit Within 10 Days of Seed (<span id="res-within10-count">0</span>)</h2>
+                <p style="color:#666;margin-bottom:10px;">From the Common Numbers list, these hit within 10 days of the most recent seed occurrence</p>
+                <div class="numbers-output" id="res-within10-numbers" style="background: #4a1a1a;"></div>
+            </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentResults = null;
+        let currentSort = {field: null, asc: true};
+        let currentSortBefore = {field: null, asc: true};
+        
+        async function loadStates() {
+            const res = await fetch('/api/prediction/states');
+            const states = await res.json();
+            document.getElementById('pred-state').innerHTML = '<option value="">Select State</option>' + states.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+        
+        document.getElementById('pred-state').addEventListener('change', async (e) => {
+            const state = e.target.value;
+            if (!state) { document.getElementById('pred-game-type').innerHTML = '<option value="">Select state first</option>'; return; }
+            const res = await fetch(`/api/prediction/games/${encodeURIComponent(state)}`);
+            const games = await res.json();
+            document.getElementById('pred-game-type').innerHTML = '<option value="">Select Game Type</option>' + games.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        });
+        
+        document.getElementById('pred-seed-date').addEventListener('change', async (e) => {
+            const state = document.getElementById('pred-state').value;
+            const gameType = document.getElementById('pred-game-type').value;
+            const date = e.target.value;
+            if (!state || !gameType || !date) return;
+            const tod = document.getElementById('pred-tod').value; const res = await fetch('/api/prediction/draw-by-date/' + encodeURIComponent(state) + '/' + encodeURIComponent(gameType) + '/' + date + (tod ? '?tod=' + encodeURIComponent(tod) : ''));
+            const data = await res.json();
+            if (!data.error) { document.getElementById('pred-seed-number').value = data.value.replace(/-/g, ''); }
+        });
+        
+        async function fetchLatestDraw() {
+            const state = document.getElementById('pred-state').value, gameType = document.getElementById('pred-game-type').value;
+            if (!state || !gameType) { alert('Select state and game type first'); return; }
+            const tod = document.getElementById('pred-tod').value; const res = await fetch(`/api/prediction/latest/${encodeURIComponent(state)}/${encodeURIComponent(gameType)}` + (tod ? `?tod=${encodeURIComponent(tod)}` : ''));
+            const data = await res.json();
+            if (data.error) { alert(data.error); return; }
+            document.getElementById('pred-seed-number').value = data.value.replace(/-/g, '');
+            document.getElementById('pred-seed-date').value = data.date;
+        }
+        
+        async function runPrediction() {
+            const state = document.getElementById('pred-state').value, gameType = document.getElementById('pred-game-type').value;
+            const seedNumber = document.getElementById('pred-seed-number').value, seedDate = document.getElementById('pred-seed-date').value;
+            const daysThreshold = document.getElementById('pred-days-threshold').value;
+            if (!state || !gameType || !seedNumber || !seedDate) { alert('Fill all fields'); return; }
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('complete'));
+            const res = await fetch('/api/prediction/2dp-ap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seed_number: seedNumber, seed_date: seedDate, state, game_type: gameType, days_threshold: parseInt(daysThreshold), tod: document.getElementById('pred-tod').value }) });
+            const data = await res.json();
+            if (data.error) { alert(data.error); return; }
+            currentResults = data;
+            document.getElementById('prediction-results').classList.remove('hidden');
+            document.getElementById('res-seed').textContent = data.normalized_seed;
+            document.getElementById('res-candidates').textContent = data.total_2dp_candidates;
+            document.getElementById('res-historical').textContent = data.seed_historical_hits;
+            document.getElementById('res-pairs').innerHTML = data.pairs_2dp.map(p => `<span class="pair-badge">${p}</span>`).join('');
+            document.getElementById('res-seed-history').innerHTML = data.seed_history.map(h => `<tr><td>${h.date}</td><td>${h.value}</td><td>${h.tod || '-'}</td><td>${h.date_diff}</td></tr>`).join('');
+            document.querySelectorAll('.step').forEach(s => s.classList.add('complete'));
+            applyMinHitsFilter();
+        }
+        
+        function applyMinHitsFilter() {
+            if (!currentResults) return;
+            const minHits = parseInt(document.getElementById('pred-min-hits').value) || 1;
+            
+            // Filter AFTER predictions
+            const filtered = currentResults.predictions.filter(p => p.hit_count >= minHits);
+            
+            // Filter BEFORE predictions
+            const filteredBefore = (currentResults.predictions_before || []).filter(p => p.hit_count >= minHits);
+            
+            // Calculate missing numbers
+            const qualifiedNumbers = new Set(filtered.map(p => p.number));
+            
+            // Update AFTER stats
+            document.getElementById('res-qualified').textContent = filtered.length;
+            document.getElementById('res-total-count').textContent = filtered.length;
+            document.getElementById('res-all-numbers').textContent = filtered.map(p => p.number).sort().join(' ');
+            
+            // Update BEFORE stats
+            if (document.getElementById('res-qualified-before')) {
+                document.getElementById('res-qualified-before').textContent = filteredBefore.length;
+            }
+            if (document.getElementById('res-total-count-before')) {
+                document.getElementById('res-total-count-before').textContent = filteredBefore.length;
+            }
+            if (document.getElementById('res-all-numbers-before')) {
+                document.getElementById('res-all-numbers-before').textContent = filteredBefore.map(p => p.number).sort().join(' ');
+            }
+            
+            // Update missing
+            
+            
+            // Calculate COMMON numbers (in both Before and After)
+            const afterNumbers = new Set(filtered.map(p => p.number));
+            const beforeNumbers = new Set(filteredBefore.map(p => p.number));
+            const commonNumbers = [...afterNumbers].filter(n => beforeNumbers.has(n)).sort();
+            
+            // Find which common numbers hit within 10 days (recent hits) - track days and direction
+            const recentHits = {};
+            filtered.forEach(p => {
+                if (commonNumbers.includes(p.number)) {
+                    p.hits.forEach(h => {
+                        if (h.days_after <= 10) {
+                            if (!recentHits[p.number] || h.days_after < recentHits[p.number].days) {
+                                recentHits[p.number] = { days: h.days_after, direction: 'AFTER' };
+                            }
+                        }
+                    });
+                }
+            });
+            filteredBefore.forEach(p => {
+                if (commonNumbers.includes(p.number)) {
+                    p.hits.forEach(h => {
+                        if (h.days_before <= 10) {
+                            if (!recentHits[p.number] || h.days_before < recentHits[p.number].days) {
+                                recentHits[p.number] = { days: h.days_before, direction: 'BEFORE' };
+                            }
+                        }
+                    });
+                }
+            });
+            
+            const recentCount = Object.keys(recentHits).length;
+            if (document.getElementById('res-common-count')) {
+                document.getElementById('res-common-count').textContent = commonNumbers.length + (recentCount > 0 ? ' (' + recentCount + ' recent hits!)' : '');
+            }
+            if (document.getElementById('res-common-numbers')) {
+                document.getElementById('res-common-numbers').innerHTML = commonNumbers.map(n => 
+                    recentHits[n] ? '<span class="recent-hit">⭐ ' + n + ' (' + recentHits[n].days + 'd ' + recentHits[n].direction + ')</span>' : n
+                ).join(' ');
+            }
+            
+            // Calculate Common Numbers that hit within 10 days of the SEED DATE
+            const seedDate = new Date(currentResults.seed_date);
+            const within10Seed = {};
+            
+            // Check AFTER hits for common numbers (within 10 days after seed)
+            filtered.forEach(p => {
+                if (commonNumbers.includes(p.number)) {
+                    p.hits.forEach(h => {
+                        if (h.days_after <= 10) {
+                            // Check if this hit is from the most recent seed occurrence
+                            if (h.seed_date === currentResults.seed_date) {
+                                if (!within10Seed[p.number] || h.days_after < within10Seed[p.number].daysFromSeed) {
+                                    within10Seed[p.number] = { 
+                                        hitDate: h.hit_date,
+                                        seedDate: h.seed_date,
+                                        direction: 'AFTER',
+                                        daysFromSeed: h.days_after
+                                    };
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Check BEFORE hits for common numbers (within 10 days before seed)
+            filteredBefore.forEach(p => {
+                if (commonNumbers.includes(p.number)) {
+                    p.hits.forEach(h => {
+                        if (h.days_before <= 10) {
+                            // Check if this hit is from the most recent seed occurrence
+                            if (h.seed_date === currentResults.seed_date) {
+                                if (!within10Seed[p.number] || h.days_before < within10Seed[p.number].daysFromSeed) {
+                                    within10Seed[p.number] = { 
+                                        hitDate: h.hit_date,
+                                        seedDate: h.seed_date,
+                                        direction: 'BEFORE',
+                                        daysFromSeed: h.days_before
+                                    };
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            
+            const within10Sorted = Object.entries(within10Seed).sort((a, b) => a[1].daysFromSeed - b[1].daysFromSeed);
+            
+            if (document.getElementById('res-within10-count')) {
+                document.getElementById('res-within10-count').textContent = within10Sorted.length;
+            }
+            if (document.getElementById('res-within10-numbers')) {
+                document.getElementById('res-within10-numbers').innerHTML = within10Sorted.length > 0 
+                    ? within10Sorted.map(([num, info]) => 
+                        '<span class="recent-hit">⭐ ' + num + ' (' + info.daysFromSeed + 'd ' + info.direction + ', hit ' + info.hitDate + ')</span>'
+                    ).join(' ')
+                    : 'None of the Common Numbers hit within 10 days of the seed date (' + currentResults.seed_date + ')';
+            }
+            
+            // Render tables
+            renderPredictions(filtered);
+            renderPredictionsBefore(filteredBefore);
+        }
+        
+        function renderPredictions(preds) {
+            document.getElementById('res-predictions').innerHTML = preds.map((p, i) => `<tr><td>${i+1}</td><td><b>${p.number}</b></td><td>${p.normalized}</td><td>${p.hit_count}</td><td>${p.hits.map(h => h.seed_date + (h.seed_tod ? ' ' + h.seed_tod : '') + ' → ' + h.hit_date + (h.hit_tod ? ' ' + h.hit_tod : '') + ' (' + h.days_after + 'd)').join('<br>')}</td></tr>`).join('');
+        }
+        
+        function renderPredictionsBefore(preds) {
+            if (!document.getElementById('res-predictions-before')) return;
+            document.getElementById('res-predictions-before').innerHTML = preds.map((p, i) => `<tr><td>${i+1}</td><td><b>${p.number}</b></td><td>${p.normalized}</td><td>${p.hit_count}</td><td>${p.hits.map(h => h.hit_date + (h.hit_tod ? ' ' + h.hit_tod : '') + ' → ' + h.seed_date + (h.seed_tod ? ' ' + h.seed_tod : '') + ' (' + h.days_before + 'd)').join('<br>')}</td></tr>`).join('');
+        }
+        
+        function sortTable(field) {
+            if (!currentResults) return;
+            if (currentSort.field === field) { currentSort.asc = !currentSort.asc; }
+            else { currentSort.field = field; currentSort.asc = true; }
+            const minHits = parseInt(document.getElementById('pred-min-hits').value) || 1;
+            let sorted = currentResults.predictions.filter(p => p.hit_count >= minHits);
+            if (field === 'number') sorted.sort((a, b) => currentSort.asc ? a.number.localeCompare(b.number) : b.number.localeCompare(a.number));
+            else if (field === 'hits') sorted.sort((a, b) => currentSort.asc ? a.hit_count - b.hit_count : b.hit_count - a.hit_count);
+            renderPredictions(sorted);
+        }
+        
+        function sortTableBefore(field) {
+            if (!currentResults || !currentResults.predictions_before) return;
+            if (currentSortBefore.field === field) { currentSortBefore.asc = !currentSortBefore.asc; }
+            else { currentSortBefore.field = field; currentSortBefore.asc = true; }
+            const minHits = parseInt(document.getElementById('pred-min-hits').value) || 1;
+            let sorted = currentResults.predictions_before.filter(p => p.hit_count >= minHits);
+            if (field === 'number') sorted.sort((a, b) => currentSortBefore.asc ? a.number.localeCompare(b.number) : b.number.localeCompare(a.number));
+            else if (field === 'hits') sorted.sort((a, b) => currentSortBefore.asc ? a.hit_count - b.hit_count : b.hit_count - a.hit_count);
+            renderPredictionsBefore(sorted);
+        }
+        
+        function copyNumbers() { if (currentResults) { navigator.clipboard.writeText(currentResults.all_numbers.join(' ')); alert('Copied!'); } }
+        function copyNumbersBefore() { if (currentResults && currentResults.all_numbers_before) { navigator.clipboard.writeText(currentResults.all_numbers_before.join(' ')); alert('Copied!'); } }
+        
+        loadStates();
+        document.getElementById('pred-seed-date').valueAsDate = new Date();
+        
+        // Game Type change listener - update seed number when game changes
+        document.getElementById('pred-game-type').addEventListener('change', () => {
+            const date = document.getElementById('pred-seed-date').value;
+            if (date) {
+                // Trigger date change to refetch with new game type
+                const event = new Event('change');
+                document.getElementById('pred-seed-date').dispatchEvent(event);
+            } else {
+                fetchLatestDraw();
+            }
+        });
+        
+        // TOD change listener - update seed number when TOD changes
+        document.getElementById('pred-tod').addEventListener('change', async () => {
+            const state = document.getElementById('pred-state').value;
+            const date = document.getElementById('pred-seed-date').value;
+            const tod = document.getElementById('pred-tod').value;
+            const gameType = document.getElementById('pred-game-type').value;
+            
+            if (!state || !gameType) return;
+            
+            // If we have a date selected, fetch draw for that date + TOD
+            if (date) {
+                const url = '/api/prediction/draw-by-date/' + encodeURIComponent(state) + '/' + encodeURIComponent(gameType) + '/' + date + (tod ? '?tod=' + encodeURIComponent(tod) : '');
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.error && data.value) {
+                    document.getElementById('pred-seed-number').value = data.value.replace(/-/g, '');
+                }
+            } else {
+                fetchLatestDraw();
+            }
+        });
+    </script>
+    </div>
+</body>
+</html>

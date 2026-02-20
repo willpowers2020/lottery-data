@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3DP AP Efficacy Report - Pick 5</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 220px; height: 100vh; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); padding: 20px 0; z-index: 1000; }
+        .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .sidebar-header h3 { color: #4ecdc4; margin: 0; font-size: 18px; }
+        .sidebar-nav { display: flex; flex-direction: column; }
+        .nav-item { display: flex; align-items: center; padding: 12px 20px; color: #aaa; text-decoration: none; transition: all 0.3s; border-left: 3px solid transparent; }
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .nav-item.active { background: rgba(78,205,196,0.2); color: #4ecdc4; border-left-color: #4ecdc4; }
+        .nav-icon { font-size: 18px; margin-right: 12px; }
+        .nav-text { font-size: 14px; }
+        .main-content { margin-left: 220px; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 20px; text-align: center; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .card h2 { margin-bottom: 15px; color: #1a1a2e; border-bottom: 2px solid #ff6b6b; padding-bottom: 10px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 120px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; margin-right: 10px; }
+        .btn-primary { background: #ff6b6b; color: white; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-box { background: #f8f9fa; border-radius: 5px; padding: 15px; text-align: center; }
+        .stat-box .value { font-size: 24px; font-weight: bold; color: #ff6b6b; }
+        .stat-box .label { font-size: 12px; color: #666; }
+        .stat-box.highlight { background: #d4edda; }
+        .stat-box.highlight .value { color: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; position: sticky; top: 0; }
+        .table-wrapper { max-height: 500px; overflow-y: auto; }
+        .hidden { display: none; }
+        .good { color: #28a745; font-weight: bold; }
+        .medium { color: #ffc107; font-weight: bold; }
+        .poor { color: #dc3545; font-weight: bold; }
+        .hit-detail { background: #fffacd; padding: 2px 6px; border-radius: 3px; margin: 2px; display: inline-block; font-size: 11px; }
+        .hit-after { background: #d4edda; }
+        .hit-before { background: #cce5ff; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header"><h3>🎱 MyLottoData</h3></div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item"><span class="nav-icon">🔍</span><span class="nav-text">Query Tool</span></a>
+            <a href="/predictions" class="nav-item"><span class="nav-icon">🔮</span><span class="nav-text">2DP AP (Pick 4)</span></a>
+            <a href="/predictions/pick5" class="nav-item"><span class="nav-icon">🎯</span><span class="nav-text">3DP AP (Pick 5)</span></a>
+            <a href="/report/efficacy" class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Efficacy (Pick 4)</span></a>
+            <a href="/report/efficacy-pick5" class="nav-item active"><span class="nav-icon">📈</span><span class="nav-text">Efficacy (Pick 5)</span></a>
+        </nav>
+    </div>
+    
+    <div class="main-content">
+        <div class="header">
+            <h1>📈 3DP AP Efficacy Report - Pick 5</h1>
+            <p>Algorithm Effectiveness Analysis</p>
+        </div>
+        
+        <div class="container">
+            <div class="card">
+                <h2>Report Parameters</h2>
+                <div class="form-row">
+                    <div class="form-group"><label>State</label><select id="state"><option value="">Loading...</option></select></div>
+                    <div class="form-group"><label>TOD (optional)</label><select id="tod"><option value="">All Draws</option><option value="Midday">Midday</option><option value="Evening">Evening</option></select></div>
+                    <div class="form-group"><label>Start Date</label><input type="date" id="start-date" value="2026-01-01"></div>
+                    <div class="form-group"><label>End Date</label><input type="date" id="end-date" value="2026-01-19"></div>
+                    <div class="form-group"><label>Days Threshold</label><input type="number" id="days-threshold" value="30" min="1"></div>
+                    <div class="form-group"><label>Hit Window (days)</label><input type="number" id="hit-window" value="1" min="1"></div>
+                </div>
+                <div class="form-row">
+                    <button class="btn btn-primary" onclick="runReport()">📊 Run Report</button>
+                    <button class="btn" onclick="openEmailModal()" style="background:#6c5ce7;color:white;">📧 Email Report</button>
+                </div>
+            </div>
+            
+            <div id="loading" class="card hidden"><div style="text-align:center;padding:40px;">⏳ Generating Report...</div></div>
+            
+            <div id="results" class="hidden">
+                <div class="card">
+                    <h2>📈 Overall Summary</h2>
+                    <div class="results-grid">
+                        <div class="stat-box"><div class="value" id="res-seeds">-</div><div class="label">Seeds Analyzed</div></div>
+                        <div class="stat-box"><div class="value" id="res-common">-</div><div class="label">Common Predicted</div></div>
+                        <div class="stat-box"><div class="value" id="res-hits">-</div><div class="label" id="res-hits-label">Hits Within Xd</div></div>
+                        <div class="stat-box highlight"><div class="value" id="res-rate">-</div><div class="label">Hit Rate %</div></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>🔍 Detailed Results</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr><th>Seed Date</th><th>Seed Value</th><th>Common #</th><th>Hits</th><th>Rate %</th><th>Actual Hits</th></tr></thead>
+                            <tbody id="detail-results"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="email-modal" class="modal hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;">
+        <div style="background:white;padding:30px;border-radius:10px;max-width:500px;width:90%;">
+            <h3>📧 Email Report</h3>
+            <div style="margin:15px 0;"><label>Recipient Email:</label><input type="email" id="recipient-email" placeholder="your@email.com" style="width:100%;padding:10px;margin-top:5px;"></div>
+            <div style="margin-top:20px;">
+                <button class="btn btn-primary" onclick="sendEmail()">📤 Send</button>
+                <button class="btn" onclick="closeEmailModal()" style="background:#ccc;">Cancel</button>
+            </div>
+            <p id="email-status" style="margin-top:15px;"></p>
+        </div>
+    </div>
+    
+    <script>
+        let lastReportData = null;
+        
+        async function loadStates() {
+            const res = await fetch('/api/prediction/pick5/states');
+            const states = await res.json();
+            document.getElementById('state').innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+        
+        function getRateClass(rate) { return rate >= 15 ? 'good' : rate >= 8 ? 'medium' : 'poor'; }
+        
+        function formatHitDetail(h) {
+            const dirClass = h.direction === 'AFTER' ? 'hit-after' : 'hit-before';
+            return `<span class="hit-detail ${dirClass}">⭐ ${h.number} → ${h.hit_value} (${h.hit_date}${h.hit_tod ? ' ' + h.hit_tod : ''}, ${Math.abs(h.days_from_seed)}d ${h.direction})</span>`;
+        }
+        
+        async function runReport() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            
+            const hitWindow = parseInt(document.getElementById('hit-window').value);
+            
+            const res = await fetch('/api/prediction/efficacy-report-pick5', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    state: document.getElementById('state').value,
+                    tod: document.getElementById('tod').value,
+                    start_date: document.getElementById('start-date').value,
+                    end_date: document.getElementById('end-date').value,
+                    days_threshold: parseInt(document.getElementById('days-threshold').value),
+                    hit_window: hitWindow
+                })
+            });
+            
+            const data = await res.json();
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+            
+            lastReportData = {
+                params: {
+                    state: document.getElementById('state').value,
+                    startDate: document.getElementById('start-date').value,
+                    endDate: document.getElementById('end-date').value,
+                    hitWindow: hitWindow
+                },
+                summary: {
+                    seeds: data.total_seeds_analyzed,
+                    common: data.total_common_predicted,
+                    hits: data.total_hits_within_window || 0,
+                    rate: data.overall_hit_rate + '%'
+                }
+            };
+            
+            document.getElementById('res-hits-label').textContent = `Hits Within ${hitWindow}d`;
+            document.getElementById('res-seeds').textContent = data.total_seeds_analyzed;
+            document.getElementById('res-common').textContent = data.total_common_predicted;
+            document.getElementById('res-hits').textContent = data.total_hits_within_window || 0;
+            document.getElementById('res-rate').textContent = data.overall_hit_rate + '%';
+            
+            document.getElementById('detail-results').innerHTML = data.results.map(r => `
+                <tr>
+                    <td>${r.seed_date}</td>
+                    <td>${r.seed_value}<br><small>(${r.seed_norm})</small></td>
+                    <td>${r.common_count}</td>
+                    <td>${r.hits_within_window || 0}</td>
+                    <td class="${getRateClass(r.hit_rate)}">${r.hit_rate}%</td>
+                    <td>${r.hits_detail.map(h => formatHitDetail(h)).join(' ') || '-'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function openEmailModal() { if (!lastReportData) { alert('Run report first'); return; } document.getElementById('email-modal').style.display = 'flex'; }
+        function closeEmailModal() { document.getElementById('email-modal').style.display = 'none'; }
+        
+        async function sendEmail() {
+            const toEmail = document.getElementById('recipient-email').value;
+            if (!toEmail) { alert('Enter email'); return; }
+            document.getElementById('email-status').innerHTML = '<span style="color:blue;">📤 Sending...</span>';
+            
+            const d = lastReportData;
+            const detailHTML = document.getElementById('detail-results').innerHTML;
+            const fullHTML = `<h2>3DP AP Efficacy Report - Pick 5</h2>
+                <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                <p><strong>State:</strong> ${d.params.state} | <strong>Date Range:</strong> ${d.params.startDate} to ${d.params.endDate}</p>
+                <h3>Summary</h3>
+                <ul><li>Seeds: ${d.summary.seeds}</li><li>Common Predicted: ${d.summary.common}</li><li>Hits: ${d.summary.hits}</li><li>Rate: ${d.summary.rate}</li></ul>
+                <h3>Details</h3>
+                <table border="1" cellpadding="8"><tr><th>Seed Date</th><th>Seed Value</th><th>Common</th><th>Hits</th><th>Rate</th><th>Actual Hits</th></tr>${detailHTML}</table>`;
+            
+            const response = await fetch('/api/send-pdf-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to_email: toEmail, subject: '3DP AP Efficacy Report (Pick 5) - ' + new Date().toLocaleDateString(), html_content: fullHTML })
+            });
+            const result = await response.json();
+            document.getElementById('email-status').innerHTML = result.success ? '<span style="color:green;">✅ Sent!</span>' : '<span style="color:red;">❌ ' + result.error + '</span>';
+        }
+        
+        loadStates();
+    </script>
+</body>
+</html>

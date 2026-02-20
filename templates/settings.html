@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Settings - MyLottoData</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e1e2e;
+            --darker: #181825;
+            --light: #cdd6f4;
+            --muted: #6c7086;
+            --surface: #313244;
+            --surface-light: #45475a;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--darker);
+            color: var(--light);
+            min-height: 100vh;
+        }
+        
+        /* Navigation */
+        .navbar {
+            background: var(--dark);
+            border-bottom: 1px solid var(--surface);
+            padding: 0 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--light);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        
+        .nav-brand span {
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            color: var(--muted);
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: var(--surface);
+            color: var(--light);
+        }
+        
+        .nav-link.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        
+        /* Main Content */
+        .main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: var(--light);
+        }
+        
+        .settings-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .settings-section h2 {
+            font-size: 1.1rem;
+            color: var(--light);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--surface-light);
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--surface-light);
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-info h3 {
+            font-size: 0.95rem;
+            color: var(--light);
+            margin-bottom: 5px;
+        }
+        
+        .setting-info p {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        
+        .setting-control select,
+        .setting-control input {
+            padding: 10px 15px;
+            background: var(--darker);
+            border: 1px solid var(--surface-light);
+            border-radius: 6px;
+            color: var(--light);
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+        
+        .setting-control select:focus,
+        .setting-control input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-badge.connected {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+        
+        .status-badge.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        
+        .info-box {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .info-box strong {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                🎰 <span>MyLottoData</span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="/" class="nav-link">🏠 Dashboard</a>
+                <a href="/predictions" class="nav-link">🎯 Predictions</a>
+                <a href="/backtest" class="nav-link">🧪 Backtest</a>
+                <a href="/settings" class="nav-link active">⚙️ Settings</a>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="main">
+        <h1>⚙️ Settings</h1>
+        
+        <div class="settings-section">
+            <h2>🗄️ Database</h2>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Database Mode</h3>
+                    <p>Select the database backend for queries</p>
+                </div>
+                <div class="setting-control">
+                    <select id="dbMode" onchange="changeDbMode()">
+                        <option value="mongo_v2">MongoDB v2 (Optimized)</option>
+                        <option value="mongo">MongoDB (Original)</option>
+                        <option value="sqlite">SQLite (Local)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Connection Status</h3>
+                    <p>Current database connection</p>
+                </div>
+                <div class="setting-control">
+                    <span class="status-badge connected" id="dbStatus">Connected</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h2>🎯 Default Predictions</h2>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Default State</h3>
+                    <p>Pre-selected state for predictions</p>
+                </div>
+                <div class="setting-control">
+                    <select id="defaultState">
+                        <option value="Florida">Florida</option>
+                        <option value="Texas">Texas</option>
+                        <option value="New York">New York</option>
+                        <option value="California">California</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Default Game</h3>
+                    <p>Pre-selected game type</p>
+                </div>
+                <div class="setting-control">
+                    <select id="defaultGame">
+                        <option value="pick3">Pick 3</option>
+                        <option value="pick4" selected>Pick 4</option>
+                        <option value="pick5">Pick 5</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>DP Size</h3>
+                    <p>Digit pair matching size (3DP recommended)</p>
+                </div>
+                <div class="setting-control">
+                    <select id="dpSize">
+                        <option value="2">2DP (Pairs)</option>
+                        <option value="3" selected>3DP (Triplets)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h2>📧 Email Notifications</h2>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Email Address</h3>
+                    <p>Receive daily predictions via email</p>
+                </div>
+                <div class="setting-control">
+                    <input type="email" id="emailAddress" placeholder="your@email.com">
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>SMTP Status</h3>
+                    <p>Email server configuration</p>
+                </div>
+                <div class="setting-control">
+                    <span class="status-badge disconnected" id="smtpStatus">Not Configured</span>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <strong>Note:</strong> To enable email notifications, configure SMTP environment variables:
+                <br><code>SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS</code>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h2>📊 Algorithm Stats</h2>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>365-Day Backtest Results</h3>
+                    <p>RBTL + 3DP Algorithm Performance</p>
+                </div>
+                <div class="setting-control" style="text-align:right">
+                    <div style="color:var(--success);font-weight:600">47.7% Top 3</div>
+                    <div style="color:var(--warning);font-weight:600">57.1% Top 10</div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="saveSettings()" style="margin-top:20px">
+            💾 Save Settings
+        </button>
+    </main>
+    
+    <script>
+        // Load settings
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dbMode = urlParams.get('db') || localStorage.getItem('dbMode') || 'mongo_v2';
+            document.getElementById('dbMode').value = dbMode;
+            
+            // Load other settings from localStorage
+            const defaultState = localStorage.getItem('defaultState') || 'Florida';
+            const defaultGame = localStorage.getItem('defaultGame') || 'pick4';
+            const dpSize = localStorage.getItem('dpSize') || '3';
+            const email = localStorage.getItem('emailAddress') || '';
+            
+            document.getElementById('defaultState').value = defaultState;
+            document.getElementById('defaultGame').value = defaultGame;
+            document.getElementById('dpSize').value = dpSize;
+            document.getElementById('emailAddress').value = email;
+            
+            checkDbStatus();
+        });
+        
+        function changeDbMode() {
+            const mode = document.getElementById('dbMode').value;
+            localStorage.setItem('dbMode', mode);
+            // Reload with new db mode
+            window.location.href = '/?db=' + mode;
+        }
+        
+        async function checkDbStatus() {
+            try {
+                const mode = document.getElementById('dbMode').value;
+                const res = await fetch('/api/db-status?db=' + mode);
+                const data = await res.json();
+                
+                document.getElementById('dbStatus').textContent = 'Connected';
+                document.getElementById('dbStatus').className = 'status-badge connected';
+            } catch (e) {
+                document.getElementById('dbStatus').textContent = 'Error';
+                document.getElementById('dbStatus').className = 'status-badge disconnected';
+            }
+        }
+        
+        function saveSettings() {
+            localStorage.setItem('defaultState', document.getElementById('defaultState').value);
+            localStorage.setItem('defaultGame', document.getElementById('defaultGame').value);
+            localStorage.setItem('dpSize', document.getElementById('dpSize').value);
+            localStorage.setItem('emailAddress', document.getElementById('emailAddress').value);
+            localStorage.setItem('dbMode', document.getElementById('dbMode').value);
+            
+            alert('Settings saved!');
+        }
+    </script>
+</body>
+</html>

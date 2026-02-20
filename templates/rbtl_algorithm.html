@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 RBTL Algorithm - Historical Pattern Finder</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root[data-theme="light"] {
+            --bg:#f5f7fa;--surface:#ffffff;--surface-alt:#f0f2f5;--border:#e0e4e8;--border-light:#eaeef2;
+            --text:#1e293b;--text-sec:#64748b;--text-dim:#94a3b8;
+            --primary:#6366f1;--primary-dark:#4f46e5;--primary-glow:rgba(99,102,241,0.08);
+            --success:#10b981;--success-glow:rgba(16,185,129,0.08);
+            --warning:#f59e0b;--warning-glow:rgba(245,158,11,0.08);
+            --danger:#ef4444;--danger-glow:rgba(239,68,68,0.08);--orange:#e65100;
+            --shadow:0 1px 3px rgba(0,0,0,0.08);
+            --nav-bg:#1e1e2e;--nav-text:#cdd6f4;--nav-muted:#6c7086;--nav-surface:#313244;
+        }
+        :root[data-theme="dark"] {
+            --bg:#0f1117;--surface:#161922;--surface-alt:#1c1f2e;--border:#2a2d3e;--border-light:#363952;
+            --text:#e8eaed;--text-sec:#9ca3af;--text-dim:#6b7280;
+            --primary:#818cf8;--primary-dark:#6366f1;--primary-glow:rgba(99,102,241,0.15);
+            --success:#34d399;--success-glow:rgba(16,185,129,0.15);
+            --warning:#fbbf24;--warning-glow:rgba(245,158,11,0.15);
+            --danger:#f87171;--danger-glow:rgba(239,68,68,0.15);--orange:#fb923c;
+            --shadow:0 1px 3px rgba(0,0,0,0.3);
+            --nav-bg:#0b0d14;--nav-text:#cdd6f4;--nav-muted:#6c7086;--nav-surface:#1c1f2e;
+        }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+        
+        /* Navbar */
+        .navbar { background:var(--nav-bg); border-bottom:1px solid var(--nav-surface); padding:0 20px; position:sticky; top:0; z-index:1000; }
+        .nav-container { max-width:1400px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:56px; }
+        .nav-brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--nav-text); font-weight:800; font-size:18px; }
+        .nav-links { display:flex; align-items:center; gap:4px; }
+        .nav-link { color:var(--nav-muted); text-decoration:none; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+        .nav-link:hover { color:var(--nav-text); background:rgba(255,255,255,0.05); }
+        .nav-link.active { color:#fff; background:var(--primary-dark); }
+        .theme-toggle { background:var(--nav-surface); border:1px solid rgba(255,255,255,0.1); color:var(--nav-text); padding:6px 12px; border-radius:8px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:600; }
+        .theme-toggle:hover { background:rgba(255,255,255,0.1); }
+        
+        /* Layout */
+        .layout { display:flex; min-height:calc(100vh - 56px); }
+        .sidebar { width:300px; background:var(--surface); border-right:1px solid var(--border); padding:20px; flex-shrink:0; overflow-y:auto; }
+        .sidebar h2 { font-size:1.1rem; margin-bottom:4px; }
+        .sidebar>p { font-size:0.82rem; color:var(--text-dim); margin-bottom:16px; }
+        .form-group { margin-bottom:14px; }
+        .form-group label { display:block; font-size:0.78rem; font-weight:600; color:var(--text-sec); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px; }
+        .form-group select,.form-group input[type="date"],.filter-input { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-alt); color:var(--text); font-size:0.9rem; }
+        .form-group select:focus,.form-group input:focus,.filter-input:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px var(--primary-glow); }
+        .btn { width:100%; padding:10px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-size:0.9rem; font-weight:700; cursor:pointer; }
+        .btn:hover { background:var(--primary-dark); } .btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .main-content { flex:1; padding:20px; overflow-y:auto; }
+        .main-content .header h1 { font-size:1.3rem; margin-bottom:12px; }
+        
+        /* Admin */
+        .admin-info { background:var(--surface-alt); border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+        .admin-badge { font-size:0.8rem; font-weight:700; color:var(--primary); margin-bottom:6px; }
+        .admin-stats { display:flex; gap:20px; flex-wrap:wrap; }
+        .admin-stat { font-size:0.78rem; } .admin-stat .label { color:var(--text-dim); } .admin-stat .value { color:var(--text); font-weight:600; }
+        .admin-stat .value.warning { color:var(--warning); } .admin-stat .value.danger { color:var(--danger); }
+        
+        /* Past Winners */
+        .past-winners { background:var(--warning-glow); border:1px solid rgba(245,158,11,0.2); padding:10px 14px; border-radius:10px; margin-bottom:16px; }
+        .past-winners-label { font-size:0.85rem; font-weight:700; color:var(--warning); margin-bottom:4px; }
+        .past-winners-list { font-family:'Courier New',monospace; font-weight:700; letter-spacing:2px; word-spacing:10px; }
+        
+        /* Hot Months */
+        .hot-months { margin-bottom:16px; }
+        .hot-months-title { font-size:0.9rem; font-weight:700; margin-bottom:8px; }
+        .hot-month-list { display:flex; flex-wrap:wrap; gap:6px; }
+        .hot-month-item { padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:600; background:var(--surface-alt); border:1px solid var(--border); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.15s; }
+        .hot-month-item:hover { border-color:var(--primary); }
+        .hot-month-item.selected { background:var(--primary-glow); border-color:var(--primary); color:var(--primary); }
+        .hot-month-item .count { background:var(--warning-glow); color:var(--warning); padding:1px 6px; border-radius:4px; font-size:0.7rem; font-weight:800; }
+        
+        /* Stats */
+        .stats-bar { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+        .stat-item { background:var(--surface-alt); border:1px solid var(--border); border-radius:10px; padding:10px 16px; text-align:center; flex:1; min-width:100px; }
+        .stat-item .stat-value { font-size:1.4rem; font-weight:800; color:var(--primary); }
+        .stat-item .stat-label { font-size:0.72rem; color:var(--text-dim); margin-top:2px; }
+        
+        /* Tabs */
+        .tabs { display:flex; gap:2px; margin-bottom:12px; background:var(--surface-alt); border-radius:10px; padding:3px; border:1px solid var(--border); }
+        .tab { padding:8px 16px; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; color:var(--text-sec); background:transparent; border:none; }
+        .tab.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+        
+        /* Table */
+        .table-container { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        th { background:var(--surface-alt); color:var(--text-sec); font-weight:700; text-transform:uppercase; font-size:0.7rem; letter-spacing:0.5px; padding:10px 12px; text-align:left; border-bottom:2px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap; }
+        th:hover { color:var(--text); }
+        td { padding:8px 12px; border-bottom:1px solid var(--border-light); }
+        tr:hover td { background:var(--primary-glow); }
+        .loading { text-align:center; padding:40px; color:var(--text-dim); }
+        
+        /* Backtest */
+        .backtest-results { background:var(--surface-alt); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; }
+        .backtest-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
+        .backtest-header h3 { font-size:1rem; } .backtest-date { font-size:0.8rem; color:var(--text-dim); }
+        .backtest-summary { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+        .backtest-stat { padding:10px 16px; border-radius:10px; text-align:center; min-width:100px; background:var(--surface); border:1px solid var(--border); }
+        .backtest-stat.hit { background:var(--success); color:#fff; border:none; }
+        .backtest-stat .value { font-size:1.4rem; font-weight:800; }
+        .backtest-stat .label { font-size:0.7rem; color:var(--text-dim); margin-top:2px; }
+        .backtest-stat.hit .label { color:rgba(255,255,255,0.8); }
+        .backtest-winner-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; margin-bottom:4px; font-size:0.85rem; }
+        .backtest-winner-item.hit { background:var(--success-glow); border:1px solid rgba(16,185,129,0.2); }
+        .backtest-winner-item.miss { background:var(--danger-glow); border:1px solid rgba(239,68,68,0.15); }
+        .backtest-winner-item .details { color:var(--text-sec); font-size:0.8rem; }
+        .suggested-plays-section { margin-top:16px; }
+        .suggested-plays-section h4 { font-size:0.9rem; margin-bottom:8px; }
+        .suggested-plays-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        .suggested-plays-table th { background:var(--surface); }
+        .suggested-plays-table td { padding:6px 10px; }
+        .suggested-plays-table .candidate { font-family:'Courier New',monospace; font-weight:700; letter-spacing:1px; }
+        .suggested-plays-table .score { color:var(--warning); font-weight:700; }
+        .suggested-plays-table .pairs { font-family:'Courier New',monospace; font-size:0.75rem; color:var(--text-dim); }
+        .suggested-plays-table .winner-match { background:var(--success-glow); }
+        .suggested-plays-table .window-hit { background:var(--warning-glow); }
+        .rank-badge { display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:24px; border-radius:6px; font-size:0.78rem; font-weight:700; background:var(--surface-alt); color:var(--text-sec); border:1px solid var(--border); padding:0 4px; }
+        .rank-badge.top3 { background:var(--primary-glow); color:var(--primary); border-color:rgba(99,102,241,0.2); }
+        .hit-yes { color:var(--success); font-weight:600; } .hit-no { color:var(--text-dim); }
+        .backtest-hot-months { margin-top:16px; } .backtest-hot-months h4 { font-size:0.9rem; margin-bottom:8px; }
+        .backtest-month-tag { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:600; background:var(--warning-glow); color:var(--warning); margin:2px; }
+        .backtest-month-tag .count { font-weight:800; }
+        
+        @media (max-width:768px) { .layout { flex-direction:column; } .sidebar { width:100%; border-right:none; border-bottom:1px solid var(--border); } .nav-links { display:none; } }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar"><div class="nav-container">
+        <a href="/" class="nav-brand"><span>🎰</span> MyLottoData</a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">🏠 Home</a>
+            <a href="/predictions" class="nav-link">🎯 Predictions</a>
+            <a href="/analysis/rbtl" class="nav-link active">🔥 RBTL</a>
+            <a href="/analysis/efficacy" class="nav-link">📊 Efficacy</a>
+            <a href="/backtest" class="nav-link">🧪 Backtest</a>
+            <a href="/analysis/consecutive" class="nav-link">📈 Consecutive</a>
+            <a href="/settings" class="nav-link">⚙️</a>
+        </div>
+        <div><button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">🌙</span> <span id="themeLabel">Dark</span></button></div>
+    </div></nav>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>🎯 RBTL Algorithm</h2>
+            <p>Repeat By The Lookup — Find historical patterns and hot months</p>
+            <div class="form-group"><label>Country</label><select id="countrySelect"><option value="United States">USA</option></select></div>
+            <div class="form-group"><label>State</label><select id="stateSelect"><option value="">Select State</option></select></div>
+            <div class="form-group"><label>Game</label><select id="gameType"><option value="pick3">Pick 3</option><option value="pick4" selected>Pick 4</option><option value="pick5">Pick 5</option></select></div>
+            <div class="form-group"><label>Start Date (Seed Range)</label><input type="date" id="startDate"></div>
+            <div class="form-group"><label>End Date (Seed Range)</label><input type="date" id="endDate"></div>
+            <div class="form-group"><label>Draw Time</label><select id="drawTime"><option value="">All</option><option value="Midday">Midday</option><option value="Evening">Evening</option></select></div>
+            <button class="btn" id="analyzeBtn" onclick="runAnalysis()">🔍 Analyze</button>
+            <hr style="margin:20px 0;border:none;border-top:1px solid var(--border)">
+            
+            <!-- Backtest -->
+            <div>
+                <h3 style="color:var(--orange);font-size:0.95rem;margin-bottom:10px">🧪 Backtesting</h3>
+                <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:10px">Test if RBTL would have predicted winners on a target date</p>
+                <div class="form-group"><label>Target Date</label><input type="date" id="targetDate"></div>
+                <div class="form-group"><label>Lookback Days</label><select id="lookbackDays"><option value="3">3 days</option><option value="5" selected>5 days</option><option value="7">7 days</option><option value="10">10 days</option><option value="14">14 days</option></select></div>
+                <div class="form-group"><label>DP Size</label><select id="dpSize"><option value="2">2DP (pairs)</option><option value="3" selected>3DP (triplets)</option></select></div>
+                <div class="form-group"><label>Prediction Window</label><select id="predictionWindow"><option value="1">1 day</option><option value="3">3 days</option><option value="5" selected>5 days</option><option value="7">7 days</option></select></div>
+                <button class="btn" id="backtestBtn" onclick="runBacktest()" style="background:var(--orange)">🧪 Run Backtest</button>
+            </div>
+            <hr style="margin:20px 0;border:none;border-top:1px solid var(--border)">
+            <div class="form-group"><label>Filter by Month</label><input type="text" class="filter-input" id="monthFilter" placeholder="e.g., 2020-05" oninput="filterByMonth()"></div>
+        </div>
+        
+        <!-- Main -->
+        <div class="main-content">
+            <div class="header"><div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <h1>Historical Pattern Analysis</h1>
+                <div class="admin-info" id="adminInfo" style="display:none">
+                    <div class="admin-badge">👤 Admin</div>
+                    <div class="admin-stats">
+                        <div class="admin-stat"><span class="label">Last Draw:</span> <span class="value" id="lastDrawDate">-</span></div>
+                        <div class="admin-stat"><span class="label">Total Draws:</span> <span class="value" id="totalDraws">-</span></div>
+                        <div class="admin-stat"><span class="label">Date Range:</span> <span class="value" id="dataDateRange">-</span></div>
+                    </div>
+                </div>
+            </div></div>
+            
+            <div class="past-winners" id="pastWinners" style="display:none">
+                <div class="past-winners-label">🎯 Current Winners (from seed date range):</div>
+                <div class="past-winners-list" id="pastWinnersList"></div>
+            </div>
+            
+            <!-- Backtest Results -->
+            <div class="backtest-results" id="backtestResults" style="display:none">
+                <div class="backtest-header"><h3>🧪 Backtest Results</h3><span class="backtest-date" id="backtestDateRange"></span></div>
+                <div class="backtest-summary">
+                    <div class="backtest-stat hit"><div class="value" id="backtestHitRate">0%</div><div class="label">DP Hit Rate</div></div>
+                    <div class="backtest-stat"><div class="value" id="backtestTotalHits">0/0</div><div class="label">Winners Found</div></div>
+                    <div class="backtest-stat"><div class="value" id="backtestWindowHits">0</div><div class="label">Window Hits</div></div>
+                    <div class="backtest-stat"><div class="value" id="backtestWindowRate">0%</div><div class="label">Window Rate</div></div>
+                </div>
+                <div id="backtestWinnersList"></div>
+                <div class="suggested-plays-section">
+                    <h4>🎯 Top Suggested Plays (Ranked by DP Score)</h4>
+                    <table class="suggested-plays-table"><thead><tr><th>Rank</th><th>Candidate</th><th>Score</th><th>Targets</th><th>Pairs</th><th>Window Hit</th></tr></thead>
+                    <tbody id="suggestedPlaysBody"></tbody></table>
+                </div>
+                <div class="backtest-hot-months"><h4>🔥 Hot Months from Lookback</h4><div id="backtestHotMonths"></div></div>
+            </div>
+            
+            <div class="hot-months" id="hotMonths" style="display:none">
+                <div class="hot-months-title">🔥 Hot Months (click to filter)</div>
+                <div class="hot-month-list" id="hotMonthList"></div>
+            </div>
+            
+            <div class="stats-bar" id="statsBar" style="display:none">
+                <div class="stat-item"><div class="stat-value" id="statSeeds">0</div><div class="stat-label">Seed Draws</div></div>
+                <div class="stat-item"><div class="stat-value" id="statHistory">0</div><div class="stat-label">Historical Matches</div></div>
+                <div class="stat-item"><div class="stat-value" id="statUniquePerm">0</div><div class="stat-label">Unique Perms</div></div>
+                <div class="stat-item"><div class="stat-value" id="statHotMonth">-</div><div class="stat-label">Hottest Month</div></div>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" data-view="all" onclick="setView('all')">All Results</div>
+                <div class="tab" data-view="byMonth" onclick="setView('byMonth')">By Month</div>
+                <div class="tab" data-view="byPerm" onclick="setView('byPerm')">By Perm</div>
+            </div>
+            
+            <div class="table-container"><table id="resultsTable"><thead><tr>
+                <th data-sort="month" onclick="sortTable('month')">Month</th>
+                <th data-sort="date" onclick="sortTable('date')">Date</th>
+                <th data-sort="date_diff" onclick="sortTable('date_diff')">Date-Diff</th>
+                <th data-sort="value" onclick="sortTable('value')">Value</th>
+                <th data-sort="actual" onclick="sortTable('actual')">Actual</th>
+                <th data-sort="input_date" onclick="sortTable('input_date')">Input Date</th>
+                <th data-sort="sums" onclick="sortTable('sums')">Sums</th>
+                <th data-sort="times_drawn" onclick="sortTable('times_drawn')">#Times Drawn</th>
+                <th data-sort="repeat_count" onclick="sortTable('repeat_count')">#Repeat</th>
+            </tr></thead>
+            <tbody id="resultsBody"><tr><td colspan="9" class="loading">Select parameters and click Analyze</td></tr></tbody>
+            </table></div>
+        </div>
+    </div>
+    
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            var h = document.documentElement;
+            var c = h.getAttribute('data-theme');
+            var n = c === 'light' ? 'dark' : 'light';
+            h.setAttribute('data-theme', n);
+            document.getElementById('themeIcon').textContent = n === 'light' ? '🌙' : '☀️';
+            document.getElementById('themeLabel').textContent = n === 'light' ? 'Dark' : 'Light';
+            try { localStorage.setItem('mld-theme', n); } catch(e) {}
+        }
+        try {
+            var saved = localStorage.getItem('mld-theme');
+            if (saved) {
+                document.documentElement.setAttribute('data-theme', saved);
+                document.getElementById('themeIcon').textContent = saved === 'light' ? '🌙' : '☀️';
+                document.getElementById('themeLabel').textContent = saved === 'light' ? 'Dark' : 'Light';
+            }
+        } catch(e) {}
+
+        // === Original working JS (same API calls, same response handling) ===
+        var urlParams = new URLSearchParams(window.location.search);
+        var dbMode = urlParams.get('db') || 'mongo_v2';
+        var allResults = [];
+        var currentSort = { column: 'month', direction: 'desc' };
+        var selectedMonth = null;
+        var monthCounts = {};
+
+        function apiUrl(path) {
+            var sep = path.includes('?') ? '&' : '?';
+            return path + sep + 'db=' + dbMode;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStates();
+            setDefaultDates();
+            document.getElementById('adminInfo').style.display = 'block';
+        });
+
+        async function loadAdminStats() {
+            var state = document.getElementById('stateSelect').value;
+            var gameType = document.getElementById('gameType').value;
+            if (!state) { document.getElementById('lastDrawDate').textContent = '-'; document.getElementById('totalDraws').textContent = '-'; document.getElementById('dataDateRange').textContent = '-'; return; }
+            try {
+                var res = await fetch(apiUrl('/api/rbtl/data-stats/' + encodeURIComponent(state) + '/' + gameType));
+                var data = await res.json();
+                if (data.error) { document.getElementById('lastDrawDate').textContent = 'Error'; return; }
+                var lastDate = new Date(data.last_draw_date);
+                var today = new Date();
+                var daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+                var el = document.getElementById('lastDrawDate');
+                el.textContent = data.last_draw_date;
+                if (daysDiff > 7) { el.classList.add('danger'); el.classList.remove('warning'); }
+                else if (daysDiff > 2) { el.classList.add('warning'); el.classList.remove('danger'); }
+                else { el.classList.remove('warning', 'danger'); }
+                document.getElementById('totalDraws').textContent = data.total_draws.toLocaleString();
+                document.getElementById('dataDateRange').textContent = data.first_draw_date + ' to ' + data.last_draw_date;
+            } catch (e) { document.getElementById('lastDrawDate').textContent = 'Error'; }
+        }
+
+        document.getElementById('stateSelect').addEventListener('change', function() { loadAdminStats(); });
+        document.getElementById('gameType').addEventListener('change', function() { loadStates(); loadAdminStats(); });
+
+        function setDefaultDates() {
+            var today = new Date();
+            var weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
+        }
+
+        async function loadStates() {
+            var gameType = document.getElementById('gameType').value;
+            try {
+                var res = await fetch(apiUrl('/api/prediction/' + gameType + '/states'));
+                var states = await res.json();
+                var sel = document.getElementById('stateSelect');
+                sel.innerHTML = '<option value="">Select State</option>' + states.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+            } catch (e) { console.error('Error loading states:', e); }
+        }
+
+        async function runAnalysis() {
+            var state = document.getElementById('stateSelect').value;
+            var gameType = document.getElementById('gameType').value;
+            var startDate = document.getElementById('startDate').value;
+            var endDate = document.getElementById('endDate').value;
+            var drawTime = document.getElementById('drawTime').value;
+            if (!state || !startDate || !endDate) { alert('Please fill in all required fields'); return; }
+            var btn = document.getElementById('analyzeBtn');
+            btn.disabled = true; btn.textContent = '⏳ Analyzing...';
+            document.getElementById('resultsBody').innerHTML = '<tr><td colspan="9" class="loading">Loading historical data...</td></tr>';
+            try {
+                var res = await fetch(apiUrl('/api/rbtl/analyze'), {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state: state, game_type: gameType, start_date: startDate, end_date: endDate, draw_time: drawTime })
+                });
+                var data = await res.json();
+                if (data.error) { alert(data.error); document.getElementById('resultsBody').innerHTML = '<tr><td colspan="9" class="loading">' + data.error + '</td></tr>'; return; }
+                allResults = data.results;
+                displayResults(data);
+            } catch (e) { alert('Error: ' + e.message); document.getElementById('resultsBody').innerHTML = '<tr><td colspan="9" class="loading">Error: ' + e.message + '</td></tr>'; }
+            finally { btn.disabled = false; btn.textContent = '🔍 Analyze'; }
+        }
+
+        function displayResults(data) {
+            document.getElementById('pastWinners').style.display = 'block';
+            document.getElementById('pastWinnersList').textContent = data.past_winners.join(' ');
+            monthCounts = {};
+            data.results.forEach(function(r) { monthCounts[r.month] = (monthCounts[r.month] || 0) + 1; });
+            var sorted = Object.entries(monthCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
+            document.getElementById('hotMonths').style.display = 'block';
+            document.getElementById('hotMonthList').innerHTML = sorted.map(function(e) {
+                return '<div class="hot-month-item" onclick="toggleMonthFilter(\'' + e[0] + '\')" data-month="' + e[0] + '">' + e[0] + '<span class="count">' + e[1] + '</span></div>';
+            }).join('');
+            document.getElementById('statsBar').style.display = 'flex';
+            document.getElementById('statSeeds').textContent = data.seed_count;
+            document.getElementById('statHistory').textContent = data.total_historical_matches;
+            document.getElementById('statUniquePerm').textContent = data.unique_perms;
+            document.getElementById('statHotMonth').textContent = sorted.length > 0 ? sorted[0][0] + ' (' + sorted[0][1] + ')' : '-';
+            renderTable(data.results);
+        }
+
+        function renderTable(results) {
+            var filter = document.getElementById('monthFilter').value.trim();
+            var filtered = results;
+            if (selectedMonth) filtered = filtered.filter(function(r) { return r.month === selectedMonth; });
+            if (filter) filtered = filtered.filter(function(r) { return r.month.includes(filter); });
+            var tbody = document.getElementById('resultsBody');
+            if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="loading">No results match filter</td></tr>'; return; }
+            tbody.innerHTML = filtered.map(function(r) {
+                return '<tr><td>' + r.month + '</td><td>' + r.date + '</td><td>' + r.date_diff + '</td>' +
+                    '<td style="font-family:monospace;font-weight:700;letter-spacing:1px">' + r.value + '</td>' +
+                    '<td style="font-family:monospace;color:var(--text-sec)">' + r.actual + '</td>' +
+                    '<td>' + r.input_date + '</td><td>' + r.sums + '</td><td>' + r.times_drawn + '</td><td>' + r.repeat_count + '</td></tr>';
+            }).join('');
+        }
+
+        function toggleMonthFilter(month) {
+            var items = document.querySelectorAll('.hot-month-item');
+            if (selectedMonth === month) { selectedMonth = null; items.forEach(function(i) { i.classList.remove('selected'); }); }
+            else { selectedMonth = month; items.forEach(function(i) { i.classList.toggle('selected', i.dataset.month === month); }); }
+            renderTable(allResults);
+        }
+
+        function filterByMonth() { renderTable(allResults); }
+
+        function sortTable(column) {
+            if (currentSort.column === column) { currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc'; }
+            else { currentSort.column = column; currentSort.direction = 'desc'; }
+            document.querySelectorAll('th').forEach(function(th) {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.sort === column) th.classList.add(currentSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            });
+            allResults.sort(function(a, b) {
+                var va = a[column], vb = b[column];
+                if (typeof va === 'number') return currentSort.direction === 'asc' ? va - vb : vb - va;
+                va = String(va || ''); vb = String(vb || '');
+                return currentSort.direction === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+            renderTable(allResults);
+        }
+
+        function setView(view) {
+            document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelector('.tab[data-view="' + view + '"]').classList.add('active');
+            renderTable(allResults);
+        }
+
+        // Backtest
+        async function runBacktest() {
+            var state = document.getElementById('stateSelect').value;
+            var gameType = document.getElementById('gameType').value;
+            var targetDate = document.getElementById('targetDate').value;
+            var lookbackDays = parseInt(document.getElementById('lookbackDays').value);
+            var dpSize = parseInt(document.getElementById('dpSize').value);
+            var predictionWindow = parseInt(document.getElementById('predictionWindow').value);
+            if (!state || !targetDate) { alert('Please select a state and target date'); return; }
+            var btn = document.getElementById('backtestBtn');
+            btn.disabled = true; btn.textContent = '⏳ Testing...';
+            try {
+                var res = await fetch(apiUrl('/api/rbtl/backtest'), {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state: state, game_type: gameType, target_date: targetDate, lookback_days: lookbackDays, dp_size: dpSize, prediction_window: predictionWindow })
+                });
+                var data = await res.json();
+                if (data.error) { alert(data.error); return; }
+                displayBacktestResults(data);
+            } catch (e) { alert('Error: ' + e.message); }
+            finally { btn.disabled = false; btn.textContent = '🧪 Run Backtest'; }
+        }
+
+        function displayBacktestResults(data) {
+            document.getElementById('backtestResults').style.display = 'block';
+            document.getElementById('backtestDateRange').textContent = 'Target: ' + data.target_date + ' | Lookback: ' + data.lookback_period + ' | ' + data.dp_size + 'DP';
+            document.getElementById('backtestHitRate').textContent = data.dp_hit_rate + '%';
+            document.getElementById('backtestTotalHits').textContent = data.dp_hit_count + '/' + data.target_winner_count;
+            document.getElementById('backtestWindowHits').textContent = data.plays_that_hit_in_window || 0;
+            document.getElementById('backtestWindowRate').textContent = (data.window_hit_rate || 0) + '%';
+            var hitStat = document.querySelector('.backtest-stat.hit');
+            if (data.dp_hit_rate >= 50) hitStat.style.background = 'var(--success)';
+            else if (data.dp_hit_rate > 0) hitStat.style.background = 'var(--warning)';
+            else hitStat.style.background = 'var(--danger)';
+
+            var targetActuals = new Set(data.target_winners.map(function(w) { return w.actual; }));
+            document.getElementById('backtestWinnersList').innerHTML = data.prediction_results.map(function(r) {
+                var cls = r.dp_hit ? 'hit' : 'miss';
+                var icon = r.dp_hit ? '✅' : '❌';
+                var pairs = r.dp_matching_pairs ? r.dp_matching_pairs.slice(0, 4).join(', ') : '-';
+                return '<div class="backtest-winner-item ' + cls + '"><span>' + icon + '</span> <strong>' + r.target_value + '</strong> <span class="details">(' + r.target_actual + ') ' + r.target_tod + ' — ' + r.dp_matching_candidate_count + ' candidates [' + pairs + ']</span></div>';
+            }).join('');
+
+            var plays = data.suggested_plays || [];
+            document.getElementById('suggestedPlaysBody').innerHTML = plays.slice(0, 20).map(function(p) {
+                var isW = targetActuals.has(p.candidate);
+                var rc = isW ? 'winner-match' : (p.hit_in_window ? 'window-hit' : '');
+                var rk = p.rank <= 3 ? 'top3' : '';
+                var pairs = p.unique_pairs.slice(0, 4).join(', ');
+                var targets = p.matched_targets.join(', ');
+                var hit = p.hit_in_window ? '<span class="hit-yes">✓ ' + (p.hit_dates[0] ? p.hit_dates[0].date : '') + '</span>' : '<span class="hit-no">-</span>';
+                return '<tr class="' + rc + '"><td><span class="rank-badge ' + rk + '">' + p.rank + '</span></td><td class="candidate">' + p.candidate + '</td><td class="score">' + p.score + '</td><td>' + targets + '</td><td class="pairs">' + pairs + '</td><td>' + hit + '</td></tr>';
+            }).join('') || '<tr><td colspan="6">No suggested plays</td></tr>';
+
+            document.getElementById('backtestHotMonths').innerHTML = data.hot_months.map(function(m) {
+                return '<span class="backtest-month-tag">' + m.month + ' <span class="count">' + m.count + '</span></span>';
+            }).join('') || '<span style="color:var(--text-dim)">No hot months</span>';
+        }
+    </script>
+</body>
+</html>

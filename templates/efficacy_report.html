@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2DP AP Efficacy Report</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 20px; text-align: center; }
+        .header a { color: #4ecdc4; text-decoration: none; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .card h2 { margin-bottom: 15px; color: #1a1a2e; border-bottom: 2px solid #4ecdc4; padding-bottom: 10px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 120px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; margin-right: 10px; }
+        .btn-primary { background: #4ecdc4; color: white; }
+        .btn-danger { background: #ff6b6b; color: white; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-box { background: #f8f9fa; border-radius: 5px; padding: 15px; text-align: center; }
+        .stat-box .value { font-size: 24px; font-weight: bold; color: #4ecdc4; }
+        .stat-box .label { font-size: 12px; color: #666; }
+        .stat-box.highlight { background: #d4edda; }
+        .stat-box.highlight .value { color: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; position: sticky; top: 0; }
+        tr:hover { background: #f5f5f5; }
+        .good { color: #28a745; font-weight: bold; }
+        .medium { color: #ffc107; font-weight: bold; }
+        .poor { color: #dc3545; font-weight: bold; }
+        .table-wrapper { max-height: 500px; overflow-y: auto; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .hidden { display: none; }
+        .progress-bar { width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #4ecdc4, #28a745); transition: width 0.3s; }
+        .hit-detail { background: #fffacd; padding: 2px 6px; border-radius: 3px; margin: 2px; display: inline-block; font-size: 11px; }
+        .hit-after { background: #d4edda; }
+        .hit-before { background: #cce5ff; }
+        .hits-cell { max-width: 400px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; }
+        .modal.hidden { display: none; }
+    
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 220px;
+        height: 100vh;
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px 0;
+        z-index: 1000;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    }
+    .sidebar-header {
+        padding: 0 20px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 20px;
+    }
+    .sidebar-header h3 {
+        color: #4ecdc4;
+        margin: 0;
+        font-size: 18px;
+    }
+    .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+    }
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: #aaa;
+        text-decoration: none;
+        transition: all 0.3s;
+        border-left: 3px solid transparent;
+    }
+    .nav-item:hover {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+    .nav-item.active {
+        background: rgba(78,205,196,0.2);
+        color: #4ecdc4;
+        border-left-color: #4ecdc4;
+    }
+    .nav-icon {
+        font-size: 18px;
+        margin-right: 12px;
+    }
+    .nav-text {
+        font-size: 14px;
+    }
+    .main-content {
+        margin-left: 220px;
+    }
+    .header {
+        margin-left: 0 !important;
+    }
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 60px;
+        }
+        .sidebar-header h3, .nav-text {
+            display: none;
+        }
+        .nav-item {
+            justify-content: center;
+            padding: 15px;
+        }
+        .nav-icon {
+            margin: 0;
+            font-size: 22px;
+        }
+        .main-content {
+            margin-left: 60px;
+        }
+    }
+
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>🎱 MyLottoData</h3>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-text">Query Tool</span>
+            </a>
+            <a href="/predictions" class="nav-item">
+                <span class="nav-icon">🔮</span>
+                <span class="nav-text">2DP AP (Pick 4)</span>
+            </a>
+            <a href="/predictions/pick5" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-text">3DP AP (Pick 5)</span>
+            </a>
+            <a href="/report/efficacy" class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Efficacy (Pick 4)</span>
+            </a>
+            <a href="/report/efficacy-pick5" class="nav-item">
+                <span class="nav-icon">📈</span>
+                <span class="nav-text">Efficacy (Pick 5)</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+    <div class="header">
+        <h1>📊 2DP AP Algorithm - Efficacy Report</h1>
+        <p><a href="/predictions">← Back to Predictions</a> | <a href="/">Query Tool</a></p>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Report Parameters</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>State (single report)</label>
+                    <select id="state">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Game Type</label>
+                    <select id="game-type">
+                        <option value="daily4">Daily 4 / Pick 4</option>
+                        <option value="daily3">Daily 3 / Pick 3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>TOD (optional)</label>
+                    <select id="tod">
+                        <option value="">All Draws</option>
+                        <option value="Midday">Midday</option>
+                        <option value="Evening">Evening</option>
+                        <option value="Day">Day</option>
+                        <option value="Night">Night</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="start-date" value="2026-01-01">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="end-date" value="2026-01-19">
+                </div>
+                <div class="form-group">
+                    <label>Days Threshold (history)</label>
+                    <input type="number" id="days-threshold" value="30" min="1" max="365">
+                </div>
+                <div class="form-group">
+                    <label>Hit Window (days)</label>
+                    <input type="number" id="hit-window" value="1" min="1" max="30">
+                </div>
+            </div>
+            <div class="form-row">
+                <button class="btn btn-primary" onclick="runSingleStateReport()">📊 Run Single State Report</button>
+                <button class="btn btn-danger" onclick="runAllStatesReport()">🌎 Run ALL States Report</button>
+                <button class="btn" onclick="openEmailModal()" style="background:#6c5ce7;color:white;">📧 Email Report</button>
+            </div>
+        </div>
+        
+        <div id="loading" class="card hidden">
+            <div class="loading">
+                <h3>⏳ Generating Report...</h3>
+                <p>Analyzing historical data across all seeds in date range...</p>
+            </div>
+        </div>
+        
+        <div id="results" class="hidden">
+            <div class="card">
+                <h2>📈 Overall Summary</h2>
+                <div class="results-grid">
+                    <div class="stat-box">
+                        <div class="value" id="res-states">-</div>
+                        <div class="label">States Analyzed</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value" id="res-seeds">-</div>
+                        <div class="label">Seeds Analyzed</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value" id="res-common">-</div>
+                        <div class="label">Common Numbers Predicted</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value" id="res-hits">-</div>
+                        <div class="label" id="res-hits-label">Hits Within X Days</div>
+                    </div>
+                    <div class="stat-box highlight">
+                        <div class="value" id="res-rate">-</div>
+                        <div class="label">Overall Hit Rate %</div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <label>Hit Rate Progress:</label>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📋 Results by State</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>State</th>
+                                <th>Seeds</th>
+                                <th>Common Predicted</th>
+                                <th id="hits-header">Hits Within Xd</th>
+                                <th>Hit Rate %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="state-results"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card" id="detail-card">
+                <h2>🔍 Detailed Results - Actual Hits</h2>
+                <div class="table-wrapper" style="max-height: 600px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Seed Date</th>
+                                <th>Seed Value</th>
+                                <th>Common #</th>
+                                <th id="detail-hits-header">Hits</th>
+                                <th>Rate %</th>
+                                <th class="hits-cell">Actual Hits (Number, Date, Days, Direction)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-results"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadStates() {
+            const res = await fetch('/api/prediction/states');
+            const states = await res.json();
+            document.getElementById('state').innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+        
+        function getRateClass(rate) {
+            if (rate >= 15) return 'good';
+            if (rate >= 8) return 'medium';
+            return 'poor';
+        }
+        
+        function formatHitDetail(hit) {
+            const dirClass = hit.direction === 'AFTER' ? 'hit-after' : 'hit-before';
+            return `<span class="hit-detail ${dirClass}">⭐ ${hit.number} → ${hit.hit_value || hit.number} (${hit.hit_date}, ${Math.abs(hit.days_from_seed)}d ${hit.direction})</span>`;
+        }
+        
+        async function runAllStatesReport() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            
+            const hitWindow = parseInt(document.getElementById('hit-window').value);
+            
+            const res = await fetch('/api/prediction/efficacy-report-all-states', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    game_type: document.getElementById('game-type').value,
+                    tod: document.getElementById('tod').value,
+                    start_date: document.getElementById('start-date').value,
+                    end_date: document.getElementById('end-date').value,
+                    days_threshold: parseInt(document.getElementById('days-threshold').value),
+                    hit_window: hitWindow
+                })
+            });
+            
+            const data = await res.json();
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+            
+            // Update labels
+            document.getElementById('res-hits-label').textContent = `Hits Within ${hitWindow} Day(s)`;
+            document.getElementById('hits-header').textContent = `Hits (${hitWindow}d)`;
+            document.getElementById('detail-hits-header').textContent = `Hits (${hitWindow}d)`;
+            
+            document.getElementById('res-states').textContent = data.states_analyzed;
+            document.getElementById('res-seeds').textContent = data.by_state.reduce((a, b) => a + b.seeds_analyzed, 0);
+            document.getElementById('res-common').textContent = data.total_common_predicted;
+            document.getElementById('res-hits').textContent = data.total_hits_within_window || data.total_hits_within_10 || 0;
+            document.getElementById('res-rate').textContent = data.overall_hit_rate + '%';
+            document.getElementById('progress-fill').style.width = Math.min(data.overall_hit_rate * 2, 100) + '%';
+            
+            document.getElementById('state-results').innerHTML = data.by_state.map((s, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${s.state}</strong></td>
+                    <td>${s.seeds_analyzed}</td>
+                    <td>${s.common_predicted}</td>
+                    <td>${s.hits_within_window || s.hits_within_10 || 0}</td>
+                    <td class="${getRateClass(s.hit_rate)}">${s.hit_rate}%</td>
+                </tr>
+            `).join('');
+            
+            // Combine all detailed results from all states
+            let allDetails = [];
+            data.by_state.forEach(s => {
+                if (s.results) {
+                    s.results.forEach(r => {
+                        if (r.hits_detail && r.hits_detail.length > 0) {
+                            allDetails.push({...r, state: s.state});
+                        }
+                    });
+                }
+            });
+            
+            document.getElementById('detail-results').innerHTML = allDetails.map(r => `
+                <tr>
+                    <td>${r.seed_date}</td>
+                    <td>${r.seed_value}<br><small>(${r.seed_norm})</small></td>
+                    <td>${r.common_count}</td>
+                    <td>${r.hits_within_window || r.hits_within_10 || 0}</td>
+                    <td class="${getRateClass(r.hit_rate)}">${r.hit_rate}%</td>
+                    <td class="hits-cell">${r.hits_detail.map(h => formatHitDetail(h)).join(' ')}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6">No hits found within the specified window</td></tr>';
+        }
+        
+        async function runSingleStateReport() {
+            const state = document.getElementById('state').value;
+            if (!state) { alert('Select a state'); return; }
+            
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            
+            const hitWindow = parseInt(document.getElementById('hit-window').value);
+            
+            const res = await fetch('/api/prediction/efficacy-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    state: state,
+                    tod: document.getElementById('tod').value,
+                    game_type: document.getElementById('game-type').value,
+                    start_date: document.getElementById('start-date').value,
+                    end_date: document.getElementById('end-date').value,
+                    days_threshold: parseInt(document.getElementById('days-threshold').value),
+                    hit_window: hitWindow
+                })
+            });
+            
+            const data = await res.json();
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+            
+            // Update labels
+            document.getElementById('res-hits-label').textContent = `Hits Within ${hitWindow} Day(s)`;
+            document.getElementById('hits-header').textContent = `Hits (${hitWindow}d)`;
+            document.getElementById('detail-hits-header').textContent = `Hits (${hitWindow}d)`;
+            
+            document.getElementById('res-states').textContent = '1';
+            document.getElementById('res-seeds').textContent = data.total_seeds_analyzed;
+            document.getElementById('res-common').textContent = data.total_common_predicted;
+            document.getElementById('res-hits').textContent = data.total_hits_within_window || data.total_hits_within_10 || 0;
+            document.getElementById('res-rate').textContent = data.overall_hit_rate + '%';
+            document.getElementById('progress-fill').style.width = Math.min(data.overall_hit_rate * 2, 100) + '%';
+            
+            document.getElementById('state-results').innerHTML = `
+                <tr>
+                    <td>1</td>
+                    <td><strong>${state}</strong></td>
+                    <td>${data.total_seeds_analyzed}</td>
+                    <td>${data.total_common_predicted}</td>
+                    <td>${data.total_hits_within_window}</td>
+                    <td class="${getRateClass(data.overall_hit_rate)}">${data.overall_hit_rate}%</td>
+                </tr>
+            `;
+            
+            lastReportData = {
+                type: 'single-state',
+                params: {
+                    gameType: document.getElementById('game-type').value,
+                    startDate: document.getElementById('start-date').value,
+                    endDate: document.getElementById('end-date').value,
+                    hitWindow: document.getElementById('hit-window').value
+                },
+                summary: {
+                    states: '1',
+                    seeds: data.total_seeds_analyzed,
+                    common: data.total_common_predicted,
+                    hits: data.total_hits_within_window || data.total_hits_within_10 || 0,
+                    rate: data.overall_hit_rate + '%'
+                },
+                tableHTML: document.getElementById('state-results').innerHTML
+            };
+            
+            document.getElementById('detail-results').innerHTML = data.results.map(r => `
+                <tr>
+                    <td>${r.seed_date}</td>
+                    <td>${r.seed_value}<br><small>(${r.seed_norm})</small></td>
+                    <td>${r.common_count}</td>
+                    <td>${r.hits_within_window || r.hits_within_10 || 0}</td>
+                    <td class="${getRateClass(r.hit_rate)}">${r.hit_rate}%</td>
+                    <td class="hits-cell">${r.hits_detail.map(h => formatHitDetail(h)).join(' ') || '-'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        
+        let lastReportData = null;
+        
+        function openEmailModal() {
+            if (!lastReportData) {
+                alert('Please run a report first!');
+                return;
+            }
+            document.getElementById('email-modal').classList.remove('hidden');
+        }
+        
+        function closeEmailModal() {
+            document.getElementById('email-modal').classList.add('hidden');
+            document.getElementById('email-status').textContent = '';
+        }
+        
+        function generateReportHTML() {
+            if (!lastReportData) return '';
+            const d = lastReportData;
+            return `
+                <h2>2DP AP Efficacy Report</h2>
+                <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                <p><strong>Game:</strong> ${d.params.gameType} | <strong>Date Range:</strong> ${d.params.startDate} to ${d.params.endDate} | <strong>Hit Window:</strong> ${d.params.hitWindow} day(s)</p>
+                <h3>Summary</h3>
+                <ul>
+                    <li>States Analyzed: ${d.summary.states}</li>
+                    <li>Seeds Analyzed: ${d.summary.seeds}</li>
+                    <li>Common Numbers Predicted: ${d.summary.common}</li>
+                    <li>Actual Hits: ${d.summary.hits}</li>
+                    <li><strong>Overall Hit Rate: ${d.summary.rate}</strong></li>
+                </ul>
+                <h3>Results</h3>
+                <table border="1" cellpadding="5" cellspacing="0">
+                    <tr><th>Rank</th><th>State</th><th>Seeds</th><th>Predicted</th><th>Hits</th><th>Rate</th></tr>
+                    ${d.tableHTML}
+                </table>
+            `;
+        }
+        
+        function generateReportText() {
+            if (!lastReportData) return '';
+            const d = lastReportData;
+            return `2DP AP EFFICACY REPORT
+Generated: ${new Date().toLocaleString()}
+Game: ${d.params.gameType}
+Date Range: ${d.params.startDate} to ${d.params.endDate}
+Hit Window: ${d.params.hitWindow} day(s)
+
+SUMMARY
+States Analyzed: ${d.summary.states}
+Seeds Analyzed: ${d.summary.seeds}
+Common Numbers Predicted: ${d.summary.common}
+Actual Hits: ${d.summary.hits}
+Overall Hit Rate: ${d.summary.rate}`;
+        }
+        
+        async function sendEmail() {
+            const toEmail = document.getElementById('recipient-email').value;
+            if (!toEmail) { alert('Please enter recipient email'); return; }
+            
+            document.getElementById('email-status').innerHTML = '<span style="color:blue;">📤 Generating report and sending...</span>';
+            
+            try {
+                // Capture all data directly from the page
+                const d = lastReportData || {};
+                const params = d.params || {};
+                const summary = d.summary || {};
+                
+                // Get table contents
+                const stateHTML = document.getElementById('state-results') ? document.getElementById('state-results').innerHTML : '';
+                const detailHTML = document.getElementById('detail-results') ? document.getElementById('detail-results').innerHTML : '';
+                
+                const fullHTML = `
+                    <h2 style="color: #1a1a2e; border-bottom: 2px solid #4ecdc4; padding-bottom: 10px;">2DP AP Efficacy Report</h2>
+                    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>Game:</strong> ${params.gameType || 'N/A'} | 
+                       <strong>Date Range:</strong> ${params.startDate || 'N/A'} to ${params.endDate || 'N/A'} | 
+                       <strong>Hit Window:</strong> ${params.hitWindow || 'N/A'} day(s)</p>
+                    
+                    <h3 style="color: #333; margin-top: 20px;">📈 Overall Summary</h3>
+                    <table style="border-collapse: collapse; margin: 15px 0;">
+                        <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>States Analyzed:</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${summary.states || 'N/A'}</td></tr>
+                        <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Seeds Analyzed:</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${summary.seeds || 'N/A'}</td></tr>
+                        <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Common Numbers Predicted:</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${summary.common || 'N/A'}</td></tr>
+                        <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Actual Hits:</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${summary.hits || 'N/A'}</td></tr>
+                        <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Overall Hit Rate:</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${summary.rate || 'N/A'}</td></tr>
+                    </table>
+                    
+                    <h3 style="color: #333; margin-top: 20px;">📋 Results by State</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                        <tr style="background: #f8f9fa;">
+                            <th style="border: 1px solid #ddd; padding: 8px;">Rank</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">State</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Seeds</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Predicted</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Hits</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Rate</th>
+                        </tr>
+                        ${stateHTML}
+                    </table>
+                    
+                    <h3 style="color: #333; margin-top: 20px;">🔍 Detailed Results - Actual Hits</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                        <tr style="background: #f8f9fa;">
+                            <th style="border: 1px solid #ddd; padding: 8px;">Seed Date</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Seed Value</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Common #</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Hits</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Rate %</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">Actual Hits (Number, Date, Days, Direction)</th>
+                        </tr>
+                        ${detailHTML}
+                    </table>
+                `;
+                
+                const response = await fetch('/api/send-pdf-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to_email: toEmail,
+                        subject: '2DP AP Efficacy Report - ' + new Date().toLocaleDateString(),
+                        html_content: fullHTML
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('email-status').innerHTML = '<span style="color:green;">✅ ' + result.message + '</span>';
+                } else {
+                    document.getElementById('email-status').innerHTML = '<span style="color:red;">❌ ' + result.error + '</span>';
+                }
+            } catch (error) {
+                document.getElementById('email-status').innerHTML = '<span style="color:red;">❌ ' + error.message + '</span>';
+            }
+        }
+        
+        loadStates();
+    </script>
+
+    <!-- Email Modal -->
+    <div id="email-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>📧 Email Report</h3>
+            <div class="form-group" style="margin: 15px 0;">
+                <label>Recipient Email:</label>
+                <input type="email" id="recipient-email" placeholder="your@email.com" style="width:100%;padding:10px;margin-top:5px;">
+            </div>
+            <div style="margin-top:20px;">
+                <button class="btn btn-primary" onclick="sendEmail()">📤 Send Email</button>
+                <button class="btn" onclick="closeEmailModal()" style="background:#ccc;">Cancel</button>
+            </div>
+            <p id="email-status" style="margin-top:15px;"></p>
+        </div>
+    </div>
+    </div>
+</body>
+</html>
