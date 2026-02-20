@@ -1137,8 +1137,8 @@ function applyHotsPreset(preset){
         // Hot Σ+TD only — dense cluster ±2, tight TD
         document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
-        document.getElementById('hotsTDMin').value=Math.max(0,tr.q1-5);
-        document.getElementById('hotsTDMax').value=tr.q3+5;
+        document.getElementById('hotsTDMin').value=Math.max(0,tr.min-2);
+        document.getElementById('hotsTDMax').value=tr.max+2;
         document.getElementById('hotsRequire2dp').value='';
         document.getElementById('hotsRequire3dp').value='';
     }
@@ -1147,7 +1147,7 @@ function applyHotsPreset(preset){
         document.getElementById('hotsSumMin').value=Math.max(0,sr.min-3);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.max+3);
         document.getElementById('hotsTDMin').value=0;
-        document.getElementById('hotsTDMax').value=Math.max(tr.q1-1,10);
+        document.getElementById('hotsTDMax').value=Math.max(tr.min-1,10);
         document.getElementById('hotsRequire2dp').value='';
         document.getElementById('hotsRequire3dp').value='';
     }
@@ -1155,8 +1155,8 @@ function applyHotsPreset(preset){
         // Hot everything: dense cluster Σ+TD+2DP
         document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
-        document.getElementById('hotsTDMin').value=Math.max(0,tr.q1-5);
-        document.getElementById('hotsTDMax').value=tr.q3+5;
+        document.getElementById('hotsTDMin').value=Math.max(0,tr.min-2);
+        document.getElementById('hotsTDMax').value=tr.max+2;
         document.getElementById('hotsRequire2dp').value=hotPairList.slice(0,3).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
@@ -1165,7 +1165,7 @@ function applyHotsPreset(preset){
         document.getElementById('hotsSumMin').value=Math.max(0,sr.min-3);
         document.getElementById('hotsSumMax').value=Math.min(36,sr.max+3);
         document.getElementById('hotsTDMin').value=0;
-        document.getElementById('hotsTDMax').value=Math.max(tr.q1-1,10);
+        document.getElementById('hotsTDMax').value=Math.max(tr.min-1,10);
         document.getElementById('hotsRequire2dp').value=coldPairs.slice(0,2).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
@@ -1219,15 +1219,11 @@ function autoFillSumRange(){
 
 function autoFillTDRange(){
     var tdMap=window._hotsTDMap||window._seedTDMap||{};
-    var tds=Object.values(tdMap).filter(function(v){return v>0});
+    var tds=Object.values(tdMap).filter(function(v){return v>0}).sort(function(a,b){return a-b});
     if(tds.length>0){
-        // Find peak TD cluster, then ±5
-        tds.sort(function(a,b){return a-b});
-        // Use the interquartile range for the core, then ±5
-        var q1=tds[Math.floor(tds.length*0.25)];
-        var q3=tds[Math.floor(tds.length*0.75)];
-        var minTD=Math.max(0,q1-5);
-        var maxTD=q3+5;
+        // Use actual min-max with small padding
+        var minTD=Math.max(0,tds[0]-2);
+        var maxTD=tds[tds.length-1]+2;
         document.getElementById('hotsTDMin').value=minTD;
         document.getElementById('hotsTDMax').value=maxTD;
     }
@@ -1259,14 +1255,12 @@ function getHotSumRange(){
 }
 
 function getHotTDRange(){
-    // Returns {q1, q3, min, max, med} of seed TDs
+    // Returns {min, max, med} of seed TDs
     var tdMap=window._hotsTDMap||window._seedTDMap||{};
     var tds=Object.values(tdMap).filter(function(v){return v>0}).sort(function(a,b){return a-b});
-    if(tds.length===0)return{q1:15,q3:40,min:0,max:60,med:25};
-    var q1=tds[Math.floor(tds.length*0.25)];
-    var q3=tds[Math.floor(tds.length*0.75)];
+    if(tds.length===0)return{min:15,max:45,med:25};
     var med=tds[Math.floor(tds.length*0.5)];
-    return{q1:q1,q3:q3,min:tds[0],max:tds[tds.length-1],med:med};
+    return{min:tds[0],max:tds[tds.length-1],med:med};
 }
 
 function getColdBand2DPPairs(){
