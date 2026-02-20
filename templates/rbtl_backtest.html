@@ -109,6 +109,13 @@
         .sum-band-group.active{border-color:var(--ora);background:var(--ora-g);box-shadow:0 0 6px rgba(245,158,11,.2)}
         .sum-band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
         .sum-band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .td-band-group{border:1px solid var(--border);border-radius:8px;padding:5px 7px;background:var(--surface);cursor:pointer;transition:.15s;position:relative;min-width:60px}
+        .td-band-group:hover{border-color:#10b981;background:rgba(16,185,129,.06)}
+        .td-band-group.active{border-color:#10b981;background:rgba(16,185,129,.06);box-shadow:0 0 6px rgba(16,185,129,.2)}
+        .td-band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
+        .td-band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .td-band-group.hot{border-color:var(--ora);background:var(--ora-g)}
+        .td-band-group.hot::after{content:'🔥';position:absolute;top:-6px;right:-4px;font-size:.55rem}
 
         /* Buttons */
         .btn{width:100%;padding:11px;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s}
@@ -231,6 +238,12 @@
     <div class="card hidden" id="hotSumsCard">
         <h3>🔢 Hot Sums <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(digit sum frequency · click bands to filter)</span></h3>
         <div id="hotSumsContent"></div>
+    </div>
+
+    <!-- Hot TD (appears after backtest) -->
+    <div class="card hidden" id="hotTDCard">
+        <h3>📈 Hot TD <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(times drawn distribution across candidates · click to filter)</span></h3>
+        <div id="hotTDContent"></div>
     </div>
 
     <!-- Empty / Loading / Results -->
@@ -699,6 +712,125 @@ function updateHotSums(seedSums){
     window._hotSumBands=sumBands;
 }
 
+// Hot TD — updates after backtest results are available
+function updateHotTD(plays){
+    if(!plays||plays.length===0){document.getElementById('hotTDCard').classList.add('hidden');return}
+    document.getElementById('hotTDCard').classList.remove('hidden');
+
+    // Extract TD (total_appearances) from all candidate plays
+    var tdValues=[];
+    var tdFreq={};
+    plays.forEach(function(p){
+        var td=p.total_appearances||0;
+        tdValues.push(td);
+        tdFreq[td]=(tdFreq[td]||0)+1;
+    });
+
+    // Stats
+    var minTD=Math.min.apply(null,tdValues);
+    var maxTD=Math.max.apply(null,tdValues);
+    var avgTD=Math.round(tdValues.reduce(function(a,b){return a+b},0)/tdValues.length*10)/10;
+    var range=maxTD-minTD;
+    var sorted=tdValues.slice().sort(function(a,b){return a-b});
+    var medTD=sorted.length%2===0?(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2:sorted[Math.floor(sorted.length/2)];
+
+    var html='';
+
+    // Summary stats
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">';
+    html+='<span class="sum-stat">Min <span class="sv">'+minTD+'</span></span>';
+    html+='<span class="sum-stat">Max <span class="sv">'+maxTD+'</span></span>';
+    html+='<span class="sum-stat">Range <span class="sv">'+range+'</span></span>';
+    html+='<span class="sum-stat">Avg <span class="sv">'+avgTD+'</span></span>';
+    html+='<span class="sum-stat">Med <span class="sv">'+medTD+'</span></span>';
+    html+='<span class="sum-stat">Candidates <span class="sv">'+plays.length+'</span></span>';
+    html+='</div>';
+
+    // Histogram — only show range that has data
+    var maxFreq=0;
+    Object.values(tdFreq).forEach(function(v){if(v>maxFreq)maxFreq=v});
+
+    // For large ranges, bucket into groups; for small ranges, show individual
+    var tdKeys=Object.keys(tdFreq).map(Number).sort(function(a,b){return a-b});
+    var useRange=maxTD-minTD;
+
+    if(useRange<=30){
+        // Individual bars
+        html+='<div class="hd-label">TD Distribution <span style="font-weight:400;color:var(--text3)">('+minTD+' – '+maxTD+')</span></div>';
+        html+='<div class="sum-range-bar">';
+        for(var t=minTD;t<=maxTD;t++){
+            var freq=tdFreq[t]||0;
+            var h=maxFreq>0?Math.max(freq>0?8:2,Math.round(freq/maxFreq*38)):2;
+            var col=freq===0?'var(--border)':freq>=maxFreq*0.7?'#10b981':freq>=maxFreq*0.4?'var(--pri)':'rgba(99,195,255,.7)';
+            html+='<div class="sum-bar-col" style="height:'+h+'px;background:'+col+'" title="TD '+t+': '+freq+' candidates" onclick="applyHotFilter(\'td\',\''+t+'\')"></div>';
+        }
+        html+='</div>';
+        html+='<div class="sum-range-labels">';
+        for(var t=minTD;t<=maxTD;t++){
+            html+='<span'+(tdFreq[t]?' style="font-weight:700;color:var(--text1)"':'')+'>'+t+'</span>';
+        }
+        html+='</div>';
+    }
+
+    // Individual TD chips (top 20 by frequency)
+    html+='<div class="hd-label" style="margin-top:8px">Individual TD Values</div><div class="hd-row">';
+    var tdSorted=Object.entries(tdFreq).sort(function(a,b){return b[1]-a[1]||parseInt(a[0])-parseInt(b[0])});
+    tdSorted.slice(0,25).forEach(function(e){
+        html+='<span class="hd-chip" onclick="applyHotFilter(\'td\',\''+e[0]+'\')">TD'+e[0]+' <span class="cnt">'+e[1]+'</span></span>';
+    });
+    html+='</div>';
+
+    // TD Bands (groups of 5)
+    var tdBands={};
+    var maxTDBandTotal=0;
+    var bandSize=maxTD<=20?3:maxTD<=50?5:10;
+    var numBands=Math.ceil((maxTD+1)/bandSize);
+    for(var b=0;b<numBands;b++){
+        var lo=b*bandSize,hi=Math.min(lo+bandSize-1,maxTD);
+        tdBands[b]={lo:lo,hi:hi,tds:[],total:0,label:lo+'-'+hi,candidates:0};
+    }
+    Object.entries(tdFreq).forEach(function(e){
+        var t=parseInt(e[0]),cnt=e[1];
+        var bIdx=Math.floor(t/bandSize);
+        if(tdBands[bIdx]){
+            tdBands[bIdx].tds.push({td:t,count:cnt});
+            tdBands[bIdx].total+=cnt;
+            tdBands[bIdx].candidates+=cnt;
+        }
+    });
+    Object.values(tdBands).forEach(function(b){if(b.total>maxTDBandTotal)maxTDBandTotal=b.total});
+    var tdBandEntries=Object.entries(tdBands).filter(function(e){return e[1].total>0});
+    var tdBandsByCount=tdBandEntries.slice().sort(function(a,b){return a[1].total-b[1].total});
+    var coldTDThreshold=tdBandsByCount.length>2?tdBandsByCount[Math.floor(tdBandsByCount.length/3)][1].total:0;
+    var hotTDThreshold=tdBandsByCount.length>2?tdBandsByCount[tdBandsByCount.length-1-Math.floor(tdBandsByCount.length/3)][1].total:Infinity;
+
+    html+='<div class="hd-label" style="margin-top:10px">TD Bands <span style="font-weight:400;color:var(--text3)">(groups of '+bandSize+' · 🔥 = most candidates · ❄️ = fewest)</span></div>';
+    html+='<div class="band-row">';
+    for(var b=0;b<numBands;b++){
+        var tb=tdBands[b];
+        if(tb.total===0)continue;
+        var isCold=tb.total<=coldTDThreshold&&coldTDThreshold>0;
+        var isHot=tb.total>=hotTDThreshold&&hotTDThreshold<Infinity;
+        var pct=maxTDBandTotal>0?Math.round(tb.total/maxTDBandTotal*100):0;
+        var barColor=pct>70?'#10b981':pct>40?'var(--pri)':'rgba(99,195,255,.7)';
+        var cls='td-band-group'+(isCold?' cold':'')+(isHot?' hot':'');
+        html+='<div class="'+cls+'" onclick="applyTDBandFilter(\''+tb.lo+'\',\''+tb.hi+'\')" title="Filter candidates with TD '+tb.label+'">';
+        html+='<div class="band-header"><span class="band-name">TD '+tb.label+'</span><span class="band-count">'+tb.total+' cands</span></div>';
+        html+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>';
+        html+='<div class="band-pairs">';
+        tb.tds.sort(function(a,b){return a.td-b.td}).forEach(function(t){
+            html+='<span class="band-pair">'+t.td+'<sup>'+t.count+'</sup></span>';
+        });
+        html+='</div></div>';
+    }
+    html+='</div>';
+
+    document.getElementById('hotTDContent').innerHTML=html;
+    window._hotTDFreq=tdFreq;
+    window._hotTDBands=tdBands;
+    window._hotTDBandSize=bandSize;
+}
+
 // Multi-filter system — all active filters are AND'd together
 var activeFilters=[]; // [{type:'1dp',val:'5'},{type:'year',val:'2019'}]
 
@@ -730,6 +862,10 @@ function applySumBandFilter(lo,hi){
     var el=event.target.closest('.sum-band-group');
     toggleFilter('sumband',lo+'-'+hi,el);
 }
+function applyTDBandFilter(lo,hi){
+    var el=event.target.closest('.td-band-group');
+    toggleFilter('tdband',lo+'-'+hi,el);
+}
 function filterByMonth(month){
     var el=event.target.closest('.hm-chip-click');
     toggleFilter('month',month,el);
@@ -740,7 +876,7 @@ function filterByYear(year){
 }
 function clearFilter(){
     activeFilters=[];
-    document.querySelectorAll('.hd-chip,.hm-chip-click,.band-group,.sum-band-group,.sum-bar-col').forEach(function(c){c.classList.remove('active')});
+    document.querySelectorAll('.hd-chip,.hm-chip-click,.band-group,.sum-band-group,.sum-bar-col,.td-band-group').forEach(function(c){c.classList.remove('active')});
     updateFullCandidateList();
 }
 function candidateMatchesFilter(p,f){
@@ -796,6 +932,15 @@ function candidateMatchesFilter(p,f){
         var csum=0;
         p.candidate.split('').forEach(function(c){csum+=parseInt(c)});
         return csum>=lo&&csum<=hi;
+    }else if(f.type==='td'){
+        // Match candidates whose total_appearances equals the selected TD
+        return (p.total_appearances||0)===parseInt(f.val);
+    }else if(f.type==='tdband'){
+        // Match candidates whose total_appearances falls in the band range
+        var parts=f.val.split('-');
+        var lo=parseInt(parts[0]),hi=parseInt(parts[1]);
+        var td=p.total_appearances||0;
+        return td>=lo&&td<=hi;
     }
     return true;
 }
@@ -1096,6 +1241,7 @@ function displayResult(d){
         window._lastWinSet=window._lastWinSet||{};
         activeFilters=[];
         updateFullCandidateList();
+        updateHotTD(allFiltered);
     }
 }
 
