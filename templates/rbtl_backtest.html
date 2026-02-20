@@ -1134,36 +1134,36 @@ function applyHotsPreset(preset){
     }
 
     if(preset==='hot_sum_td'){
-        // Hot Σ+TD only — no 2DP constraint
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
+        // Hot Σ+TD only — dense cluster ±2, tight TD
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=Math.max(0,tr.q1-5);
         document.getElementById('hotsTDMax').value=tr.q3+5;
         document.getElementById('hotsRequire2dp').value='';
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='cold_sum_td'){
-        // Cold Σ+TD — wider sum range, lower TD
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-6);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+6);
+        // Cold Σ+TD — full sum range (outliers), lower TD
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-3);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+3);
         document.getElementById('hotsTDMin').value=0;
         document.getElementById('hotsTDMax').value=Math.max(tr.q1-1,10);
         document.getElementById('hotsRequire2dp').value='';
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='hot_all'){
-        // Hot everything: Σ+TD+2DP
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
+        // Hot everything: dense cluster Σ+TD+2DP
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=Math.max(0,tr.q1-5);
         document.getElementById('hotsTDMax').value=tr.q3+5;
         document.getElementById('hotsRequire2dp').value=hotPairList.slice(0,3).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='cold_all'){
-        // Cold everything: wider Σ, low TD, cold 2DP
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-6);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+6);
+        // Cold everything: full range Σ, low TD, cold 2DP
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-3);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+3);
         document.getElementById('hotsTDMin').value=0;
         document.getElementById('hotsTDMax').value=Math.max(tr.q1-1,10);
         document.getElementById('hotsRequire2dp').value=coldPairs.slice(0,2).join(',');
@@ -1171,16 +1171,16 @@ function applyHotsPreset(preset){
     }
     else if(preset==='hot_sum_cold_2dp'){
         // Hot sums + cold 2DP pairs
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=0;
         document.getElementById('hotsTDMax').value=999;
         document.getElementById('hotsRequire2dp').value=coldPairs.slice(0,2).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='all_digits'){
-        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
         document.getElementById('hotsTDMin').value=0;
         document.getElementById('hotsTDMax').value=999;
         document.getElementById('hotsRequire2dp').value='';
@@ -1188,7 +1188,9 @@ function applyHotsPreset(preset){
     }
 
     renderHots1dpPicker();
-    document.getElementById('hotsBuilderStatus').textContent='Preset: '+preset.replace(/_/g,' ')+' — click Build Candidates';
+    document.getElementById('hotsBuilderStatus').textContent='Preset: '+preset.replace(/_/g,' ')+' — building...';
+    // Auto-run build
+    runHotsBuilder();
 }
 
 function renderHots1dpPicker(){
@@ -1209,23 +1211,9 @@ function toggleHotsDigit(d,el){
 }
 
 function autoFillSumRange(){
-    var hotSumFreq=window._hotSumFreq||{};
-    var sums=Object.keys(hotSumFreq).map(Number);
-    if(sums.length>0){
-        // Find peak sum (highest frequency)
-        var peakSum=sums[0],peakFreq=hotSumFreq[sums[0]];
-        sums.forEach(function(s){if(hotSumFreq[s]>peakFreq){peakSum=s;peakFreq=hotSumFreq[s]}});
-        // Find the dense cluster around peak (sums with freq > 0)
-        var activeSums=sums.filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return a-b});
-        // Use the dense cluster center ± spread, then add ±2 padding
-        var clusterMin=activeSums[0];
-        var clusterMax=activeSums[activeSums.length-1];
-        // Weighted center: bias toward peak
-        var minS=Math.max(0,clusterMin-2);
-        var maxS=Math.min(36,clusterMax+2);
-        document.getElementById('hotsSumMin').value=minS;
-        document.getElementById('hotsSumMax').value=maxS;
-    }
+    var sr=getHotSumRange();
+    document.getElementById('hotsSumMin').value=Math.max(0,sr.clusterMin-2);
+    document.getElementById('hotsSumMax').value=Math.min(36,sr.clusterMax+2);
     autoFillTDRange();
 }
 
@@ -1246,14 +1234,28 @@ function autoFillTDRange(){
 }
 
 function getHotSumRange(){
-    // Returns {peak, min, max} of the hot sum cluster
+    // Returns {peak, clusterMin, clusterMax, min, max} — cluster = dense zone around peak
     var hotSumFreq=window._hotSumFreq||{};
     var sums=Object.keys(hotSumFreq).map(Number);
-    if(sums.length===0)return{peak:18,min:10,max:26};
-    var peakSum=sums[0],peakFreq=hotSumFreq[sums[0]];
-    sums.forEach(function(s){if(hotSumFreq[s]>peakFreq){peakSum=s;peakFreq=hotSumFreq[s]}});
-    var activeSums=sums.filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return a-b});
-    return{peak:peakSum,min:activeSums[0],max:activeSums[activeSums.length-1]};
+    if(sums.length===0)return{peak:18,clusterMin:16,clusterMax:22,min:10,max:26};
+    
+    // Sort by frequency desc to find peak
+    var sorted=sums.filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return hotSumFreq[b]-hotSumFreq[a]});
+    var peakSum=sorted[0];
+    var peakFreq=hotSumFreq[peakSum];
+    
+    // Dense cluster = sums with freq >= half of peak freq, or within ±5 of peak
+    var clusterSums=sorted.filter(function(s){
+        return hotSumFreq[s]>=Math.max(1,Math.ceil(peakFreq/2))||Math.abs(s-peakSum)<=5;
+    }).sort(function(a,b){return a-b});
+    
+    var clusterMin=clusterSums[0];
+    var clusterMax=clusterSums[clusterSums.length-1];
+    
+    // All active sums
+    var allActive=sums.filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return a-b});
+    
+    return{peak:peakSum,clusterMin:clusterMin,clusterMax:clusterMax,min:allActive[0],max:allActive[allActive.length-1]};
 }
 
 function getHotTDRange(){
@@ -1285,7 +1287,7 @@ function getHot2DPPairs(){
     return Object.entries(hotPairs).sort(function(a,b){return b[1]-a[1]}).filter(function(e){return e[1]>=2}).map(function(e){return e[0]});
 }
 
-function runHotsBuilder(){
+async function runHotsBuilder(){
     var digits=Object.keys(hotsSelectedDigits).map(Number);
     if(digits.length<3){
         document.getElementById('hotsBuilderStatus').textContent='Select at least 3 digits';
@@ -1293,6 +1295,8 @@ function runHotsBuilder(){
     }
     var sumMin=parseInt(document.getElementById('hotsSumMin').value)||0;
     var sumMax=parseInt(document.getElementById('hotsSumMax').value)||36;
+    var tdMin=parseInt(document.getElementById('hotsTDMin').value)||0;
+    var tdMax=parseInt(document.getElementById('hotsTDMax').value)||999;
     var req2dp=(document.getElementById('hotsRequire2dp').value||'').split(/[,\s]+/).filter(function(s){return s.length===2});
     var req3dp=(document.getElementById('hotsRequire3dp').value||'').split(/[,\s]+/).filter(function(s){return s.length===3});
 
@@ -1346,7 +1350,44 @@ function runHotsBuilder(){
     var results=[];
     generateSorted(digits.sort(function(a,b){return a-b}),numDigits,0,[],results);
 
-    document.getElementById('hotsBuilderStatus').textContent=results.length+' candidates from '+digits.length+' digits · Σ'+sumMin+'-'+sumMax;
+    document.getElementById('hotsBuilderStatus').textContent=results.length+' candidates generated · fetching TD...';
+
+    // Store pre-TD results
+    window._hotsCandidatesRaw=results;
+
+    // Auto-fetch TD for all candidates
+    var state=document.getElementById('stateSelect').value;
+    var gameType=document.getElementById('gameType').value;
+    var candList=results.map(function(r){return r.candidate});
+    var tdMap={};
+
+    for(var i=0;i<candList.length;i+=500){
+        var chunk=candList.slice(i,i+500);
+        try{
+            var res=await fetch(apiUrl('/api/td/lookup'),{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({candidates:chunk,state:state,game_type:gameType})
+            });
+            var data=await res.json();
+            if(data.td){
+                Object.keys(data.td).forEach(function(k){tdMap[k]=data.td[k]});
+            }
+        }catch(e){console.error('TD fetch error:',e)}
+    }
+
+    window._hotsTDMap=tdMap;
+
+    // Apply TD range filter
+    var useTDFilter=tdMin>0||tdMax<999;
+    if(useTDFilter){
+        results=results.filter(function(r){
+            var td=tdMap[r.candidate]||0;
+            return td>=tdMin&&td<=tdMax;
+        });
+    }
+
+    document.getElementById('hotsBuilderStatus').textContent=results.length+' candidates · Σ'+sumMin+'-'+sumMax+(useTDFilter?' · TD '+tdMin+'-'+tdMax:'');
 
     // Cross-reference with existing RBTL candidates if available
     var rbtlSet={};
