@@ -4789,6 +4789,96 @@ def get_consecutive_draws():
 
 
 # =============================================================================
+# TD LOOKUP — Times Drawn for normalized numbers
+# =============================================================================
+
+@app.route('/api/td/lookup', methods=['POST'])
+def td_lookup():
+    """
+    Look up Times Drawn (TD) for a list of normalized numbers.
+    
+    Request body:
+        candidates: list of normalized strings, e.g. ["1288", "3556", "0199"]
+        state: optional state filter (default: all states)
+        game_type: pick4 or pick5 (default: pick4)
+    
+    Returns:
+        td: {normalized: count, ...}
+    """
+    collection = get_collection()
+    data = request.json
+    
+    candidates = data.get('candidates', [])
+    state = data.get('state', '')
+    game_type = data.get('game_type', 'pick4').lower()
+    
+    if not candidates:
+        return jsonify({'error': 'No candidates provided'}), 400
+    
+    # Cap at 500 to prevent abuse
+    candidates = candidates[:500]
+    
+    num_digits = {'pick2': 2, 'pick3': 3, 'pick4': 4, 'pick5': 5}.get(game_type, 4)
+    
+    # Get valid games
+    if state:
+        games = get_games_for_prediction(state, game_type)
+    else:
+        # All states — get all games for this game type
+        games = []
+        for s in collection.distinct('state_name'):
+            gs = get_games_for_prediction(s, game_type)
+            if gs:
+                games.extend(gs)
+    
+    if not games:
+        return jsonify({'error': f'No {game_type} games found'}), 404
+    
+    # Build TD map
+    td_map = {}
+    
+    # Try optimized path first (if collection has normalized field)
+    try:
+        for norm in candidates:
+            clean = norm.replace('-', '')
+            # Query by normalized value
+            count = collection.count_documents({
+                'game_name': {'$in': games},
+                'normalized': clean
+            })
+            td_map[clean] = count
+    except Exception:
+        # Fallback: scan and normalize manually
+        all_query = {'game_name': {'$in': games}}
+        all_draws = collection.find(all_query)
+        
+        # Build candidate set for fast lookup
+        cand_set = set(c.replace('-', '') for c in candidates)
+        
+        for d in all_draws:
+            nums = parse_numbers(d.get('numbers', '[]'))
+            if len(nums) != num_digits:
+                continue
+            norm = ''.join(sorted(nums, key=int))
+            if norm in cand_set:
+                td_map[norm] = td_map.get(norm, 0) + 1
+        
+        # Fill missing with 0
+        for c in candidates:
+            clean = c.replace('-', '')
+            if clean not in td_map:
+                td_map[clean] = 0
+    
+    return jsonify({
+        'game_type': game_type,
+        'state': state or 'All',
+        'count': len(td_map),
+        'td': td_map,
+        'db_mode': get_db_mode()
+    })
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 

@@ -294,6 +294,14 @@
                         <button onclick="autoFillSumRange()" style="font-size:.65rem;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer" title="Auto-fill from seed sum range">Auto</button>
                     </div>
                 </div>
+                <div class="fg" style="min-width:150px">
+                    <label style="font-size:.68rem">TD Range (Times Drawn)</label>
+                    <div style="display:flex;gap:4px;align-items:center;margin-top:3px">
+                        <input type="number" id="hotsTDMin" min="0" max="999" value="0" style="width:50px;font-size:.85rem;text-align:center">
+                        <span style="font-size:.8rem;color:var(--text3)">to</span>
+                        <input type="number" id="hotsTDMax" min="0" max="999" value="999" style="width:50px;font-size:.85rem;text-align:center">
+                    </div>
+                </div>
                 <div class="fg" style="min-width:120px">
                     <label style="font-size:.68rem">Must contain 2DP pair</label>
                     <input type="text" id="hotsRequire2dp" placeholder="e.g. 27,58" style="width:100px;font-family:monospace;font-size:.85rem">
@@ -305,6 +313,7 @@
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                 <button onclick="runHotsBuilder()" style="padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(90deg,#ef4444,#f97316);color:#fff;font-weight:700;font-size:.85rem;cursor:pointer">🌶️ Build Candidates</button>
+                <button onclick="fetchHotsTD()" id="hotsTDBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--pri);background:var(--pri-g);color:var(--pri);font-weight:700;font-size:.82rem;cursor:pointer" title="Look up Times Drawn from database for all candidates">📈 Fetch TD</button>
                 <span id="hotsBuilderStatus" style="font-size:.75rem;color:var(--text3)"></span>
             </div>
         </div>
@@ -1262,13 +1271,150 @@ function filterHotsType(type){
 function copyHotsCandidates(mode){
     var cands=window._hotsCandidates||[];
     var rbtlSet=window._hotsRBTLSet||{};
+    var tdMap=window._hotsTDMap||{};
     var list=cands;
     if(mode==='rbtl_miss')list=cands.filter(function(r){return !rbtlSet[r.candidate]});
-    else if(mode==='filtered'&&_hotsTypeFilter!=='ALL')list=cands.filter(function(r){return r.type===_hotsTypeFilter});
-    var text=list.map(function(r){return r.candidate}).join('\n');
+    else if(mode==='filtered'){
+        list=cands.filter(function(r){
+            if(_hotsTypeFilter!=='ALL'&&r.type!==_hotsTypeFilter)return false;
+            return true;
+        });
+    }
+    var text=list.map(function(r){
+        var td=tdMap[r.candidate];
+        return r.candidate+(td!==undefined?' (TD:'+td+')':'');
+    }).join('\n');
     navigator.clipboard.writeText(text).then(function(){
         alert('Copied '+list.length+' candidates');
     });
+}
+
+// Fetch TD from API for all Hots candidates
+async function fetchHotsTD(){
+    var cands=window._hotsCandidates||[];
+    if(cands.length===0){alert('Build candidates first');return}
+    var btn=document.getElementById('hotsTDBtn');
+    btn.disabled=true;btn.textContent='⏳ Fetching...';
+
+    var state=document.getElementById('stateSelect').value;
+    var gameType=document.getElementById('gameType').value;
+    var candList=cands.map(function(r){return r.candidate});
+
+    // Batch in chunks of 500
+    var tdMap={};
+    for(var i=0;i<candList.length;i+=500){
+        var chunk=candList.slice(i,i+500);
+        try{
+            var res=await fetch(apiUrl('/api/td/lookup'),{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({candidates:chunk,state:state,game_type:gameType})
+            });
+            var data=await res.json();
+            if(data.td){
+                Object.keys(data.td).forEach(function(k){tdMap[k]=data.td[k]});
+            }
+        }catch(e){console.error('TD fetch error:',e)}
+    }
+
+    window._hotsTDMap=tdMap;
+    btn.disabled=false;btn.textContent='📈 Fetch TD';
+
+    // Update candidate display with TD values
+    renderHotsCandidatesWithTD();
+}
+
+function renderHotsCandidatesWithTD(){
+    var cands=window._hotsCandidates||[];
+    var rbtlSet=window._hotsRBTLSet||{};
+    var tdMap=window._hotsTDMap||{};
+    var tdMin=parseInt(document.getElementById('hotsTDMin').value)||0;
+    var tdMax=parseInt(document.getElementById('hotsTDMax').value)||999;
+
+    // Filter by TD range if TD data available
+    var hasTD=Object.keys(tdMap).length>0;
+    var filtered=cands;
+    if(hasTD&&(tdMin>0||tdMax<999)){
+        filtered=cands.filter(function(r){
+            var td=tdMap[r.candidate]||0;
+            return td>=tdMin&&td<=tdMax;
+        });
+    }
+
+    // Recount types after TD filter
+    var typeCounts={S:0,D:0,DD:0,T:0,Q:0};
+    filtered.forEach(function(r){typeCounts[r.type]=(typeCounts[r.type]||0)+1});
+
+    var html='';
+
+    // Stats
+    var inRBTL=filtered.filter(function(r){return rbtlSet[r.candidate]}).length;
+    var notInRBTL=filtered.length-inRBTL;
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">';
+    html+='<span class="sum-stat">Total <span class="sv">'+filtered.length+'</span></span>';
+    if(Object.keys(rbtlSet).length>0){
+        html+='<span class="sum-stat">In RBTL <span class="sv" style="color:var(--ok)">'+inRBTL+'</span></span>';
+        html+='<span class="sum-stat">RBTL Miss <span class="sv" style="color:var(--ora)">'+notInRBTL+'</span></span>';
+    }
+    if(hasTD){
+        // TD stats
+        var tds=filtered.map(function(r){return tdMap[r.candidate]||0});
+        var minTD=Math.min.apply(null,tds),maxTD=Math.max.apply(null,tds);
+        var avgTD=Math.round(tds.reduce(function(a,b){return a+b},0)/tds.length*10)/10;
+        html+='<span class="sum-stat">TD Min <span class="sv">'+minTD+'</span></span>';
+        html+='<span class="sum-stat">TD Max <span class="sv">'+maxTD+'</span></span>';
+        html+='<span class="sum-stat">TD Avg <span class="sv">'+avgTD+'</span></span>';
+    }
+    html+='</div>';
+
+    // Type filter buttons
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">';
+    html+='<span style="font-size:.68rem;font-weight:700;color:var(--text2);align-self:center;margin-right:2px">Type:</span>';
+    var typeOrder=[
+        {key:'ALL',label:'All',color:'var(--text1)',bg:'var(--surface2)',border:'var(--border)'},
+        {key:'S',label:'S',full:'Singles',color:'#6366f1',bg:'rgba(99,102,241,.08)',border:'rgba(99,102,241,.25)'},
+        {key:'D',label:'D',full:'Doubles',color:'#f59e0b',bg:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'},
+        {key:'DD',label:'DD',full:'Dbl-Dbl',color:'#ef4444',bg:'rgba(239,68,68,.08)',border:'rgba(239,68,68,.25)'},
+        {key:'T',label:'T',full:'Triples',color:'#10b981',bg:'rgba(16,185,129,.08)',border:'rgba(16,185,129,.25)'},
+        {key:'Q',label:'Q',full:'Quads',color:'#8b5cf6',bg:'rgba(139,92,246,.08)',border:'rgba(139,92,246,.25)'}
+    ];
+    typeOrder.forEach(function(t){
+        var cnt=t.key==='ALL'?filtered.length:typeCounts[t.key]||0;
+        if(t.key!=='ALL'&&cnt===0)return;
+        html+='<button class="hots-type-btn" data-type="'+t.key+'" onclick="filterHotsType(\''+t.key+'\')" style="padding:3px 10px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid '+t.border+';background:'+t.bg+';color:'+t.color+'">';
+        html+=t.label+' <span style="font-weight:400;opacity:.7">'+cnt+'</span></button>';
+    });
+    html+='</div>';
+
+    // Copy buttons
+    html+='<div style="display:flex;gap:6px;margin-bottom:6px">';
+    html+='<button onclick="copyHotsCandidates()" style="font-size:.7rem;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);cursor:pointer">Copy All</button>';
+    html+='<button onclick="copyHotsCandidates(\'rbtl_miss\')" style="font-size:.7rem;padding:3px 10px;border:1px solid var(--ora);border-radius:6px;background:var(--ora-g);color:var(--ora);cursor:pointer">Copy RBTL Misses</button>';
+    html+='<button onclick="copyHotsCandidates(\'filtered\')" style="font-size:.7rem;padding:3px 10px;border:1px solid var(--pri);border-radius:6px;background:var(--pri-g);color:var(--pri);cursor:pointer">Copy Filtered</button>';
+    if(hasTD){
+        html+='<button onclick="renderHotsCandidatesWithTD()" style="font-size:.7rem;padding:3px 10px;border:1px solid #10b981;border-radius:6px;background:rgba(16,185,129,.08);color:#10b981;cursor:pointer">Apply TD Filter</button>';
+    }
+    html+='</div>';
+
+    // Sort: by TD desc if available, else by candidate
+    if(hasTD){
+        filtered.sort(function(a,b){return (tdMap[b.candidate]||0)-(tdMap[a.candidate]||0)});
+    }
+
+    html+='<div id="hotsCandGrid" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:3px">';
+    filtered.forEach(function(r){
+        var inR=rbtlSet[r.candidate];
+        var td=tdMap[r.candidate];
+        var bg=inR?'var(--ok-g)':'var(--surface2)';
+        var bdr=inR?'rgba(16,185,129,.2)':'var(--border)';
+        var tdLabel=td!==undefined?' \u00b7 TD:'+td:'';
+        html+='<span class="hots-cand" data-type="'+r.type+'" style="font-family:monospace;font-size:.75rem;font-weight:700;padding:2px 6px;border-radius:4px;background:'+bg+';border:1px solid '+bdr+';letter-spacing:1px'+(inR?';color:var(--ok)':'')+'" title="'+r.typeLabel+' \u00b7 \u03a3'+r.sum+tdLabel+(inR?' \u00b7 RBTL #'+inR:'')+'">'+r.candidate+(td!==undefined?'<sup style="font-size:.55rem;color:var(--text3);margin-left:1px">'+td+'</sup>':'')+'</span>';
+    });
+    html+='</div></div>';
+
+    document.getElementById('hotsBuilderResults').innerHTML=html;
+    document.getElementById('hotsBuilderStatus').textContent=filtered.length+' candidates'+(hasTD?' (sorted by TD)':'');
 }
 
 // Multi-filter system — all active filters are AND'd together
