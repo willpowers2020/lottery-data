@@ -300,6 +300,7 @@
                         <input type="number" id="hotsTDMin" min="0" max="999" value="0" style="width:50px;font-size:.85rem;text-align:center">
                         <span style="font-size:.8rem;color:var(--text3)">to</span>
                         <input type="number" id="hotsTDMax" min="0" max="999" value="999" style="width:50px;font-size:.85rem;text-align:center">
+                        <button onclick="autoFillTDRange()" style="font-size:.65rem;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer" title="Auto-fill ±5 from fetched TD range">Auto</button>
                     </div>
                 </div>
                 <div class="fg" style="min-width:120px">
@@ -1097,6 +1098,19 @@ function autoFillSumRange(){
         document.getElementById('hotsSumMin').value=minS;
         document.getElementById('hotsSumMax').value=maxS;
     }
+    // Auto-fill TD range if TD data available
+    autoFillTDRange();
+}
+
+function autoFillTDRange(){
+    var tdMap=window._hotsTDMap||{};
+    var tds=Object.values(tdMap).filter(function(v){return v>0});
+    if(tds.length>0){
+        var minTD=Math.max(0,Math.min.apply(null,tds)-5);
+        var maxTD=Math.max.apply(null,tds)+5;
+        document.getElementById('hotsTDMin').value=minTD;
+        document.getElementById('hotsTDMax').value=maxTD;
+    }
 }
 
 function runHotsBuilder(){
@@ -1319,6 +1333,9 @@ async function fetchHotsTD(){
 
     window._hotsTDMap=tdMap;
     btn.disabled=false;btn.textContent='📈 Fetch TD';
+
+    // Auto-fill TD range ±5
+    autoFillTDRange();
 
     // Update candidate display with TD values
     renderHotsCandidatesWithTD();
