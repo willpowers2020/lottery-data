@@ -277,6 +277,13 @@
             Select which hot properties to use. All 4-digit combos matching <strong>ALL</strong> selected criteria become candidates.
             Click chips in Hot Digits / Sums sections above, or use the pickers below.
         </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+            <span style="font-size:.68rem;font-weight:700;color:var(--text2);align-self:center;margin-right:2px">Presets:</span>
+            <button onclick="applyHotsPreset('hot')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Hot (Sums+TD+2DP)</button>
+            <button onclick="applyHotsPreset('cold')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold (Sums+TD+2DP)</button>
+            <button onclick="applyHotsPreset('hot_sum_cold_2dp')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--pri);background:var(--pri-g);color:var(--pri)">🔥Σ + ❄️2DP</button>
+            <button onclick="applyHotsPreset('all_digits')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2)">All Digits</button>
+        </div>
         <div id="hotsBuilderControls" style="margin-bottom:10px">
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
                 <div class="fg" style="min-width:120px">
@@ -541,6 +548,7 @@ function updateHotDigits(){
     if(selectedSeeds.length===0){
         document.getElementById('hotDigitsCard').classList.add('hidden');
         document.getElementById('hotSumsCard').classList.add('hidden');
+        document.getElementById('hotTDCard').classList.add('hidden');
         document.getElementById('autopsyCard').classList.add('hidden');
         document.getElementById('hotsBuilderCard').classList.add('hidden');
         return;
@@ -682,6 +690,9 @@ function updateHotDigits(){
     // Update Hot Sums
     updateHotSums(seedSums);
 
+    // Fetch TDs for seed normalized values
+    fetchSeedTDs();
+
     // Show autopsy card (hot data now available for analysis)
     document.getElementById('autopsyCard').classList.remove('hidden');
     // Show hots builder if profile is hots
@@ -797,7 +808,41 @@ function updateHotSums(seedSums){
     window._hotSumBands=sumBands;
 }
 
-// Hot TD — updates after backtest results are available
+// Fetch TDs for seed normalized values at seed-selection time
+async function fetchSeedTDs(){
+    if(selectedSeeds.length===0)return;
+    var state=document.getElementById('stateSelect').value;
+    var gameType=document.getElementById('gameType').value;
+    // Get unique normalized values from seeds
+    var seedNorms={};
+    selectedSeeds.forEach(function(i){
+        var d=recentDraws[i];if(!d)return;
+        var norm=d.actual||d.value;
+        seedNorms[norm]=true;
+    });
+    var candList=Object.keys(seedNorms);
+    if(candList.length===0)return;
+
+    try{
+        var res=await fetch(apiUrl('/api/td/lookup'),{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({candidates:candList,state:state,game_type:gameType})
+        });
+        var data=await res.json();
+        if(data.td){
+            window._seedTDMap=data.td;
+            // Build plays-like array for updateHotTD
+            var pseudoPlays=[];
+            Object.entries(data.td).forEach(function(e){
+                pseudoPlays.push({candidate:e[0],actual_hits:e[1],total_appearances:e[1]});
+            });
+            updateHotTD(pseudoPlays);
+        }
+    }catch(e){console.error('Seed TD fetch error:',e)}
+}
+
+// Hot TD — updates from seed TDs or backtest results
 function updateHotTD(plays){
     if(!plays||plays.length===0){document.getElementById('hotTDCard').classList.add('hidden');return}
     document.getElementById('hotTDCard').classList.remove('hidden');
@@ -1069,6 +1114,89 @@ function showHotsBuilder(){
     Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
     renderHots1dpPicker();
     autoFillSumRange();
+}
+
+function applyHotsPreset(preset){
+    var hotDigits=window._hotDigits||{};
+    var hotPairs=window._hotPairs||{};
+    var hotSumFreq=window._hotSumFreq||{};
+    var hotBands=window._hotBands||{};
+    var seedTDs=window._seedTDMap||{};
+
+    // Get hot/cold sums
+    var sums=Object.keys(hotSumFreq).map(Number);
+    var sumMin=sums.length?Math.min.apply(null,sums):10;
+    var sumMax=sums.length?Math.max.apply(null,sums):26;
+
+    // Get hot/cold TDs from seeds
+    var tds=Object.values(seedTDs).filter(function(v){return v>0});
+    var tdMin=tds.length?Math.min.apply(null,tds):0;
+    var tdMax=tds.length?Math.max.apply(null,tds):999;
+
+    // Get hot 2DP pairs (sorted by freq)
+    var pairsSorted=Object.entries(hotPairs).sort(function(a,b){return b[1]-a[1]});
+    var hotPairList=pairsSorted.filter(function(e){return e[1]>=2}).map(function(e){return e[0]});
+    // Cold pairs: freq 1 or in cold bands
+    var coldBandPairs=[];
+    Object.entries(hotBands).forEach(function(e){
+        var band=e[1];
+        // Find cold threshold
+        var allTotals=Object.values(hotBands).filter(function(b){return b.pairs.length>0}).map(function(b){return b.total}).sort(function(a,b){return a-b});
+        var coldThresh=allTotals.length>2?allTotals[Math.floor(allTotals.length/3)]:0;
+        if(band.total<=coldThresh&&band.total>0){
+            band.pairs.forEach(function(p){coldBandPairs.push(p.pair)});
+        }
+    });
+
+    // Select digits
+    hotsSelectedDigits={};
+
+    if(preset==='hot'){
+        // Hot: all hot digits, hot sum range ±2, hot TD range ±5, top hot 2DP pairs
+        Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
+        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+2);
+        document.getElementById('hotsTDMin').value=Math.max(0,tdMin-5);
+        document.getElementById('hotsTDMax').value=tdMax+5;
+        document.getElementById('hotsRequire2dp').value=hotPairList.slice(0,3).join(',');
+        document.getElementById('hotsRequire3dp').value='';
+    }
+    else if(preset==='cold'){
+        // Cold: all hot digits (need digits to build combos), but INVERTED sums & TDs, cold 2DP pairs
+        Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
+        // Cold sums: OUTSIDE the hot range but within reasonable bounds
+        var avgSum=sums.length?Math.round(sums.reduce(function(a,b){return a+b},0)/sums.length):18;
+        // Below hot range or above
+        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-8);
+        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+8);
+        document.getElementById('hotsTDMin').value=0;
+        document.getElementById('hotsTDMax').value=Math.max(tdMin-1,15);
+        document.getElementById('hotsRequire2dp').value=coldBandPairs.slice(0,2).join(',');
+        document.getElementById('hotsRequire3dp').value='';
+    }
+    else if(preset==='hot_sum_cold_2dp'){
+        // Hot sums + cold 2DP — the "catch the unexpected" strategy
+        Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
+        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+2);
+        document.getElementById('hotsTDMin').value=0;
+        document.getElementById('hotsTDMax').value=999;
+        document.getElementById('hotsRequire2dp').value=coldBandPairs.slice(0,2).join(',');
+        document.getElementById('hotsRequire3dp').value='';
+    }
+    else if(preset==='all_digits'){
+        // All 10 digits, no pair/triple constraints — widest net
+        for(var d=0;d<=9;d++)hotsSelectedDigits[d]=true;
+        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+2);
+        document.getElementById('hotsTDMin').value=0;
+        document.getElementById('hotsTDMax').value=999;
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+    }
+
+    renderHots1dpPicker();
+    document.getElementById('hotsBuilderStatus').textContent='Preset: '+preset+' applied — click Build Candidates';
 }
 
 function renderHots1dpPicker(){
