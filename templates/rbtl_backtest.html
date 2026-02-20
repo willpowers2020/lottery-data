@@ -313,7 +313,7 @@
                     </div>
                 </div>
                 <div class="fg" style="min-width:120px">
-                    <label style="font-size:.68rem">Must contain 2DP pair</label>
+                    <label style="font-size:.68rem">Must contain 2DP pair (OR)</label>
                     <input type="text" id="hotsRequire2dp" placeholder="e.g. 27,58" style="width:100px;font-family:monospace;font-size:.85rem">
                 </div>
                 <div class="fg" style="min-width:120px">
@@ -1317,15 +1317,17 @@ async function runHotsBuilder(){
             var dsum=0;current.forEach(function(c){dsum+=parseInt(c)});
             // Sum filter
             if(dsum<sumMin||dsum>sumMax)return;
-            // 2DP filter
+            // 2DP filter (OR — must contain at least one of the listed pairs)
             if(req2dp.length>0){
                 var pairs={};
                 for(var a=0;a<current.length;a++)for(var b=a+1;b<current.length;b++){
                     pairs[current[a]+current[b]]=true;
                 }
+                var hasAny=false;
                 for(var r=0;r<req2dp.length;r++){
-                    if(!pairs[req2dp[r]])return;
+                    if(pairs[req2dp[r]]){hasAny=true;break}
                 }
+                if(!hasAny)return;
             }
             // 3DP filter
             if(req3dp.length>0){
@@ -1886,7 +1888,8 @@ async function runHotsBacktest(){
                 if(dsum<sumMin||dsum>sumMax)return;
                 if(req2dp.length>0){
                     var pp={};for(var a=0;a<cur.length;a++)for(var b=a+1;b<cur.length;b++){pp[cur[a]+cur[b]]=true}
-                    for(var r=0;r<req2dp.length;r++){if(!pp[req2dp[r]])return}
+                    var hasAny2=false;for(var r=0;r<req2dp.length;r++){if(pp[req2dp[r]]){hasAny2=true;break}}
+                    if(!hasAny2)return;
                 }
                 if(req3dp.length>0){
                     var tt={};for(var a=0;a<cur.length;a++)for(var b=a+1;b<cur.length;b++)for(var c=b+1;c<cur.length;c++){tt[cur[a]+cur[b]+cur[c]]=true}
