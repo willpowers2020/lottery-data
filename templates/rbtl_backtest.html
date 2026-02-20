@@ -116,6 +116,18 @@
         .td-band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
         .td-band-group.hot{border-color:var(--ora);background:var(--ora-g)}
         .td-band-group.hot::after{content:'🔥';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .autopsy-num{font-family:'Courier New',monospace;font-weight:800;letter-spacing:2px;font-size:1.1rem;color:var(--pri)}
+        .autopsy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin:8px 0}
+        .autopsy-item{padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:.72rem}
+        .autopsy-item .al{font-weight:700;color:var(--text2);font-size:.65rem;text-transform:uppercase;margin-bottom:2px}
+        .autopsy-item .av{font-family:monospace;font-weight:700;color:var(--text1)}
+        .autopsy-tag{display:inline-block;padding:1px 5px;border-radius:4px;font-size:.62rem;font-weight:700;margin:1px}
+        .autopsy-tag.hot{background:var(--ora-g);color:var(--ora);border:1px solid rgba(245,158,11,.2)}
+        .autopsy-tag.cold{background:rgba(99,195,255,.1);color:rgba(59,130,246,1);border:1px solid rgba(99,195,255,.2)}
+        .autopsy-tag.miss{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+        .autopsy-tag.hit{background:var(--ok-g);color:var(--ok);border:1px solid rgba(16,185,129,.2)}
+        .autopsy-verdict{padding:8px 12px;border-radius:8px;font-size:.78rem;margin-top:6px}
+        .autopsy-divider{border:none;border-top:1px dashed var(--border);margin:12px 0}
 
         /* Buttons */
         .btn{width:100%;padding:11px;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s}
@@ -244,6 +256,17 @@
     <div class="card hidden" id="hotTDCard">
         <h3>📈 Hot TD <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(times drawn distribution across candidates · click to filter)</span></h3>
         <div id="hotTDContent"></div>
+    </div>
+
+    <!-- Winner Autopsy -->
+    <div class="card hidden" id="autopsyCard">
+        <h3>🔬 Winner Autopsy <span style="font-size:.7rem;font-weight:400;color:var(--text3)">(reverse-engineer any number against current hot lists)</span></h3>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <input type="text" id="autopsyInput" placeholder="e.g. 8821 or 8821,3556" maxlength="30" style="width:180px;font-family:'Courier New',monospace;text-align:center;font-size:1rem;letter-spacing:2px;padding:6px 10px;border:2px solid var(--pri);border-radius:8px;background:var(--pri-g)">
+            <button onclick="runAutopsy()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--pri);background:var(--pri);color:#fff;font-weight:700;font-size:.82rem;cursor:pointer">🔬 Autopsy</button>
+            <span style="font-size:.68rem;color:var(--text3)">Enter drawn number(s) — comma separated for multiple</span>
+        </div>
+        <div id="autopsyResults"></div>
     </div>
 
     <!-- Empty / Loading / Results -->
@@ -463,6 +486,7 @@ function updateHotDigits(){
     if(selectedSeeds.length===0){
         document.getElementById('hotDigitsCard').classList.add('hidden');
         document.getElementById('hotSumsCard').classList.add('hidden');
+        document.getElementById('autopsyCard').classList.add('hidden');
         return;
     }
     document.getElementById('hotDigitsCard').classList.remove('hidden');
@@ -601,6 +625,9 @@ function updateHotDigits(){
 
     // Update Hot Sums
     updateHotSums(seedSums);
+
+    // Show autopsy card (hot data now available for analysis)
+    document.getElementById('autopsyCard').classList.remove('hidden');
 }
 
 // Hot Sums
@@ -717,11 +744,11 @@ function updateHotTD(plays){
     if(!plays||plays.length===0){document.getElementById('hotTDCard').classList.add('hidden');return}
     document.getElementById('hotTDCard').classList.remove('hidden');
 
-    // Extract TD (total_appearances) from all candidate plays
+    // Extract TD (actual_hits = true global times drawn) from all candidate plays
     var tdValues=[];
     var tdFreq={};
     plays.forEach(function(p){
-        var td=p.total_appearances||0;
+        var td=p.actual_hits||p.total_appearances||0;
         tdValues.push(td);
         tdFreq[td]=(tdFreq[td]||0)+1;
     });
@@ -829,6 +856,148 @@ function updateHotTD(plays){
     window._hotTDFreq=tdFreq;
     window._hotTDBands=tdBands;
     window._hotTDBandSize=bandSize;
+
+    // Show autopsy card once we have hot data
+    document.getElementById('autopsyCard').classList.remove('hidden');
+}
+
+// Winner Autopsy — reverse-engineer a number against current hot lists
+function runAutopsy(){
+    var input=document.getElementById('autopsyInput').value.trim();
+    if(!input){return}
+    var numbers=input.split(/[,\s]+/).filter(function(n){return n.length>=3&&n.length<=5&&/^\d+$/.test(n)});
+    if(numbers.length===0){document.getElementById('autopsyResults').innerHTML='<span style="color:var(--err);font-size:.8rem">Enter valid 3-5 digit number(s)</span>';return}
+
+    var hotDigits=window._hotDigits||{};
+    var hotPairs=window._hotPairs||{};
+    var hotTriples=window._hotTriples||{};
+    var hotBands=window._hotBands||{};
+    var hotBands3=window._hotBands3||{};
+    var hotSumFreq=window._hotSumFreq||{};
+    var hotSumBands=window._hotSumBands||{};
+    var allPlays=window._allPlays||[];
+
+    // Get max counts for context
+    var max1dp=0,max2dp=0,max3dp=0;
+    Object.values(hotDigits).forEach(function(v){if(v>max1dp)max1dp=v});
+    Object.values(hotPairs).forEach(function(v){if(v>max2dp)max2dp=v});
+    Object.values(hotTriples).forEach(function(v){if(v>max3dp)max3dp=v});
+
+    var html='';
+
+    numbers.forEach(function(num,idx){
+        if(idx>0)html+='<hr class="autopsy-divider">';
+        var sorted=num.split('').sort();
+        var norm=sorted.join('');
+        var dsum=0;sorted.forEach(function(c){dsum+=parseInt(c)});
+
+        html+='<div style="margin-bottom:8px"><span class="autopsy-num">'+num+'</span>';
+        html+=' <span style="font-size:.78rem;color:var(--text3)">→ normalized: <strong>'+norm+'</strong> · Σ'+dsum+'</span></div>';
+
+        // 1DP Analysis
+        var unique1dp={};sorted.forEach(function(c){unique1dp[c]=true});
+        html+='<div class="autopsy-item" style="margin-bottom:6px"><div class="al">1DP Digits</div>';
+        Object.keys(unique1dp).sort().forEach(function(d){
+            var cnt=hotDigits[d]||0;
+            var cls=cnt>=max1dp*0.6?'hot':cnt>0?'hit':'miss';
+            html+='<span class="autopsy-tag '+cls+'">'+d+(cnt>0?' '+cnt+'x':'  ✗')+'</span>';
+        });
+        html+='</div>';
+
+        // 2DP Pairs
+        var myPairs=[];
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++){
+            var pair=sorted[a]+sorted[b];
+            if(myPairs.indexOf(pair)===-1)myPairs.push(pair);
+        }
+        html+='<div class="autopsy-item" style="margin-bottom:6px"><div class="al">2DP Pairs</div>';
+        var coldPairCount=0,hotPairCount=0;
+        myPairs.forEach(function(p){
+            var cnt=hotPairs[p]||0;
+            var cls=cnt>=max2dp*0.6?'hot':cnt>0?'hit':'miss';
+            if(cnt===0)coldPairCount++;
+            if(cnt>=max2dp*0.6)hotPairCount++;
+            html+='<span class="autopsy-tag '+cls+'">'+p+(cnt>0?' '+cnt+'x':' ✗')+'</span>';
+        });
+        html+='</div>';
+
+        // 2DP Band membership
+        html+='<div class="autopsy-item" style="margin-bottom:6px"><div class="al">2DP Bands</div>';
+        var myBands2={};
+        myPairs.forEach(function(p){var b=parseInt(p[0]);myBands2[b]=true});
+        for(var b=0;b<=9;b++){
+            if(!myBands2[b])continue;
+            var band=hotBands[b];
+            if(!band||band.pairs.length===0)continue;
+            var cls=band.total<=3?'cold':band.total>=8?'hot':'hit';
+            html+='<span class="autopsy-tag '+cls+'">'+band.label+' ('+band.total+' hits)</span>';
+        }
+        html+='</div>';
+
+        // 3DP Triples
+        var myTriples=[];
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++)for(var c=b+1;c<sorted.length;c++){
+            var trip=sorted[a]+sorted[b]+sorted[c];
+            if(myTriples.indexOf(trip)===-1)myTriples.push(trip);
+        }
+        html+='<div class="autopsy-item" style="margin-bottom:6px"><div class="al">3DP Triples</div>';
+        myTriples.forEach(function(t){
+            var cnt=hotTriples[t]||0;
+            var cls=cnt>=max3dp*0.6?'hot':cnt>0?'hit':'miss';
+            html+='<span class="autopsy-tag '+cls+'">'+t+(cnt>0?' '+cnt+'x':' ✗')+'</span>';
+        });
+        html+='</div>';
+
+        // Sum Analysis
+        var sumInHot=hotSumFreq[dsum]||0;
+        var sumBandIdx=null;
+        Object.entries(hotSumBands||{}).forEach(function(e){
+            var sb=e[1];
+            if(dsum>=sb.lo&&dsum<=sb.hi&&sb.total>0)sumBandIdx=e[0];
+        });
+        html+='<div class="autopsy-item" style="margin-bottom:6px"><div class="al">Digit Sum</div>';
+        html+='<span class="autopsy-tag '+(sumInHot>0?'hit':'miss')+'">Σ'+dsum+(sumInHot>0?' ('+sumInHot+'x in seeds)':' (not in seeds)')+'</span>';
+        if(sumBandIdx!==null){
+            var sb=hotSumBands[sumBandIdx];
+            html+=' <span class="autopsy-tag hit">Band Σ'+sb.lo+'-'+sb.hi+' ('+sb.total+' hits)</span>';
+        }
+        html+='</div>';
+
+        // Check if in candidate list
+        var inCandidates=false;
+        var candRank=null;
+        for(var ci=0;ci<allPlays.length;ci++){
+            if(allPlays[ci].candidate===norm){
+                inCandidates=true;
+                candRank=allPlays[ci].rank||ci+1;
+                break;
+            }
+        }
+
+        // Verdict
+        var verdictColor=inCandidates?'var(--ok-g)':'var(--err-g)';
+        var verdictBorder=inCandidates?'rgba(16,185,129,.2)':'rgba(239,68,68,.15)';
+        html+='<div class="autopsy-verdict" style="background:'+verdictColor+';border:1px solid '+verdictBorder+'">';
+        if(inCandidates){
+            html+='✅ <strong>IN candidates</strong> at rank #'+candRank;
+        }else{
+            html+='❌ <strong>NOT in candidates</strong>';
+        }
+        // Strategy hints
+        var hints=[];
+        if(coldPairCount>0)hints.push(coldPairCount+'/'+myPairs.length+' 2DP pairs are cold (✗) — cold band strategy would catch this');
+        if(sumInHot===0)hints.push('Sum Σ'+dsum+' not in seed sums — sum-based filter would miss this');
+        if(sumInHot>0)hints.push('Sum Σ'+dsum+' matches seed sums ('+sumInHot+'x)');
+        if(hotPairCount>0)hints.push(hotPairCount+'/'+myPairs.length+' pairs are hot — DP filter could find this');
+        if(hints.length>0){
+            html+='<div style="margin-top:4px;font-size:.68rem;color:var(--text2)">';
+            hints.forEach(function(h){html+='<div>💡 '+h+'</div>'});
+            html+='</div>';
+        }
+        html+='</div>';
+    });
+
+    document.getElementById('autopsyResults').innerHTML=html;
 }
 
 // Multi-filter system — all active filters are AND'd together
@@ -933,13 +1102,13 @@ function candidateMatchesFilter(p,f){
         p.candidate.split('').forEach(function(c){csum+=parseInt(c)});
         return csum>=lo&&csum<=hi;
     }else if(f.type==='td'){
-        // Match candidates whose total_appearances equals the selected TD
-        return (p.total_appearances||0)===parseInt(f.val);
+        // Match candidates whose actual_hits (global TD) equals the selected TD
+        return (p.actual_hits||p.total_appearances||0)===parseInt(f.val);
     }else if(f.type==='tdband'){
-        // Match candidates whose total_appearances falls in the band range
+        // Match candidates whose actual_hits falls in the band range
         var parts=f.val.split('-');
         var lo=parseInt(parts[0]),hi=parseInt(parts[1]);
-        var td=p.total_appearances||0;
+        var td=p.actual_hits||p.total_appearances||0;
         return td>=lo&&td<=hi;
     }
     return true;
