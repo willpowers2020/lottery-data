@@ -279,8 +279,10 @@
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
             <span style="font-size:.68rem;font-weight:700;color:var(--text2);align-self:center;margin-right:2px">Presets:</span>
-            <button onclick="applyHotsPreset('hot')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Hot (Sums+TD+2DP)</button>
-            <button onclick="applyHotsPreset('cold')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold (Sums+TD+2DP)</button>
+            <button onclick="applyHotsPreset('hot_sum_td')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Hot Σ+TD</button>
+            <button onclick="applyHotsPreset('cold_sum_td')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold Σ+TD</button>
+            <button onclick="applyHotsPreset('hot_all')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--ora);background:var(--ora-g);color:var(--ora)">🔥 Hot (All)</button>
+            <button onclick="applyHotsPreset('cold_all')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid rgba(99,195,255,.5);background:rgba(99,195,255,.08);color:#3b82f6">❄️ Cold (All)</button>
             <button onclick="applyHotsPreset('hot_sum_cold_2dp')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--pri);background:var(--pri-g);color:var(--pri)">🔥Σ + ❄️2DP</button>
             <button onclick="applyHotsPreset('all_digits')" style="padding:4px 12px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2)">All Digits</button>
         </div>
@@ -1118,77 +1120,67 @@ function showHotsBuilder(){
 
 function applyHotsPreset(preset){
     var hotDigits=window._hotDigits||{};
-    var hotPairs=window._hotPairs||{};
-    var hotSumFreq=window._hotSumFreq||{};
-    var hotBands=window._hotBands||{};
-    var seedTDs=window._seedTDMap||{};
+    var sr=getHotSumRange();
+    var tr=getHotTDRange();
+    var hotPairList=getHot2DPPairs();
+    var coldPairs=getColdBand2DPPairs();
 
-    // Get hot/cold sums
-    var sums=Object.keys(hotSumFreq).map(Number);
-    var sumMin=sums.length?Math.min.apply(null,sums):10;
-    var sumMax=sums.length?Math.max.apply(null,sums):26;
-
-    // Get hot/cold TDs from seeds
-    var tds=Object.values(seedTDs).filter(function(v){return v>0});
-    var tdMin=tds.length?Math.min.apply(null,tds):0;
-    var tdMax=tds.length?Math.max.apply(null,tds):999;
-
-    // Get hot 2DP pairs (sorted by freq)
-    var pairsSorted=Object.entries(hotPairs).sort(function(a,b){return b[1]-a[1]});
-    var hotPairList=pairsSorted.filter(function(e){return e[1]>=2}).map(function(e){return e[0]});
-    // Cold pairs: freq 1 or in cold bands
-    var coldBandPairs=[];
-    Object.entries(hotBands).forEach(function(e){
-        var band=e[1];
-        // Find cold threshold
-        var allTotals=Object.values(hotBands).filter(function(b){return b.pairs.length>0}).map(function(b){return b.total}).sort(function(a,b){return a-b});
-        var coldThresh=allTotals.length>2?allTotals[Math.floor(allTotals.length/3)]:0;
-        if(band.total<=coldThresh&&band.total>0){
-            band.pairs.forEach(function(p){coldBandPairs.push(p.pair)});
-        }
-    });
-
-    // Select digits
+    // All presets use all hot digits
     hotsSelectedDigits={};
-
-    if(preset==='hot'){
-        // Hot: all hot digits, hot sum range ±2, hot TD range ±5, top hot 2DP pairs
+    if(preset==='all_digits'){
+        for(var d=0;d<=9;d++)hotsSelectedDigits[d]=true;
+    }else{
         Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
-        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+2);
-        document.getElementById('hotsTDMin').value=Math.max(0,tdMin-5);
-        document.getElementById('hotsTDMax').value=tdMax+5;
+    }
+
+    if(preset==='hot_sum_td'){
+        // Hot Σ+TD only — no 2DP constraint
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
+        document.getElementById('hotsTDMin').value=Math.max(0,tr.q1-5);
+        document.getElementById('hotsTDMax').value=tr.q3+5;
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+    }
+    else if(preset==='cold_sum_td'){
+        // Cold Σ+TD — wider sum range, lower TD
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-6);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+6);
+        document.getElementById('hotsTDMin').value=0;
+        document.getElementById('hotsTDMax').value=Math.max(tr.q1-1,10);
+        document.getElementById('hotsRequire2dp').value='';
+        document.getElementById('hotsRequire3dp').value='';
+    }
+    else if(preset==='hot_all'){
+        // Hot everything: Σ+TD+2DP
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
+        document.getElementById('hotsTDMin').value=Math.max(0,tr.q1-5);
+        document.getElementById('hotsTDMax').value=tr.q3+5;
         document.getElementById('hotsRequire2dp').value=hotPairList.slice(0,3).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
-    else if(preset==='cold'){
-        // Cold: all hot digits (need digits to build combos), but INVERTED sums & TDs, cold 2DP pairs
-        Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
-        // Cold sums: OUTSIDE the hot range but within reasonable bounds
-        var avgSum=sums.length?Math.round(sums.reduce(function(a,b){return a+b},0)/sums.length):18;
-        // Below hot range or above
-        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-8);
-        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+8);
+    else if(preset==='cold_all'){
+        // Cold everything: wider Σ, low TD, cold 2DP
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-6);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+6);
         document.getElementById('hotsTDMin').value=0;
-        document.getElementById('hotsTDMax').value=Math.max(tdMin-1,15);
-        document.getElementById('hotsRequire2dp').value=coldBandPairs.slice(0,2).join(',');
+        document.getElementById('hotsTDMax').value=Math.max(tr.q1-1,10);
+        document.getElementById('hotsRequire2dp').value=coldPairs.slice(0,2).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='hot_sum_cold_2dp'){
-        // Hot sums + cold 2DP — the "catch the unexpected" strategy
-        Object.keys(hotDigits).forEach(function(d){if(hotDigits[d]>0)hotsSelectedDigits[parseInt(d)]=true});
-        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+2);
+        // Hot sums + cold 2DP pairs
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
         document.getElementById('hotsTDMin').value=0;
         document.getElementById('hotsTDMax').value=999;
-        document.getElementById('hotsRequire2dp').value=coldBandPairs.slice(0,2).join(',');
+        document.getElementById('hotsRequire2dp').value=coldPairs.slice(0,2).join(',');
         document.getElementById('hotsRequire3dp').value='';
     }
     else if(preset==='all_digits'){
-        // All 10 digits, no pair/triple constraints — widest net
-        for(var d=0;d<=9;d++)hotsSelectedDigits[d]=true;
-        document.getElementById('hotsSumMin').value=Math.max(0,sumMin-2);
-        document.getElementById('hotsSumMax').value=Math.min(36,sumMax+2);
+        document.getElementById('hotsSumMin').value=Math.max(0,sr.min-2);
+        document.getElementById('hotsSumMax').value=Math.min(36,sr.max+2);
         document.getElementById('hotsTDMin').value=0;
         document.getElementById('hotsTDMax').value=999;
         document.getElementById('hotsRequire2dp').value='';
@@ -1196,7 +1188,7 @@ function applyHotsPreset(preset){
     }
 
     renderHots1dpPicker();
-    document.getElementById('hotsBuilderStatus').textContent='Preset: '+preset+' applied — click Build Candidates';
+    document.getElementById('hotsBuilderStatus').textContent='Preset: '+preset.replace(/_/g,' ')+' — click Build Candidates';
 }
 
 function renderHots1dpPicker(){
@@ -1220,25 +1212,77 @@ function autoFillSumRange(){
     var hotSumFreq=window._hotSumFreq||{};
     var sums=Object.keys(hotSumFreq).map(Number);
     if(sums.length>0){
-        // Use seed sum range ± 2
-        var minS=Math.max(0,Math.min.apply(null,sums)-2);
-        var maxS=Math.min(36,Math.max.apply(null,sums)+2);
+        // Find peak sum (highest frequency)
+        var peakSum=sums[0],peakFreq=hotSumFreq[sums[0]];
+        sums.forEach(function(s){if(hotSumFreq[s]>peakFreq){peakSum=s;peakFreq=hotSumFreq[s]}});
+        // Find the dense cluster around peak (sums with freq > 0)
+        var activeSums=sums.filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return a-b});
+        // Use the dense cluster center ± spread, then add ±2 padding
+        var clusterMin=activeSums[0];
+        var clusterMax=activeSums[activeSums.length-1];
+        // Weighted center: bias toward peak
+        var minS=Math.max(0,clusterMin-2);
+        var maxS=Math.min(36,clusterMax+2);
         document.getElementById('hotsSumMin').value=minS;
         document.getElementById('hotsSumMax').value=maxS;
     }
-    // Auto-fill TD range if TD data available
     autoFillTDRange();
 }
 
 function autoFillTDRange(){
-    var tdMap=window._hotsTDMap||{};
+    var tdMap=window._hotsTDMap||window._seedTDMap||{};
     var tds=Object.values(tdMap).filter(function(v){return v>0});
     if(tds.length>0){
-        var minTD=Math.max(0,Math.min.apply(null,tds)-5);
-        var maxTD=Math.max.apply(null,tds)+5;
+        // Find peak TD cluster, then ±5
+        tds.sort(function(a,b){return a-b});
+        // Use the interquartile range for the core, then ±5
+        var q1=tds[Math.floor(tds.length*0.25)];
+        var q3=tds[Math.floor(tds.length*0.75)];
+        var minTD=Math.max(0,q1-5);
+        var maxTD=q3+5;
         document.getElementById('hotsTDMin').value=minTD;
         document.getElementById('hotsTDMax').value=maxTD;
     }
+}
+
+function getHotSumRange(){
+    // Returns {peak, min, max} of the hot sum cluster
+    var hotSumFreq=window._hotSumFreq||{};
+    var sums=Object.keys(hotSumFreq).map(Number);
+    if(sums.length===0)return{peak:18,min:10,max:26};
+    var peakSum=sums[0],peakFreq=hotSumFreq[sums[0]];
+    sums.forEach(function(s){if(hotSumFreq[s]>peakFreq){peakSum=s;peakFreq=hotSumFreq[s]}});
+    var activeSums=sums.filter(function(s){return hotSumFreq[s]>0}).sort(function(a,b){return a-b});
+    return{peak:peakSum,min:activeSums[0],max:activeSums[activeSums.length-1]};
+}
+
+function getHotTDRange(){
+    // Returns {q1, q3, min, max, med} of seed TDs
+    var tdMap=window._hotsTDMap||window._seedTDMap||{};
+    var tds=Object.values(tdMap).filter(function(v){return v>0}).sort(function(a,b){return a-b});
+    if(tds.length===0)return{q1:15,q3:40,min:0,max:60,med:25};
+    var q1=tds[Math.floor(tds.length*0.25)];
+    var q3=tds[Math.floor(tds.length*0.75)];
+    var med=tds[Math.floor(tds.length*0.5)];
+    return{q1:q1,q3:q3,min:tds[0],max:tds[tds.length-1],med:med};
+}
+
+function getColdBand2DPPairs(){
+    var hotBands=window._hotBands||{};
+    var allTotals=Object.values(hotBands).filter(function(b){return b.pairs.length>0}).map(function(b){return b.total}).sort(function(a,b){return a-b});
+    var coldThresh=allTotals.length>2?allTotals[Math.floor(allTotals.length/3)]:0;
+    var coldPairs=[];
+    Object.values(hotBands).forEach(function(band){
+        if(band.total<=coldThresh&&band.total>0){
+            band.pairs.forEach(function(p){coldPairs.push(p.pair)});
+        }
+    });
+    return coldPairs;
+}
+
+function getHot2DPPairs(){
+    var hotPairs=window._hotPairs||{};
+    return Object.entries(hotPairs).sort(function(a,b){return b[1]-a[1]}).filter(function(e){return e[1]>=2}).map(function(e){return e[0]});
 }
 
 function runHotsBuilder(){
