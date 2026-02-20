@@ -4796,10 +4796,11 @@ def get_consecutive_draws():
 def td_lookup():
     """
     Look up Times Drawn (TD) for a list of normalized numbers.
+    TD = how many times this normalized number has been drawn in a specific state.
     
     Request body:
         candidates: list of normalized strings, e.g. ["1288", "3556", "0199"]
-        state: optional state filter (default: all states)
+        state: state name (REQUIRED for accurate TD)
         game_type: pick4 or pick5 (default: pick4)
     
     Returns:
@@ -4809,7 +4810,7 @@ def td_lookup():
     data = request.json
     
     candidates = data.get('candidates', [])
-    state = data.get('state', '')
+    state = data.get('state', 'Florida')
     game_type = data.get('game_type', 'pick4').lower()
     
     if not candidates:
@@ -4820,54 +4821,50 @@ def td_lookup():
     
     num_digits = {'pick2': 2, 'pick3': 3, 'pick4': 4, 'pick5': 5}.get(game_type, 4)
     
-    # Get valid games
-    if state:
-        games = get_games_for_prediction(state, game_type)
-    else:
-        # All states — get all games for this game type
-        games = []
-        for s in collection.distinct('state_name'):
-            gs = get_games_for_prediction(s, game_type)
-            if gs:
-                games.extend(gs)
-    
+    # Get valid games for THIS state only
+    games = get_games_for_prediction(state, game_type)
     if not games:
-        return jsonify({'error': f'No {game_type} games found'}), 404
+        return jsonify({'error': f'No {game_type} games found for {state}'}), 404
     
-    # Build TD map
+    # Build TD map — scan all draws for this state+game once, count ALL normalized values
+    # Then filter to requested candidates
+    full_td_map = {}
+    cand_set = set(c.replace('-', '') for c in candidates)
+    
+    # Single query: get ALL draws for this state+game
+    all_query = {
+        'state_name': state,
+        'game_name': {'$in': games}
+    }
+    
+    all_draws = list(collection.find(all_query))
+    
+    for d in all_draws:
+        nums = parse_numbers(d.get('numbers', '[]'))
+        if len(nums) != num_digits:
+            continue
+        try:
+            norm = ''.join(sorted(nums, key=lambda x: int(x)))
+        except (ValueError, TypeError):
+            continue
+        # Only count if it's in our candidate set (saves memory)
+        if norm in cand_set:
+            full_td_map[norm] = full_td_map.get(norm, 0) + 1
+    
+    # Build result: requested candidates with their TD (0 if never drawn)
     td_map = {}
+    for c in candidates:
+        clean = c.replace('-', '')
+        td_map[clean] = full_td_map.get(clean, 0)
     
-    # Try optimized path first (if collection has normalized field)
-    try:
-        for norm in candidates:
-            clean = norm.replace('-', '')
-            # Query by normalized value
-            count = collection.count_documents({
-                'game_name': {'$in': games},
-                'normalized': clean
-            })
-            td_map[clean] = count
-    except Exception:
-        # Fallback: scan and normalize manually
-        all_query = {'game_name': {'$in': games}}
-        all_draws = collection.find(all_query)
-        
-        # Build candidate set for fast lookup
-        cand_set = set(c.replace('-', '') for c in candidates)
-        
-        for d in all_draws:
-            nums = parse_numbers(d.get('numbers', '[]'))
-            if len(nums) != num_digits:
-                continue
-            norm = ''.join(sorted(nums, key=int))
-            if norm in cand_set:
-                td_map[norm] = td_map.get(norm, 0) + 1
-        
-        # Fill missing with 0
-        for c in candidates:
-            clean = c.replace('-', '')
-            if clean not in td_map:
-                td_map[clean] = 0
+    return jsonify({
+        'game_type': game_type,
+        'state': state,
+        'count': len(td_map),
+        'total_draws_scanned': len(all_draws),
+        'td': td_map,
+        'db_mode': get_db_mode()
+    })
     
     return jsonify({
         'game_type': game_type,
