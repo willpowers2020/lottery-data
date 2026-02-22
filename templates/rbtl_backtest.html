@@ -805,22 +805,20 @@ function updateHotDigits(){
     html+='</div>';
 
     // === 4DP Quads (Pick 5 only) ===
-    var numDigits=5;
-    if(plays.length>0){
-        var firstCand=plays[0].candidate||'';
-        numDigits=firstCand.length;
+    var numDigits=0;
+    if(selectedSeeds.length>0){
+        var firstDraw=recentDraws[selectedSeeds[0]];
+        if(firstDraw)numDigits=(firstDraw.actual||firstDraw.value).length;
     }
     if(numDigits===5){
         var quads={};
-        plays.forEach(function(p){
-            var norm=p.candidate;
-            var digs=norm.split('');
-            // C(5,4)=5 subsets
-            for(var skip=0;skip<5;skip++){
-                var sub=[];
-                for(var j=0;j<5;j++){if(j!==skip)sub.push(digs[j])}
-                var key=sub.sort().join('');
-                quads[key]=(quads[key]||0)+1;
+        selectedSeeds.forEach(function(i){
+            var d=recentDraws[i];if(!d)return;
+            var norm=(d.actual||d.value).split('');
+            var seenQuads={};
+            for(var a=0;a<norm.length;a++)for(var b=a+1;b<norm.length;b++)for(var c=b+1;c<norm.length;c++)for(var dd=c+1;dd<norm.length;dd++){
+                var quad=norm[a]+norm[b]+norm[c]+norm[dd];
+                if(!seenQuads[quad]){seenQuads[quad]=true;quads[quad]=(quads[quad]||0)+1}
             }
         });
         var quadArr=Object.entries(quads).sort(function(a,b){return b[1]-a[1]});
