@@ -2,7 +2,7 @@
 <!--
   rbtl_backtest.html — Nexus Enhanced v5
   AFTER DEPLOYING, RUN:
-  ./save_version.sh "hot digits: added 4DP quads + 4DP bands to hot digits panel with click-to-filter"
+  ./save_version.sh "nexus: 4DP quads + 4DP bands in hot 4DP digits sidebar, nexus normalized row, pick4 4DP support"
 -->
 <!-- saved from url=(0030)http://localhost:5001/backtest -->
 <html lang="en" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -3468,6 +3468,51 @@ function renderHot4DPDigits(){
     }
 
     document.getElementById('nexusHot4DPDigitsContent').innerHTML=h;
+
+    // === 4DP Quads + Bands (appended below) ===
+    var dpArr=Object.entries(dpCounts).sort(function(a,b){return b[1]-a[1]});
+    if(dpArr.length>0){
+        var h2='<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px">';
+        h2+='<div class="hd-label">4DP Quads <span style="font-weight:400;color:var(--text3)">(C(5,4) subsets from '+nexusSeeds.length+' seeds)</span></div>';
+        h2+='<div class="hd-row">';
+        dpArr.forEach(function(e){
+            h2+='<span class="hd-chip" onclick="applyHotFilter(\'4dp\',\''+e[0]+'\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+        });
+        h2+='</div>';
+
+        // 4DP Bands
+        var bands4=[];
+        for(var i=0;i<=9;i++) bands4.push({label:i+'xxx',quads:[],total:0});
+        dpArr.forEach(function(e){
+            var lead=parseInt(e[0][0]);
+            bands4[lead].quads.push({quad:e[0],count:e[1]});
+            bands4[lead].total+=e[1];
+        });
+        var maxBand4Total=bands4.reduce(function(m,b){return Math.max(m,b.total)},0);
+        var nonEmpty4=bands4.filter(function(b){return b.total>0});
+        var sorted4=nonEmpty4.slice().sort(function(a,b){return a.total-b.total});
+        var cold4Threshold=sorted4.length>=3?sorted4[Math.floor(sorted4.length*0.33)].total:0;
+
+        h2+='<div class="hd-label" style="margin-top:10px">4DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit · ❄️ = coldest)</span></div>';
+        h2+='<div class="band-row">';
+        for(var i=0;i<=9;i++){
+            var b4=bands4[i];
+            if(b4.quads.length===0)continue;
+            var isCold4=b4.total<=cold4Threshold&&cold4Threshold>0;
+            var pct4=maxBand4Total>0?Math.round(b4.total/maxBand4Total*100):0;
+            var barColor4=pct4>70?'var(--ora)':pct4>40?'var(--pri)':'rgba(99,195,255,.7)';
+            h2+='<div class="band-group'+(isCold4?' cold':'')+'" title="'+b4.label+' quads">';
+            h2+='<div class="band-header"><span class="band-name">'+b4.label+'</span><span class="band-count">'+b4.total+' hits · '+b4.quads.length+' quads</span></div>';
+            h2+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct4+'%;background:'+barColor4+'"></div></div>';
+            h2+='<div class="band-pairs">';
+            b4.quads.forEach(function(q){
+                h2+='<span class="band-pair">'+q.quad+'<sup>'+q.count+'</sup></span>';
+            });
+            h2+='</div></div>';
+        }
+        h2+='</div></div>';
+        document.getElementById('nexusHot4DPDigitsContent').innerHTML+=h2;
+    }
 }
 
 // === Hot: DeltaSumTD — trending Δ/Sum/TD with seed vs AFTER comparison ===
