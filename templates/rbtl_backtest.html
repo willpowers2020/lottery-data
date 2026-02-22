@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-  rbtl_backtest.html — Nexus Enhanced v4
+  rbtl_backtest.html — Nexus Enhanced v5
   AFTER DEPLOYING, RUN:
-  ./save_version.sh "nexus: hot 4dp digits panel, hot delta-sum-td panel, scrollable cols, after-first, candidates"
+  ./save_version.sh "hot digits: added 4DP quads + 4DP bands to hot digits panel with click-to-filter"
 -->
 <!-- saved from url=(0030)http://localhost:5001/backtest -->
 <html lang="en" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -803,6 +803,71 @@ function updateHotDigits(){
         html+='</div></div>';
     }
     html+='</div>';
+
+    // === 4DP Quads (Pick 5 only) ===
+    var numDigits=5;
+    if(plays.length>0){
+        var firstCand=plays[0].candidate||'';
+        numDigits=firstCand.length;
+    }
+    if(numDigits===5){
+        var quads={};
+        plays.forEach(function(p){
+            var norm=p.candidate;
+            var digs=norm.split('');
+            // C(5,4)=5 subsets
+            for(var skip=0;skip<5;skip++){
+                var sub=[];
+                for(var j=0;j<5;j++){if(j!==skip)sub.push(digs[j])}
+                var key=sub.sort().join('');
+                quads[key]=(quads[key]||0)+1;
+            }
+        });
+        var quadArr=Object.entries(quads).sort(function(a,b){return b[1]-a[1]});
+
+        html+='<div class="band-divider"></div>';
+        html+='<div class="hd-label" style="margin-top:6px">4DP Quads <span style="font-weight:400;color:var(--text3)">(C(5,4) subsets · click to filter)</span></div>';
+        html+='<div class="hd-row">';
+        quadArr.forEach(function(e){
+            html+='<span class="hd-chip" onclick="applyHotFilter(\'4dp\',\''+e[0]+'\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+        });
+        html+='</div>';
+
+        // === 4DP Bands: group quads by first digit ===
+        var bands4=[];
+        for(var i=0;i<=9;i++) bands4.push({label:i+'xxx',quads:[],total:0});
+        quadArr.forEach(function(e){
+            var lead=parseInt(e[0][0]);
+            bands4[lead].quads.push({quad:e[0],count:e[1]});
+            bands4[lead].total+=e[1];
+        });
+        var maxBand4Total=bands4.reduce(function(m,b){return Math.max(m,b.total)},0);
+        var nonEmpty4=bands4.filter(function(b){return b.total>0});
+        var sorted4=nonEmpty4.slice().sort(function(a,b){return a.total-b.total});
+        var cold4Threshold=sorted4.length>=3?sorted4[Math.floor(sorted4.length*0.33)].total:0;
+
+        html+='<div class="hd-label" style="margin-top:10px">4DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit · ❄️ = coldest)</span></div>';
+        html+='<div class="band-row">';
+        for(var i=0;i<=9;i++){
+            var b4=bands4[i];
+            if(b4.quads.length===0)continue;
+            var isCold4=b4.total<=cold4Threshold&&cold4Threshold>0;
+            var pct4=maxBand4Total>0?Math.round(b4.total/maxBand4Total*100):0;
+            var barColor4=pct4>70?'var(--ora)':pct4>40?'var(--pri)':'rgba(99,195,255,.7)';
+            html+='<div class="band-group'+(isCold4?' cold':'')+'" onclick="applyBandFilter(\'4dp\',\''+i+'\')" title="Click to filter candidates to '+b4.label+' quads">';
+            html+='<div class="band-header"><span class="band-name">'+b4.label+'</span><span class="band-count">'+b4.total+' hits · '+b4.quads.length+' quads</span></div>';
+            html+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct4+'%;background:'+barColor4+'"></div></div>';
+            html+='<div class="band-pairs">';
+            b4.quads.forEach(function(q){
+                html+='<span class="band-pair">'+q.quad+'<sup>'+q.count+'</sup></span>';
+            });
+            html+='</div></div>';
+        }
+        html+='</div>';
+
+        // Store for filtering
+        window._hotQuads=quads;
+    }
 
     document.getElementById('hotDigitsContent').innerHTML=html;
     // Store for filtering
@@ -2145,6 +2210,23 @@ function candidateMatchesFilter(p,f){
         var lo=parseInt(parts[0]),hi=parseInt(parts[1]);
         var td=p.actual_hits||p.total_appearances||0;
         return td>=lo&&td<=hi;
+    }else if(f.type==='4dp'){
+        // Match candidates that contain this 4-digit sorted subset
+        var sorted=p.candidate.split('');
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++)for(var c=b+1;c<sorted.length;c++)for(var d=c+1;d<sorted.length;d++){
+            if(sorted[a]+sorted[b]+sorted[c]+sorted[d]===f.val)return true;
+        }
+        return false;
+    }else if(f.type==='band_4dp'){
+        // Match candidates that contain any 4DP quad from this band
+        var sorted=p.candidate.split('');
+        var quadSet=window._hotQuads||{};
+        var lead=f.val;
+        for(var a=0;a<sorted.length;a++)for(var b=a+1;b<sorted.length;b++)for(var c=b+1;c<sorted.length;c++)for(var d=c+1;d<sorted.length;d++){
+            var q=sorted[a]+sorted[b]+sorted[c]+sorted[d];
+            if(q[0]===lead&&quadSet[q])return true;
+        }
+        return false;
     }
     return true;
 }
