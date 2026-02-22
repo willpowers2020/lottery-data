@@ -197,13 +197,12 @@
             <div class="profile" onclick="selectProfile('radar')"><span class="tag tag-soon">SOON</span><span class="icon">📡</span><span class="name">Radar</span></div>
             <div class="profile" onclick="selectProfile('crossfire')"><span class="tag tag-soon">SOON</span><span class="icon">⚡</span><span class="name">Crossfire</span></div>
             <div class="profile" onclick="selectProfile('hots')"><span class="tag tag-live">LIVE</span><span class="icon">🌶️</span><span class="name">Hots</span></div>
-            <div class="profile" onclick="selectProfile('nexus')"><span class="tag tag-live">LIVE</span><span class="icon">🔮</span><span class="name">Nexus</span></div>
         </div>
         <div class="profile-desc" id="profileDesc"><strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list. <em>Win #1: Rank #18/226 → $8,100 (72x ROI)</em></div>
     </div>
 
     <!-- Config -->
-    <div class="card card-ora" id="normalConfig">
+    <div class="card card-ora">
         <h3>⚙️ Configuration</h3>
         <div class="fg"><label>State</label><select id="stateSelect"><option value="">Select</option></select></div>
         <div class="fg"><label>Game</label><select id="gameType"><option value="pick3">Pick 3</option><option value="pick4" selected>Pick 4</option><option value="pick5">Pick 5</option></select></div>
@@ -229,20 +228,6 @@
             <button class="preset" onclick="setPreset('random')">Random</button>
         </div>
         <button class="btn btn-run" id="runBtn" onclick="runBacktest()">🧪 Run Backtest</button>
-    </div>
-
-    <!-- Nexus Config (shown only when Nexus profile selected) -->
-    <div class="card card-ora hidden" id="nexusConfig" style="border-left-color:var(--pri)">
-        <h3>🔮 Nexus Configuration</h3>
-        <div class="fg"><label>Seed Date Range Start</label><input type="date" id="nexusStart"></div>
-        <div class="fg"><label>Seed Date Range End</label><input type="date" id="nexusEnd"></div>
-        <div class="fg"><label>State</label><select id="nexusState"><option value="All">All Pick5 States</option></select></div>
-        <div class="fg"><label>TOD</label><select id="nexusTOD"><option value="All">All</option><option value="Midday">Midday</option><option value="Evening">Evening</option></select></div>
-        <div class="fg"><label>View</label><select id="nexusView"><option value="nexus">🔮 Nexus (per seed)</option><option value="timeline">📅 Date Timeline</option><option value="delta">Δ Distribution</option></select></div>
-        <button class="btn btn-run" onclick="runNexus()">🔮 Run Nexus</button>
-        <div id="nexusStatus" style="font-size:.7rem;color:var(--text3);margin-top:6px;text-align:center"></div>
-        <div class="hidden" id="nexusDeltaTrend" style="margin-top:10px"><h3 style="font-size:.78rem">📊 Delta Trend</h3><div id="nexusDeltaBars"></div></div>
-        <div class="hidden" id="nexusConsecPanel" style="margin-top:10px"><h3 style="font-size:.78rem">🎯 Consecutive Runs</h3><div id="nexusConsecBars"></div></div>
     </div>
 </div>
 
@@ -392,9 +377,7 @@ var PROFILES={
     crossfire:{name:'Crossfire',icon:'⚡',desc:'<strong>⚡ Crossfire:</strong> RBTL ∩ DP-AP. Two algorithms agree = highest confidence. <em>Coming soon.</em>',
         config:{}},
     hots:{name:'Hots',icon:'🌶️',desc:'<strong>🌶️ Hots:</strong> Build candidates from hot digit properties — cherry-pick 1DP, 2DP bands, sum range, 3DP. Bypasses RBTL grouping entirely. Use Autopsy to reverse-engineer winners, then build forward. <em>New strategy.</em>',
-        config:{minCount:'1',dpSize:'0',exclNonDupes:false,targetTOD:''}},
-    nexus:{name:'Nexus',icon:'🔮',desc:'<strong>🔮 Nexus:</strong> ΔSumsTD consecutive trending. Seeds from date range → find all permuted historical matches across ALL states → show BEFORE/AFTER date-diffs → consecutive date clusters reveal the nexus. Like Efficacy but for Δ(Sums−TD).',
-        config:{},isNexus:true}
+        config:{minCount:'1',dpSize:'0',exclNonDupes:false,targetTOD:''}}
 };
 
 function selectProfile(p){
@@ -402,20 +385,6 @@ function selectProfile(p){
     document.querySelectorAll('.profile').forEach(function(el){el.classList.remove('active')});
     document.querySelector('.profile[onclick*="'+p+'"]').classList.add('active');
     document.getElementById('profileDesc').innerHTML=PROFILES[p].desc;
-    // Toggle nexus vs normal config
-    var isNexus=PROFILES[p].isNexus;
-    document.getElementById('nexusConfig').classList.toggle('hidden',!isNexus);
-    document.getElementById('normalConfig').classList.toggle('hidden',!!isNexus);
-    document.getElementById('seedCard').classList.toggle('hidden',!!isNexus);
-    if(isNexus){
-        // Init nexus dates if empty
-        if(!document.getElementById('nexusEnd').value){
-            var td=new Date(),ago=new Date();ago.setDate(ago.getDate()-14);
-            document.getElementById('nexusEnd').value=td.toISOString().split('T')[0];
-            document.getElementById('nexusStart').value=ago.toISOString().split('T')[0];
-        }
-        return;
-    }
     var cfg=PROFILES[p].config;
     if(cfg.minCount)document.getElementById('minCount').value=cfg.minCount;
     if(cfg.dpSize!==undefined)document.getElementById('dpSize').value=cfg.dpSize;
@@ -2671,239 +2640,6 @@ function toggleSuppressSeeds(){
 }
 
 function sc(l,v,s,c){return'<div class="stat"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'}
-
-// =============================================================================
-// NEXUS — ΔSumsTD Consecutive Trending
-// =============================================================================
-var nexusData=null,nexusMatches=[],nexusSeeds=[];
-
-async function runNexus(){
-    var start=document.getElementById('nexusStart').value;
-    var end=document.getElementById('nexusEnd').value;
-    if(!start||!end){alert('Set date range');return}
-    document.getElementById('emptyState').style.display='none';
-    document.getElementById('loadingDiv').classList.remove('hidden');
-    document.getElementById('resultArea').classList.add('hidden');
-    document.getElementById('nexusStatus').textContent='Querying...';
-    try{
-        var st=document.getElementById('nexusState').value;
-        var tod=document.getElementById('nexusTOD').value;
-        var r=await fetch(apiUrl('/api/consecutive/draws'),{
-            method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({game_type:'pick5',states:[st],start_date:start,end_date:end,tod:tod})
-        });
-        if(!r.ok)throw new Error('API '+r.status);
-        nexusData=await r.json();
-        if(!nexusData.draws||!nexusData.draws.length)throw new Error('No draws returned');
-        processNexus();
-        document.getElementById('nexusStatus').textContent=nexusSeeds.length+' seeds → '+nexusMatches.length+' permuted matches';
-        document.getElementById('loadingDiv').classList.add('hidden');
-        document.getElementById('resultArea').classList.remove('hidden');
-        renderNexusView();
-    }catch(e){
-        document.getElementById('nexusStatus').textContent='Error: '+e.message;
-        document.getElementById('loadingDiv').classList.add('hidden');
-        document.getElementById('emptyState').style.display='block';
-    }
-}
-
-function processNexus(){
-    var startD=document.getElementById('nexusStart').value;
-    var endD=document.getElementById('nexusEnd').value;
-    nexusSeeds=[];nexusMatches=[];
-    var seedKeys=new Set();
-    // Seeds = draws where date is within seed range AND is the original draw
-    nexusData.draws.forEach(function(d){
-        if(d.date>=startD&&d.date<=endD&&d.date===d.input_date){
-            var k=d.date+'|'+d.value+'|'+d.state;
-            if(!seedKeys.has(k)){seedKeys.add(k);nexusSeeds.push(d)}
-        }
-    });
-    // Matches = everything NOT a seed
-    nexusData.draws.forEach(function(d){
-        var k=d.date+'|'+d.value+'|'+d.state;
-        if(!seedKeys.has(k)){d.delta=d.sums-d.td;d.abs_delta=Math.abs(d.delta);nexusMatches.push(d)}
-    });
-    nexusMatches.sort(function(a,b){return a.date.localeCompare(b.date)});
-    buildNexusTrend();
-    findNexusConsec();
-}
-
-function buildNexusTrend(){
-    var dc={};
-    nexusMatches.forEach(function(d){dc[d.abs_delta]=(dc[d.abs_delta]||0)+1});
-    var arr=Object.entries(dc).sort(function(a,b){return b[1]-a[1]}).slice(0,12);
-    var mx=arr.length?arr[0][1]:1;
-    var h='';
-    arr.forEach(function(e){
-        var pct=(e[1]/mx*100).toFixed(0);
-        h+='<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">';
-        h+='<span style="width:36px;font-size:.68rem;text-align:right;font-weight:700;color:var(--pri)">|'+e[0]+'|</span>';
-        h+='<div style="flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:var(--pri);border-radius:3px"></div></div>';
-        h+='<span style="font-size:.65rem;color:var(--text2)">'+e[1]+'</span></div>';
-    });
-    document.getElementById('nexusDeltaBars').innerHTML=h;
-    document.getElementById('nexusDeltaTrend').classList.remove('hidden');
-}
-
-function findNexusConsec(){
-    var byDate={};
-    nexusMatches.forEach(function(d){if(!byDate[d.date])byDate[d.date]=[];byDate[d.date].push(d)});
-    var dates=Object.keys(byDate).sort();
-    var runs=[],cur=[dates[0]];
-    for(var i=1;i<dates.length;i++){
-        var p=new Date(dates[i-1]),c=new Date(dates[i]);
-        if((c-p)/86400000<=1){cur.push(dates[i])}
-        else{if(cur.length>=2)runs.push(cur.slice());cur=[dates[i]]}
-    }
-    if(cur.length>=2)runs.push(cur);
-    runs.sort(function(a,b){return b.length-a.length});
-    var h='';
-    if(!runs.length){h='<div style="color:var(--text3);font-size:.72rem">No consecutive runs</div>'}
-    else runs.slice(0,6).forEach(function(run){
-        var total=run.reduce(function(s,dt){return s+(byDate[dt]?byDate[dt].length:0)},0);
-        var deltas={};
-        run.forEach(function(dt){(byDate[dt]||[]).forEach(function(d){deltas[d.abs_delta]=(deltas[d.abs_delta]||0)+1})});
-        var topD=Object.entries(deltas).sort(function(a,b){return b[1]-a[1]}).slice(0,3);
-        h+='<div style="padding:4px 0;border-bottom:1px solid var(--border2);font-size:.72rem">';
-        h+='<span style="font-weight:700;color:var(--ok)">'+run.length+'d</span> ';
-        h+='<span style="color:var(--text2)">'+run[0]+' → '+run[run.length-1]+'</span> ';
-        h+='<span style="color:var(--text3)">('+total+' hits)</span>';
-        h+='<div style="font-size:.65rem;color:var(--text3)">Top |Δ|: '+topD.map(function(e){return '|'+e[0]+'|×'+e[1]}).join(', ')+'</div>';
-        h+='</div>';
-    });
-    document.getElementById('nexusConsecBars').innerHTML=h;
-    document.getElementById('nexusConsecPanel').classList.remove('hidden');
-}
-
-function renderNexusView(){
-    var view=document.getElementById('nexusView').value;
-    var h='';
-    if(view==='nexus')h=renderNexusMain();
-    else if(view==='timeline')h=renderNexusTimeline();
-    else if(view==='delta')h=renderNexusDelta();
-    document.getElementById('resultArea').innerHTML=h;
-    document.getElementById('resultArea').classList.remove('hidden');
-}
-
-function renderNexusMain(){
-    var h='<div class="stats-grid">';
-    h+=sc('Seed Draws',nexusSeeds.length,'','var(--pri)');
-    h+=sc('Unique Norms',nexusData?nexusData.past_winners.length:0,'','var(--blue)');
-    h+=sc('Permuted Matches',nexusMatches.length,'','var(--ok)');
-    var aft=nexusMatches.filter(function(d){return d.date_diff<0}).length;
-    h+=sc('AFTER Seed',aft,'','var(--warn)');
-    h+='</div>';
-    // Group matches by seed norm
-    var byNorm={},seedsByNorm={};
-    nexusMatches.forEach(function(d){if(!byNorm[d.norm])byNorm[d.norm]=[];byNorm[d.norm].push(d)});
-    nexusSeeds.forEach(function(s){if(!seedsByNorm[s.norm])seedsByNorm[s.norm]=[];seedsByNorm[s.norm].push(s)});
-    h+='<div class="card" style="padding:8px;overflow-x:auto"><table class="sp-table"><thead><tr>';
-    ['Seed Date','Seed Value','Norm','State','TOD','Sums','TD','Δ','Matches','BEFORE / AFTER Hits (by date)'].forEach(function(c){h+='<th>'+c+'</th>'});
-    h+='</tr></thead><tbody>';
-    Object.keys(seedsByNorm).sort().forEach(function(norm){
-        var sList=seedsByNorm[norm];
-        var mList=(byNorm[norm]||[]).slice();
-        mList.sort(function(a,b){return a.date.localeCompare(b.date)});
-        // Detect consecutive in this match list
-        var mDates=mList.map(function(m){return m.date});
-        var cSet=new Set();
-        for(var i=1;i<mDates.length;i++){
-            var p=new Date(mDates[i-1]),c=new Date(mDates[i]);
-            if((c-p)/86400000<=1){cSet.add(mDates[i-1]);cSet.add(mDates[i])}
-        }
-        sList.forEach(function(seed,idx){
-            var delta=seed.sums-seed.td;
-            h+='<tr>';
-            h+='<td style="font-weight:600">'+seed.date+'</td>';
-            h+='<td class="mono" style="color:var(--pri);letter-spacing:2px">'+seed.value+'</td>';
-            if(idx===0)h+='<td class="mono" style="color:var(--text2)" rowspan="'+sList.length+'">'+norm+'</td>';
-            h+='<td>'+seed.state+'</td><td style="color:var(--text3)">'+seed.tod+'</td>';
-            h+='<td style="color:var(--blue);font-weight:700">'+seed.sums+'</td>';
-            h+='<td style="color:var(--pri);font-weight:700">'+seed.td+'</td>';
-            h+='<td style="font-weight:800;color:'+(delta>=0?'var(--ok)':'var(--err)')+'">'+delta+'</td>';
-            if(idx===0){
-                h+='<td rowspan="'+sList.length+'" style="font-weight:700;color:var(--pri)">'+mList.length+'</td>';
-                h+='<td rowspan="'+sList.length+'" style="max-width:550px;white-space:normal">';
-                if(!mList.length){h+='<span style="color:var(--text3)">No historical matches</span>'}
-                else{mList.forEach(function(m){
-                    var dd=m.date_diff;
-                    var cls,lbl;
-                    if(dd>0){cls='hit-before';lbl='BEFORE'}
-                    else if(dd<0){cls='hit-after';lbl='AFTER'}
-                    else{cls='';lbl='SAME DAY'}
-                    var isCon=cSet.has(m.date);
-                    var mD=m.sums-m.td;
-                    h+='<div class="'+(cls||'')+'" style="font-size:.72rem;margin:1px 0;padding:1px 4px;'+(isCon?'background:var(--ok-g);border-left:3px solid var(--ok);border-radius:3px':'')+'">';
-                    h+='<span class="mono" style="color:var(--pri)">'+m.value+'</span> ';
-                    h+=m.state+' ';
-                    h+='<span class="date-diff" style="font-weight:800">['+( dd>0?'+':'')+dd+'d]</span> ';
-                    h+=m.date+' <span style="font-size:.65rem">('+lbl+')</span> ';
-                    h+='<span style="color:var(--blue)">S:'+m.sums+'</span> ';
-                    h+='<span style="color:var(--pri)">TD:'+m.td+'</span> ';
-                    h+='<span style="font-weight:800;color:'+(Math.abs(mD)<=7?'var(--ok)':'var(--text3)')+'">Δ:'+mD+'</span>';
-                    h+='</div>';
-                })}
-                h+='</td>';
-            }
-            h+='</tr>';
-        });
-    });
-    h+='</tbody></table></div>';
-    return h;
-}
-
-function renderNexusTimeline(){
-    var byDate={};
-    nexusMatches.forEach(function(d){if(!byDate[d.date])byDate[d.date]=[];byDate[d.date].push(d)});
-    var dates=Object.keys(byDate).sort();
-    var cSet=new Set();
-    for(var i=1;i<dates.length;i++){
-        var p=new Date(dates[i-1]),c=new Date(dates[i]);
-        if((c-p)/86400000<=1){cSet.add(dates[i-1]);cSet.add(dates[i])}
-    }
-    var h='<div class="card"><h3>📅 All Matches by Date (consecutive = green)</h3>';
-    h+='<div style="max-height:600px;overflow-y:auto">';
-    dates.forEach(function(dt){
-        var isC=cSet.has(dt);
-        var draws=byDate[dt];
-        h+='<div style="padding:5px 8px;margin:2px 0;border-radius:6px;border-left:3px solid '+(isC?'var(--ok)':'var(--border)')+';background:'+(isC?'var(--ok-g)':'transparent')+'">';
-        h+='<div style="font-weight:700;font-size:.82rem;color:'+(isC?'var(--ok)':'var(--text)')+'">'+dt+' <span style="font-size:.68rem;color:var(--text3)">('+draws.length+')</span></div>';
-        draws.forEach(function(d){
-            var mD=d.sums-d.td;var dd=d.date_diff;
-            h+='<div style="font-size:.72rem;margin-left:12px;color:var(--text2)">';
-            h+='<span class="mono" style="color:var(--pri)">'+d.value+'</span> '+d.state+' '+d.tod+' ';
-            h+='<span style="color:var(--blue)">S:'+d.sums+'</span> <span style="color:var(--pri)">TD:'+d.td+'</span> ';
-            h+='<span style="font-weight:800;color:'+(Math.abs(mD)<=7?'var(--ok)':'var(--text3)')+'">Δ:'+mD+'</span> ';
-            h+='<span class="date-diff" style="color:'+(dd>0?'var(--ora)':'var(--ok)')+'">['+( dd>0?'+':'')+dd+'d]</span>';
-            h+='</div>';
-        });
-        h+='</div>';
-    });
-    h+='</div></div>';
-    return h;
-}
-
-function renderNexusDelta(){
-    var dc={};
-    nexusMatches.forEach(function(d){var k=d.sums-d.td;dc[k]=(dc[k]||0)+1});
-    var arr=Object.entries(dc).sort(function(a,b){return parseInt(a[0])-parseInt(b[0])});
-    var mx=arr.reduce(function(m,e){return Math.max(m,e[1])},1);
-    var h='<div class="card"><h3>Δ Distribution (Sums−TD) — '+nexusMatches.length+' matches</h3>';
-    arr.forEach(function(e){
-        var v=parseInt(e[0]);
-        h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;padding:2px 4px">';
-        h+='<span style="width:42px;font-size:.72rem;text-align:right;font-weight:700;color:'+(Math.abs(v)<=7?'var(--ok)':'var(--text3)')+'">'+e[0]+'</span>';
-        h+='<div style="flex:1;height:8px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:'+(e[1]/mx*100)+'%;height:100%;background:'+(Math.abs(v)<=7?'var(--ok)':'var(--pri)')+';border-radius:3px"></div></div>';
-        h+='<span style="font-size:.68rem;color:var(--text2)">'+e[1]+'</span>';
-        h+='<span style="font-size:.6rem;color:var(--text3)">'+(nexusMatches.length?(e[1]/nexusMatches.length*100).toFixed(1):0)+'%</span></div>';
-    });
-    h+='</div>';
-    return h;
-}
-
-// Listen for nexus view change
-document.getElementById('nexusView').addEventListener('change',function(){if(nexusData)renderNexusView()});
 </script>
 </body>
 </html>

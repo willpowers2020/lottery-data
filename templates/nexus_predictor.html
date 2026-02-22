@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus - Pick 5 DeltaSumsTD</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}
+:root[data-theme="light"]{--bg:#f5f7fa;--surface:#fff;--surface2:#f0f2f5;--border:#e0e4e8;--border2:#eaeef2;--text:#1e293b;--text2:#64748b;--text3:#94a3b8;--pri:#6366f1;--pri2:#4f46e5;--pri-g:rgba(99,102,241,.08);--ok:#10b981;--ok-g:rgba(16,185,129,.1);--warn:#f59e0b;--warn-g:rgba(245,158,11,.1);--err:#ef4444;--err-g:rgba(239,68,68,.08);--ora:#e65100;--ora-g:rgba(230,81,0,.08);--shadow:0 1px 3px rgba(0,0,0,.08);--nav-bg:#1e1e2e;--nav-t:#cdd6f4;--nav-m:#6c7086;--nav-s:#313244;--cyan:#0891b2;--cyan-g:rgba(8,145,178,.08)}
+:root[data-theme="dark"]{--bg:#0f1117;--surface:#161922;--surface2:#1c1f2e;--border:#2a2d3e;--border2:#363952;--text:#e8eaed;--text2:#9ca3af;--text3:#6b7280;--pri:#818cf8;--pri2:#6366f1;--pri-g:rgba(99,102,241,.15);--ok:#34d399;--ok-g:rgba(16,185,129,.15);--warn:#fbbf24;--warn-g:rgba(245,158,11,.15);--err:#f87171;--err-g:rgba(239,68,68,.15);--ora:#fb923c;--ora-g:rgba(251,146,60,.15);--shadow:0 1px 3px rgba(0,0,0,.3);--nav-bg:#0b0d14;--nav-t:#cdd6f4;--nav-m:#6c7086;--nav-s:#1c1f2e;--cyan:#22d3ee;--cyan-g:rgba(34,211,238,.12)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.navbar{background:var(--nav-bg);border-bottom:1px solid var(--nav-s);padding:0 20px;position:sticky;top:0;z-index:1000}
+.nav-c{max-width:1440px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--nav-t);font-weight:800;font-size:18px}
+.nav-links{display:flex;gap:4px}.nav-link{color:var(--nav-m);text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;transition:.15s}
+.nav-link:hover{color:var(--nav-t);background:rgba(255,255,255,.05)}.nav-link.active{color:#fff;background:var(--pri2)}
+.theme-toggle{background:var(--nav-s);border:1px solid rgba(255,255,255,.1);color:var(--nav-t);padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+.container{max-width:1440px;margin:0 auto;padding:20px}
+.layout{display:flex;gap:20px;align-items:flex-start}.sidebar{width:300px;flex-shrink:0}.main{flex:1;min-width:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+.card h3{font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card-cyan{border-left:4px solid var(--cyan)}
+.fg{margin-bottom:12px}.fg label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+.fg select,.fg input[type=date],.fg input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.85rem}
+.fg select:focus,.fg input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-g)}
+.btn{width:100%;padding:11px;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s}
+.btn-run{background:linear-gradient(90deg,var(--cyan),var(--pri));color:#fff}
+.btn-bt{background:linear-gradient(90deg,var(--ora),var(--err));color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.mode-toggle{display:flex;border:2px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.mode-btn{flex:1;padding:10px;text-align:center;font-weight:800;font-size:.85rem;cursor:pointer;border:none;background:var(--surface);color:var(--text3)}
+.mode-btn.active{background:var(--pri);color:#fff}.mode-btn:first-child{border-right:1px solid var(--border)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--border);padding:12px;border-radius:10px;text-align:center;box-shadow:var(--shadow)}
+.stat .v{font-size:1.4rem;font-weight:800}.stat .l{font-size:.68rem;color:var(--text3);margin-top:2px}.stat .s{font-size:.62rem;color:var(--text3)}
+.sp-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.sp-table th{background:var(--surface2);color:var(--text2);font-weight:700;text-transform:uppercase;font-size:.6rem;letter-spacing:.4px;padding:7px 5px;text-align:left;border-bottom:2px solid var(--border);position:sticky;top:0;white-space:nowrap}
+.sp-table td{padding:5px;border-bottom:1px solid var(--border2);white-space:nowrap}
+.sp-table tr:hover td{background:var(--pri-g)}.sp-table tr.hit td{background:var(--ok-g)}
+.mono{font-family:'Courier New',monospace;font-weight:700;letter-spacing:1px}
+.pill{display:inline-block;padding:2px 8px;border-radius:5px;font-size:.68rem;font-weight:700}
+.pill-ok{background:var(--ok-g);color:var(--ok)}.pill-err{background:var(--err-g);color:var(--err)}
+.winners-wrap{font-family:'Courier New',monospace;font-size:.72rem;font-weight:600;letter-spacing:1px;color:var(--ora);line-height:1.9;word-spacing:6px;max-height:110px;overflow-y:auto}
+.pred-box{background:var(--ok-g);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:16px;margin-bottom:14px}
+.pred-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.pred-cell{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px}
+.pred-cell .lbl{font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.pred-cell .val{font-size:1.1rem;font-weight:800}
+.pager{display:flex;align-items:center;gap:3px}
+.pager button{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:.7rem;cursor:pointer;color:var(--text2)}.pager button:disabled{opacity:.3}
+.tab-row{display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap}
+.tab-btn{padding:7px 14px;border-radius:8px 8px 0 0;border:1px solid var(--border);border-bottom:none;background:var(--surface);color:var(--text3);font-size:.75rem;font-weight:700;cursor:pointer}
+.tab-btn.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+.check-input{width:90px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-family:'Courier New',monospace;font-size:1.1rem;font-weight:800;text-align:center;letter-spacing:3px;color:var(--text)}
+.loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:40px;color:var(--text2)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}.hidden{display:none!important}
+.pulse{animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@media(max-width:900px){.layout{flex-direction:column}.sidebar{width:100%}}</style>
+</head>
+<body>
+<nav class="navbar"><div class="nav-c">
+    <a href="/" class="nav-brand"><span>🎰</span> MyLottoData</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">🏠 Home</a>
+        <a href="/predictions" class="nav-link">🎯 Predictions</a>
+        <a href="/analysis/rbtl" class="nav-link">🔥 RBTL</a>
+        <a href="/analysis/efficacy" class="nav-link">📊 Efficacy</a>
+        <a href="/backtest" class="nav-link">🧪 Backtest</a>
+        <a href="/analysis/consecutive" class="nav-link">📈 Consecutive</a>
+        <a href="/nexus" class="nav-link active">🔮 Nexus</a>
+        <a href="/settings" class="nav-link">⚙️</a>
+    </div>
+    <div><button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">🌙</span> <span id="themeLabel">Dark</span></button></div>
+</div></nav>
+<div class="container"><div class="layout">
+<div class="sidebar">
+    <div class="mode-toggle">
+        <button class="mode-btn active" id="modePredict" onclick="setMode('predict')">🔮 Prediction</button>
+        <button class="mode-btn" id="modeBacktest" onclick="setMode('backtest')">🧪 Backtest</button>
+    </div>
+    <div class="card"><h3>⚡ Quick Check</h3>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input class="check-input" id="checkNum" maxlength="5" placeholder="00000" oninput="quickCheck()">
+            <div id="checkResult" style="font-size:.78rem"></div>
+        </div>
+    </div>
+    <div class="card card-cyan"><h3>⚙️ Configuration</h3>
+        <div class="fg"><label>Seed Date Range Start</label><input type="date" id="startDate"></div>
+        <div class="fg"><label>Seed Date Range End</label><input type="date" id="endDate"></div>
+        <div class="fg"><label>Target Δ (Sums − TD)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+                <input type="number" id="targetDelta" value="7" min="-45" max="45" style="width:70px;text-align:center;font-size:1.1rem;font-weight:800">
+                <label style="display:flex;align-items:center;gap:4px;margin:0;font-size:.8rem;text-transform:none;cursor:pointer">
+                    <input type="checkbox" id="useAbs" checked style="accent-color:var(--ok)"> |ABS|
+                </label>
+            </div>
+            <small style="font-size:.62rem;color:var(--text3)">Δ = Sums − TD(historical times drawn)</small>
+        </div>
+        <div class="fg"><label>State</label><select id="stateFilter"><option value="All">All Pick5 States</option></select></div>
+        <div class="fg"><label>TOD</label><select id="todFilter"><option value="All">All</option><option value="Midday">Midday</option><option value="Evening">Evening</option></select></div>
+        <div id="backtestFields" class="hidden">
+            <div class="fg"><label style="color:var(--ora)">Backtest Verify Date</label><input type="date" id="verifyDate" style="border-color:var(--ora)"></div>
+        </div>
+        <button class="btn btn-run" id="runBtn" onclick="runQuery()">🔮 Run Prediction</button>
+        <div id="statusMsg" style="font-size:.7rem;color:var(--text3);margin-top:6px;text-align:center"></div>
+    </div>
+    <div class="card hidden" id="deltaSummaryCard"><h3>📊 Consecutive ΔSumsTD</h3><div id="deltaSummary" style="font-size:.78rem"></div></div>
+    <div class="card" style="font-size:.7rem;color:var(--text3)"><div id="dbInfo">Connecting to MLD...</div></div>
+</div>
+<div class="main">
+    <div class="card hidden" id="winnersCard">
+        <h3 style="color:var(--ora)">Past Winners: <span style="font-weight:400;font-size:.72rem;color:var(--text3)" id="winnersCount"></span></h3>
+        <div class="winners-wrap" id="winnersBanner"></div>
+    </div>
+    <div class="tab-row">
+        <button class="tab-btn active" data-tab="draws" onclick="setTab('draws')">📋 Draws</button>
+        <button class="tab-btn" data-tab="prediction" onclick="setTab('prediction')">🔮 Prediction</button>
+        <button class="tab-btn" data-tab="states" onclick="setTab('states')">🗺️ Per State</button>
+        <button class="tab-btn" data-tab="analysis" onclick="setTab('analysis')">📈 Δ Analysis</button>
+    </div>
+    <div id="emptyState" style="text-align:center;padding:60px 20px;color:var(--text3)"><div style="font-size:48px;margin-bottom:10px">🔮</div><div style="font-size:1rem;font-weight:600">Pick 5 Nexus — ΔSumsTD Predictor</div><div style="font-size:.85rem">Nexus of Date × Sums × TD(historical) × Δ. Set date range and Run.</div></div>
+    <div id="loadingDiv" class="hidden"><div class="loading"><div class="spinner"></div><div>Querying MLD...</div></div></div>
+    <div id="resultArea" class="hidden"></div>
+</div>
+</div></div>
+<script>
+var dbMode=new URLSearchParams(window.location.search).get('db')||'mongo_v2';
+var currentMode='predict',currentTab='draws',allDraws=[],matchedDraws=[],drawPage=0,PAGE=50;
+function api(p){return p+(p.includes('?')?'&':'?')+'db='+dbMode}
+function fmt(d){return d.toISOString().split('T')[0]}
+function daysBetween(a,b){return Math.round(Math.abs(new Date(b)-new Date(a))/864e5)}
+
+function toggleTheme(){var h=document.documentElement,c=h.getAttribute('data-theme'),n=c==='light'?'dark':'light';h.setAttribute('data-theme',n);document.getElementById('themeIcon').textContent=n==='light'?'🌙':'☀️';document.getElementById('themeLabel').textContent=n==='light'?'Dark':'Light';try{localStorage.setItem('mld-theme',n)}catch(e){}}
+try{var sv=localStorage.getItem('mld-theme');if(sv){document.documentElement.setAttribute('data-theme',sv);document.getElementById('themeIcon').textContent=sv==='light'?'🌙':'☀️';document.getElementById('themeLabel').textContent=sv==='light'?'Dark':'Light'}}catch(e){}
+
+document.addEventListener('DOMContentLoaded',function(){
+    var today=new Date(),ago=new Date();ago.setFullYear(ago.getFullYear()-1);
+    document.getElementById('endDate').value=fmt(today);
+    document.getElementById('startDate').value=fmt(ago);
+    var tmrw=new Date();tmrw.setDate(tmrw.getDate()+1);
+    document.getElementById('verifyDate').value=fmt(tmrw);
+    fetch(api('/api/db-status')).then(r=>r.json()).then(d=>{
+        document.getElementById('dbInfo').innerHTML='<strong>'+d.mode+'</strong> &middot; '+Number(d.records).toLocaleString()+' records &middot; '+d.states+' states<br>'+d.date_range;
+    }).catch(()=>{document.getElementById('dbInfo').textContent='Cannot reach MLD'});
+});
+
+function setMode(m){currentMode=m;document.getElementById('modePredict').classList.toggle('active',m==='predict');document.getElementById('modeBacktest').classList.toggle('active',m==='backtest');document.getElementById('backtestFields').classList.toggle('hidden',m!=='backtest');var b=document.getElementById('runBtn');b.textContent=m==='predict'?'🔮 Run Prediction':'🧪 Run Backtest';b.className='btn '+(m==='predict'?'btn-run':'btn-bt');}
+function setTab(t){currentTab=t;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));drawPage=0;render();}
+function quickCheck(){var v=document.getElementById('checkNum').value.replace(/\D/g,'');document.getElementById('checkNum').value=v;if(v.length!==5){document.getElementById('checkResult').innerHTML='';return}var s=v.split('').reduce((a,c)=>a+parseInt(c),0);document.getElementById('checkResult').innerHTML='Sums=<b style="color:var(--cyan)">'+s+'</b> <span style="font-size:.62rem;color:var(--text3)">(TD=historical count)</span>';}
+
+async function runQuery(){
+    var start=document.getElementById('startDate').value,end=document.getElementById('endDate').value;
+    if(!start||!end){alert('Set date range');return}
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('loadingDiv').classList.remove('hidden');
+    document.getElementById('resultArea').classList.add('hidden');
+    document.getElementById('runBtn').disabled=true;
+    document.getElementById('statusMsg').textContent='Querying...';
+    try{
+        var r=await fetch(api('/api/consecutive/draws'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game_type:'pick5',states:['All'],start_date:start,end_date:end,tod:'All'})});
+        if(!r.ok)throw new Error('API '+r.status);
+        var data=await r.json();
+        if(!data.draws||!data.draws.length)throw new Error('No draws returned');
+        // Sums & TD from API are correct historical values. delta_sums_td=0 from API so we compute.
+        allDraws=data.draws.map(d=>{var sums=d.sums||0,td=d.td||0,dst=sums-td;return Object.assign({},d,{sums,td,dst,adst:Math.abs(dst)});}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        // Past winners
+        var seen={},winners=[];allDraws.forEach(d=>{if(d.value&&!seen[d.value]){seen[d.value]=1;winners.push(d.value)}});
+        document.getElementById('winnersBanner').textContent=winners.join('  ');
+        document.getElementById('winnersCount').textContent=winners.length+' unique from '+allDraws.length+' draws';
+        document.getElementById('winnersCard').classList.remove('hidden');
+        // State filter
+        var states={};allDraws.forEach(d=>{if(d.state)states[d.state]=1});
+        var sel=document.getElementById('stateFilter'),cur=sel.value;
+        sel.innerHTML='<option value="All">All Pick5 States</option>'+Object.keys(states).sort().map(s=>'<option value="'+s+'">'+s+'</option>').join('');
+        sel.value=cur||'All';
+        applyFilters();
+        document.getElementById('statusMsg').textContent=allDraws.length.toLocaleString()+' draws loaded';
+    }catch(e){document.getElementById('statusMsg').textContent='Error: '+e.message;document.getElementById('loadingDiv').classList.add('hidden');document.getElementById('emptyState').style.display='block';}
+    document.getElementById('runBtn').disabled=false;
+}
+
+function applyFilters(){
+    var target=parseInt(document.getElementById('targetDelta').value)||7,useAbs=document.getElementById('useAbs').checked;
+    var stF=document.getElementById('stateFilter').value,todF=document.getElementById('todFilter').value;
+    matchedDraws=allDraws.filter(d=>{var dm=useAbs?d.adst===Math.abs(target):d.dst===target;if(!dm)return false;if(stF!=='All'&&d.state!==stF)return false;if(todF!=='All'&&d.tod!==todF)return false;return true;});
+    buildDeltaSummary();drawPage=0;
+    document.getElementById('loadingDiv').classList.add('hidden');
+    document.getElementById('resultArea').classList.remove('hidden');
+    render();
+}
+['stateFilter','todFilter','targetDelta','useAbs'].forEach(id=>{document.getElementById(id).addEventListener('change',()=>{if(allDraws.length)applyFilters()})});
+
+function buildDeltaSummary(){
+    var dc={};allDraws.forEach(d=>{var k=d.adst;dc[k]=(dc[k]||0)+1});
+    var arr=Object.entries(dc).sort((a,b)=>b[1]-a[1]).slice(0,15);
+    var target=Math.abs(parseInt(document.getElementById('targetDelta').value)||7);
+    var h='<table style="width:100%;font-size:.72rem;border-collapse:collapse"><tr style="color:var(--text3)"><th style="text-align:left;padding:2px 4px">|Δ|</th><th style="text-align:right;padding:2px 4px">Count</th><th style="text-align:right;padding:2px 4px">%</th></tr>';
+    arr.forEach(e=>{var isT=parseInt(e[0])===target;h+='<tr style="'+(isT?'background:var(--ok-g);font-weight:700':'')+'"><td style="padding:2px 4px;color:'+(isT?'var(--ok)':'var(--text)')+'">|Δ|='+e[0]+'</td><td style="text-align:right;padding:2px 4px">'+e[1]+'</td><td style="text-align:right;padding:2px 4px;color:var(--text3)">'+(allDraws.length?(e[1]/allDraws.length*100).toFixed(1):0)+'%</td></tr>';});
+    h+='</table>';
+    document.getElementById('deltaSummary').innerHTML=h;
+    document.getElementById('deltaSummaryCard').classList.remove('hidden');
+}
+
+function render(){var h='';if(currentTab==='draws')h=renderDraws();else if(currentTab==='prediction')h=renderPrediction();else if(currentTab==='states')h=renderStates();else if(currentTab==='analysis')h=renderAnalysis();document.getElementById('resultArea').innerHTML=h;}
+
+// ═══ DRAWS TABLE (shows ALL draws, highlights delta matches) ═══
+function renderDraws(){
+    var target=parseInt(document.getElementById('targetDelta').value)||7,useAbs=document.getElementById('useAbs').checked;
+    var stF=document.getElementById('stateFilter').value,todF=document.getElementById('todFilter').value;
+    var filtered=allDraws.filter(d=>{if(stF!=='All'&&d.state!==stF)return false;if(todF!=='All'&&d.tod!==todF)return false;return true;});
+    var totalPages=Math.ceil(filtered.length/PAGE);
+    var page=filtered.slice(drawPage*PAGE,(drawPage+1)*PAGE);
+    var h='<div class="card" style="padding:8px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:6px"><span style="font-size:.8rem;font-weight:700;color:var(--text2)">'+filtered.length.toLocaleString()+' draws &middot; <span style="color:var(--ok)">'+matchedDraws.length+' &Delta;'+(useAbs?'|'+target+'|':target)+' matches (green rows)</span></span>';
+    h+='<div class="pager"><button onclick="drawPage=Math.max(0,drawPage-1);render()" '+(drawPage===0?'disabled':'')+'>&#8249; Prev</button><span style="font-size:.7rem;color:var(--text3);padding:0 6px">'+(drawPage+1)+'/'+totalPages+'</span><button onclick="drawPage=Math.min('+(totalPages-1)+',drawPage+1);render()" '+(drawPage>=totalPages-1?'disabled':'')+'>Next &#8250;</button></div></div>';
+    h+='<div style="overflow-x:auto;max-height:620px;overflow-y:auto"><table class="sp-table"><thead><tr>';
+    ['Date','Value','Norm','State','TOD','Group','Hit Count','Hit %','#Repeat','Month','Input Date','Perm','State2','TOD2','Date Diff','Sums','TD','&Delta; Sums TD','SDT'].forEach(c=>{h+='<th>'+c+'</th>'});
+    h+='</tr></thead><tbody>';
+    page.forEach(d=>{
+        var isMatch=useAbs?d.adst===Math.abs(target):d.dst===target;
+        h+='<tr class="'+(isMatch?'hit':'')+'">';
+        h+='<td style="font-weight:600">'+d.date+'</td>';
+        h+='<td class="mono" style="color:var(--pri);letter-spacing:2px">'+d.value+'</td>';
+        h+='<td style="color:var(--text2)">'+(d.norm||'')+'</td>';
+        h+='<td>'+d.state+'</td>';
+        h+='<td style="color:var(--text3)">'+d.tod+'</td>';
+        h+='<td>'+(d.group||'')+'</td>';
+        h+='<td>'+(d.hit_count||'')+'</td>';
+        h+='<td>'+(d.hit_ratio!=null?d.hit_ratio+'%':'')+'</td>';
+        h+='<td>'+(d.repeat||'')+'</td>';
+        h+='<td style="color:var(--text3)">'+(d.month||'')+'</td>';
+        h+='<td style="color:var(--text3);font-size:.68rem">'+(d.input_date||'')+'</td>';
+        h+='<td class="mono" style="color:var(--text3)">'+(d.perm||'')+'</td>';
+        h+='<td style="color:var(--pri)">'+(d.state2||'')+'</td>';
+        h+='<td style="color:var(--text3)">'+(d.tod2||'')+'</td>';
+        h+='<td>'+(d.date_diff||'')+'</td>';
+        h+='<td style="color:var(--cyan);font-weight:700">'+d.sums+'</td>';
+        h+='<td style="color:var(--pri);font-weight:700">'+d.td+'</td>';
+        h+='<td style="font-weight:800;font-size:.88rem;color:'+(isMatch?'var(--ok)':d.dst>=0?'var(--text)':'var(--err)')+'">'+d.dst+'</td>';
+        h+='<td>'+(d.sdt||'')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    if(totalPages>1){h+='<div class="pager" style="padding:8px"><button onclick="drawPage=0;render()">1</button>';for(var i=Math.max(1,drawPage-2);i<=Math.min(totalPages-1,drawPage+3);i++){h+='<button onclick="drawPage='+i+';render()" style="'+(i===drawPage?'background:var(--pri);color:#fff;border-color:var(--pri)':'')+'">'+(i+1)+'</button>';}if(drawPage+3<totalPages-1)h+='<button onclick="drawPage='+(totalPages-1)+';render()">'+totalPages+'</button>';h+='</div>';}
+    h+='</div>';
+    // Backtest verify
+    if(currentMode==='backtest')h+=renderBacktest();
+    return h;
+}
+
+function renderBacktest(){
+    var vDate=document.getElementById('verifyDate').value;
+    if(!vDate)return '<div class="card"><h3>Backtest</h3><div style="font-size:.82rem;color:var(--text3)">Set Verify Date in sidebar.</div></div>';
+    var target=parseInt(document.getElementById('targetDelta').value)||7,useAbs=document.getElementById('useAbs').checked;
+    var vDraws=allDraws.filter(function(d){if(d.date!==vDate)return false;return useAbs?d.adst===Math.abs(target):d.dst===target;});
+    var h='<div class="card" style="border-left:4px solid '+(vDraws.length?'var(--ok)':'var(--err)')+'"><h3>Backtest: '+vDate+'</h3>';
+    if(vDraws.length){
+        h+='<span class="pill pill-ok" style="font-size:.85rem;margin-bottom:8px;display:inline-block">HIT - '+vDraws.length+' D'+target+' draw(s)</span><br>';
+        vDraws.forEach(function(d){h+='<span class="mono" style="color:var(--pri);margin-right:10px">'+d.value+'</span> '+d.state+' '+d.tod+' S:'+d.sums+' TD:'+d.td+' D:'+d.dst+'<br>';});
+    }else{
+        h+='<span class="pill pill-err">MISS - No D'+target+' on '+vDate+'</span>';
+    }
+    h+='</div>';return h;
+}
+
+function renderPrediction(){
+    var target=document.getElementById('targetDelta').value,useAbs=document.getElementById('useAbs').checked;
+    var dL=useAbs?'|'+target+'|':target,total=allDraws.length,hits=matchedDraws.length;
+    var sorted=matchedDraws.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+    var gaps=[];for(var i=1;i<sorted.length;i++){var g=daysBetween(sorted[i-1].date,sorted[i].date);if(g>0)gaps.push(g);}
+    var gs=gaps.slice().sort(function(a,b){return a-b});
+    var med=gs.length?gs[Math.floor(gs.length/2)]:0;
+    var avg=gaps.length?(gaps.reduce(function(a,b){return a+b},0)/gaps.length).toFixed(1):0;
+    var last=sorted[sorted.length-1];
+    var daysSince=last?daysBetween(last.date,fmt(new Date())):null;
+
+    var h='<div class="stats-grid">';
+    h+='<div class="stat"><div class="v" style="color:var(--cyan)">'+total.toLocaleString()+'</div><div class="l">Total Draws</div></div>';
+    h+='<div class="stat"><div class="v" style="color:var(--pri)">'+hits.toLocaleString()+'</div><div class="l">D'+dL+' Matches</div><div class="s">'+(total?(hits/total*100).toFixed(1):0)+'%</div></div>';
+    h+='<div class="stat"><div class="v" style="color:var(--ok)">'+med+'d</div><div class="l">Median Gap</div><div class="s">Avg: '+avg+'d</div></div>';
+    h+='<div class="stat"><div class="v" style="color:'+(daysSince>(med*1.2)?'var(--err)':'var(--warn)')+'">'+(daysSince!=null?daysSince+'d':'--')+'</div><div class="l">Since Last</div><div class="s">'+(last?last.state:'')+'</div></div></div>';
+
+    if(last&&med){
+        var ld=new Date(last.date),en=new Date(ld);en.setDate(en.getDate()+med);
+        var ws=new Date(ld);ws.setDate(ws.getDate()+Math.max(1,gs[0]||1));
+        var we=new Date(ld);we.setDate(we.getDate()+Math.min(gs[gs.length-1]||30,med*2));
+        var inWin=new Date()>=ws&&new Date()<=we,over=new Date()>we;
+        h+='<div class="pred-box"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:1.1rem">&#127919;</span><strong style="color:var(--ok)">NEXT D'+dL+' PREDICTION</strong>';
+        if(inWin)h+=' <span class="pill pill-ok pulse">TODAY IN WINDOW</span>';
+        if(over)h+=' <span class="pill pill-err">OVERDUE</span>';
+        h+='</div><div class="pred-grid">';
+        h+='<div class="pred-cell"><div class="lbl">Last Hit</div><div class="val">'+last.date+'</div><div style="font-size:.78rem;color:var(--text2)"><span class="mono" style="color:var(--pri)">'+last.value+'</span> '+last.state+' '+last.tod+'</div><div style="font-size:.68rem;color:var(--text3)">S:'+last.sums+' TD:'+last.td+' D:'+last.dst+'</div></div>';
+        h+='<div class="pred-cell" style="border-color:var(--ok)"><div class="lbl">Estimated Next</div><div class="val" style="font-size:1.4rem;color:var(--ok)">'+fmt(en)+'</div><div style="font-size:.68rem;color:var(--text3)">'+med+'d median gap</div></div>';
+        h+='<div class="pred-cell"><div class="lbl">Play Window</div><div class="val" style="color:var(--cyan)">'+fmt(ws)+' to '+fmt(we)+'</div></div>';
+        h+='</div></div>';
+    }
+
+    var norms={};matchedDraws.forEach(function(d){if(d.norm)norms[d.norm]=(norms[d.norm]||0)+1});
+    var topN=Object.entries(norms).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
+    var pairs={};matchedDraws.forEach(function(d){var k=d.sums+'/'+d.td;pairs[k]=(pairs[k]||0)+1});
+    var topP=Object.entries(pairs).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">';
+    h+='<div class="card" style="margin:0"><h3>Hot Normalized Combos</h3>';
+    topN.forEach(function(n,i){h+='<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border2)"><span class="mono" style="font-size:.9rem;letter-spacing:2px;color:'+(i<3?'var(--pri)':'var(--text)')+'">'+n[0]+'</span><span style="font-size:.72rem;color:var(--text3)">x'+n[1]+'</span></div>';});
+    h+='</div>';
+    h+='<div class="card" style="margin:0"><h3>Target Sums / TD</h3>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 8px;font-size:.65rem;color:var(--text3)"><span>Sums</span><span>TD</span><span>Hits</span></div>';
+    topP.forEach(function(p){var pts=p[0].split('/');h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 8px;padding:3px 0;border-top:1px solid var(--border2);font-size:.85rem"><span style="color:var(--cyan);font-weight:700">'+pts[0]+'</span><span style="color:var(--pri);font-weight:700">'+pts[1]+'</span><span>'+p[1]+'</span></div>';});
+    h+='</div></div>';
+    if(currentMode==='backtest')h+=renderBacktest();
+    return h;
+}
+
+function renderStates(){
+    var byState={};matchedDraws.forEach(function(d){var st=d.state||'?';if(!byState[st])byState[st]=[];byState[st].push(d);});
+    var stArr=Object.entries(byState).map(function(entry){
+        var st=entry[0],draws=entry[1];
+        var sorted=draws.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+        var last=sorted[sorted.length-1];
+        var gaps=[];for(var i=1;i<sorted.length;i++){var g=daysBetween(sorted[i-1].date,sorted[i].date);if(g>0)gaps.push(g);}
+        var gs=gaps.slice().sort(function(a,b){return a-b});var med=gs.length?gs[Math.floor(gs.length/2)]:0;
+        var daysSince=last?daysBetween(last.date,fmt(new Date())):999;
+        var est=new Date(last?last.date:new Date());est.setDate(est.getDate()+med);
+        var nc={};draws.forEach(function(d){if(d.norm)nc[d.norm]=(nc[d.norm]||0)+1});
+        var topN=Object.entries(nc).sort(function(a,b){return b[1]-a[1]}).slice(0,5);
+        var pc={};draws.forEach(function(d){var k=d.sums+'/'+d.td;pc[k]=(pc[k]||0)+1});
+        var topP=Object.entries(pc).sort(function(a,b){return b[1]-a[1]}).slice(0,3);
+        return{state:st,count:draws.length,lastDate:last?last.date:'',lastValue:last?last.value:'',lastNorm:last?last.norm:'',daysSince:daysSince,medGap:med,estNext:fmt(est),overdue:med>0&&daysSince>med*1.2,topNorms:topN,topPairs:topP};
+    }).sort(function(a,b){if(a.overdue&&!b.overdue)return-1;if(!a.overdue&&b.overdue)return 1;return b.daysSince-a.daysSince;});
+
+    var h='<div class="card" style="padding:8px"><table class="sp-table"><thead><tr>';
+    ['State','Hits','Last Date','Last Value','Norm','Days Since','Med Gap','Est Next','Status','Top Combos','Top S/TD'].forEach(function(c){h+='<th>'+c+'</th>'});
+    h+='</tr></thead><tbody>';
+    stArr.forEach(function(s){
+        h+='<tr style="'+(s.overdue?'background:var(--err-g)':'')+'">';
+        h+='<td style="font-weight:700">'+s.state+'</td>';
+        h+='<td style="color:var(--pri);font-weight:700">'+s.count+'</td>';
+        h+='<td>'+s.lastDate+'</td>';
+        h+='<td class="mono" style="color:var(--pri);letter-spacing:2px">'+s.lastValue+'</td>';
+        h+='<td style="color:var(--text2)">'+s.lastNorm+'</td>';
+        h+='<td style="font-weight:700;color:'+(s.overdue?'var(--err)':'var(--text)')+'">'+s.daysSince+'d</td>';
+        h+='<td>'+s.medGap+'d</td>';
+        h+='<td style="color:var(--ok);font-weight:700">'+s.estNext+'</td>';
+        h+='<td><span class="pill '+(s.overdue?'pill-err':'pill-ok')+'">'+(s.overdue?'OVERDUE':'OK')+'</span></td>';
+        h+='<td style="font-size:.68rem">'+s.topNorms.map(function(n){return '<span class="mono" style="color:var(--pri)">'+n[0]+'</span>x'+n[1]}).join(' ')+'</td>';
+        h+='<td style="font-size:.68rem">'+s.topPairs.map(function(p){return p[0]+'x'+p[1]}).join(' ')+'</td>';
+        h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+    return h;
+}
+
+// ═══ ANALYSIS ═══
+function renderAnalysis(){
+    var target=Math.abs(parseInt(document.getElementById('targetDelta').value)||7);
+    var dc={};allDraws.forEach(function(d){var k=d.adst;dc[k]=(dc[k]||0)+1});
+    var ddArr=Object.entries(dc).sort(function(a,b){return parseInt(a[0])-parseInt(b[0])});
+    var maxDD=ddArr.reduce(function(m,e){return Math.max(m,e[1])},1);
+    var h='<div class="card"><h3>Full Delta Distribution</h3>';
+    ddArr.forEach(function(e){
+        var isT=parseInt(e[0])===target;
+        h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;padding:2px 4px;border-radius:4px;background:'+(isT?'var(--ok-g)':'transparent')+'">';
+        h+='<span style="width:50px;font-size:.72rem;color:'+(isT?'var(--ok)':'var(--text3)')+';text-align:right;font-weight:'+(isT?'800':'400')+'">|D|='+e[0]+'</span>';
+        h+='<div class="bar-w"><div class="bar-f" style="width:'+(e[1]/maxDD*100)+'%;background:'+(isT?'var(--ok)':'var(--pri)')+'"></div></div>';
+        h+='<span style="width:50px;font-size:.72rem;text-align:right;color:'+(isT?'var(--ok)':'var(--text)')+'">'+e[1]+'</span>';
+        h+='<span style="width:40px;font-size:.62rem;color:var(--text3)">'+(allDraws.length?(e[1]/allDraws.length*100).toFixed(1):0)+'%</span></div>';
+    });
+    h+='</div>';
+    h+='<div class="card"><h3>The Nexus: Date x Sums x TD x Delta</h3>';
+    h+='<div style="font-size:.82rem;line-height:1.6;color:var(--text2)">';
+    h+='<strong>Sums</strong> = digit sum of the drawn number<br>';
+    h+='<strong>TD</strong> = Times Drawn: how many times that normalized number appeared historically <em>up to that date</em><br>';
+    h+='<strong>Delta Sums TD</strong> = Sums - TD. When backtesting, TD reflects what it was <em>at that historical point</em>, not today.<br><br>';
+    h+='A Delta of 7 means the digit sum exceeds the historical draw count by 7. This creates a nexus between the number mathematical properties (Sums) and its historical popularity (TD), anchored to a specific date.</div></div>';
+    return h;
+}
+</script>
+</body>
+</html>

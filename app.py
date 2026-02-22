@@ -931,6 +931,11 @@ def analysis_patterns_page():
     return render_template('game_patterns.html')
 
 
+
+@app.route("/nexus")
+def nexus_page():
+    """Pick 5 Nexus Predictor."""
+    return render_template("nexus_predictor.html")
 @app.route('/settings')
 def settings_page():
     """Settings page."""
