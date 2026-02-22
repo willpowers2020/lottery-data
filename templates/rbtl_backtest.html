@@ -129,6 +129,35 @@
         .autopsy-verdict{padding:8px 12px;border-radius:8px;font-size:.78rem;margin-top:6px}
         .autopsy-divider{border:none;border-top:1px dashed var(--border);margin:12px 0}
 
+        /* Nexus Seeds & Past Winners & 4DP */
+        .nx-seed{display:inline-flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:.68rem;min-width:60px;gap:1px}
+        .nx-seed .nsv{font-family:'Courier New',monospace;font-weight:800;font-size:.82rem;letter-spacing:1.5px;color:var(--pri)}
+        .nx-seed .nsd{font-size:.6rem;color:var(--text3)}
+        .nx-seed .nst{display:flex;gap:3px;margin-top:1px}
+        .nx-tag{font-size:.58rem;padding:1px 4px;border-radius:3px;font-weight:700;font-family:'Courier New',monospace}
+        .nx-tag-sum{background:var(--ora-g);color:var(--ora)}
+        .nx-tag-td{background:rgba(6,182,212,.1);color:#06b6d4}
+        .nx-tag-delta{background:var(--pri-g);color:var(--pri)}
+        .nx-trend-row{display:flex;align-items:center;gap:4px;margin-bottom:2px}
+        .nx-trend-lbl{width:32px;text-align:right;font-weight:700;font-family:'Courier New',monospace;color:var(--text2);font-size:.68rem;flex-shrink:0}
+        .nx-trend-bar{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+        .nx-trend-bar-fill{height:100%;border-radius:3px}
+        .nx-trend-cnt{width:28px;font-size:.62rem;font-weight:700;color:var(--text3);font-family:'Courier New',monospace}
+        .nx-trend-section{margin-bottom:8px}
+        .nx-trend-title{font-size:.68rem;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+        .dp4-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+        .dp4-chip{padding:5px 9px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:'Courier New',monospace;font-size:.78rem;font-weight:700;letter-spacing:1.5px;text-align:center;min-width:54px;transition:.15s;cursor:default}
+        .dp4-chip:hover{border-color:var(--pri);transform:translateY(-1px)}
+        .dp4-chip .dp4c{font-size:.6rem;color:var(--text3);font-weight:600;font-family:Arial,sans-serif;margin-top:1px;display:block;letter-spacing:0}
+        .dp4-hot{border-color:var(--ora);background:var(--ora-g);color:var(--ora)}
+        .dp4-warm{border-color:var(--warn);background:var(--warn-g);color:var(--warn)}
+        .dp4-expand{margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border)}
+        .dp4-expand-title{font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:5px}
+        .dp4-exp-chips{display:flex;flex-wrap:wrap;gap:3px}
+        .dp4-exp{padding:3px 7px;border-radius:5px;font-family:'Courier New',monospace;font-size:.72rem;font-weight:700;letter-spacing:1px;background:var(--surface);border:1px solid var(--border)}
+        .dp4-exp.winner{background:var(--ok-g);border-color:var(--ok);color:var(--ok)}
+        .pw-avg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-size:.72rem;font-weight:700;font-family:'Courier New',monospace;margin:2px}
+
         /* Buttons */
         .btn{width:100%;padding:11px;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s}
         .btn-run{background:linear-gradient(90deg,var(--ora),var(--err));color:#fff}
@@ -238,10 +267,20 @@
         <div class="fg"><label>Seed Date Range End</label><input type="date" id="nexusEnd"></div>
         <div class="fg"><label>State</label><select id="nexusState"><option value="All">All Pick5 States</option></select></div>
         <div class="fg"><label>TOD</label><select id="nexusTOD"><option value="All">All</option><option value="Midday">Midday</option><option value="Evening">Evening</option></select></div>
-        <div class="fg"><label>View</label><select id="nexusView"><option value="nexus">🔮 Nexus (per seed)</option><option value="timeline">📅 Date Timeline</option><option value="delta">Δ Distribution</option></select></div>
+        <div class="fg"><label>View</label><select id="nexusView"><option value="nexus">🔮 Nexus (per seed)</option><option value="pastwinners">🏆 Past Winners SumTD</option><option value="hots4dp">🌶️ Hots 4DP</option><option value="timeline">📅 Date Timeline</option><option value="delta">Δ Distribution</option></select></div>
         <button class="btn btn-run" onclick="runNexus()">🔮 Run Nexus</button>
         <div id="nexusStatus" style="font-size:.7rem;color:var(--text3);margin-top:6px;text-align:center"></div>
-        <div class="hidden" id="nexusDeltaTrend" style="margin-top:10px"><h3 style="font-size:.78rem">📊 Delta Trend</h3><div id="nexusDeltaBars"></div></div>
+        <!-- Seeds in Range (only seeds within selected dates) -->
+        <div class="hidden" id="nexusSeedsPanel" style="margin-top:10px">
+            <h3 style="font-size:.78rem">🌱 Seeds in Range <span id="nexusSeedCount" style="font-weight:500;color:var(--text3)"></span></h3>
+            <div id="nexusSeedsDisplay" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px"></div>
+        </div>
+        <!-- Hot Trends -->
+        <div class="hidden" id="nexusHotTrends" style="margin-top:10px">
+            <h3 style="font-size:.78rem">📊 Hot Trends</h3>
+            <div id="nexusHotTrendsContent"></div>
+        </div>
+        <div class="hidden" id="nexusDeltaTrend" style="margin-top:10px"><h3 style="font-size:.78rem">📊 Delta Trend (Matches)</h3><div id="nexusDeltaBars"></div></div>
         <div class="hidden" id="nexusConsecPanel" style="margin-top:10px"><h3 style="font-size:.78rem">🎯 Consecutive Runs</h3><div id="nexusConsecBars"></div></div>
     </div>
 </div>
@@ -2727,6 +2766,8 @@ function processNexus(){
     nexusMatches.sort(function(a,b){return a.date.localeCompare(b.date)});
     buildNexusTrend();
     findNexusConsec();
+    renderNexusSeedsInRange();
+    renderNexusHotTrends();
 }
 
 function buildNexusTrend(){
@@ -2780,6 +2821,8 @@ function renderNexusView(){
     var view=document.getElementById('nexusView').value;
     var h='';
     if(view==='nexus')h=renderNexusMain();
+    else if(view==='pastwinners')h=renderNexusPastWinners();
+    else if(view==='hots4dp')h=renderNexusHots4DP();
     else if(view==='timeline')h=renderNexusTimeline();
     else if(view==='delta')h=renderNexusDelta();
     document.getElementById('resultArea').innerHTML=h;
@@ -2900,6 +2943,294 @@ function renderNexusDelta(){
     });
     h+='</div>';
     return h;
+}
+
+// === NEXUS: Seeds in Range (sidebar — only seeds within selected dates) ===
+function renderNexusSeedsInRange(){
+    var panel=document.getElementById('nexusSeedsPanel');
+    panel.classList.remove('hidden');
+    document.getElementById('nexusSeedCount').textContent='('+nexusSeeds.length+')';
+    var h='';
+    nexusSeeds.forEach(function(s){
+        var sum=s.sums!=null?s.sums:0;
+        var td=s.td!=null?s.td:0;
+        var delta=sum-td;
+        h+='<div class="nx-seed">';
+        h+='<span class="nsv">'+s.value+'</span>';
+        h+='<span class="nsd">'+s.date+' '+(s.tod||'')+'</span>';
+        h+='<div class="nst">';
+        h+='<span class="nx-tag nx-tag-sum">Σ'+sum+'</span>';
+        h+='<span class="nx-tag nx-tag-td">T'+td+'</span>';
+        h+='<span class="nx-tag nx-tag-delta">Δ'+delta+'</span>';
+        h+='</div></div>';
+    });
+    document.getElementById('nexusSeedsDisplay').innerHTML=h;
+}
+
+// === NEXUS: Hot Trends (sidebar — aggregate Sum/TD/Delta freq from seeds) ===
+function renderNexusHotTrends(){
+    var panel=document.getElementById('nexusHotTrends');
+    panel.classList.remove('hidden');
+    var sumC={},tdC={},deltaC={};
+    nexusSeeds.forEach(function(s){
+        var sum=s.sums!=null?s.sums:0;
+        var td=s.td!=null?s.td:0;
+        var delta=Math.abs(sum-td);
+        sumC[sum]=(sumC[sum]||0)+1;
+        tdC[td]=(tdC[td]||0)+1;
+        deltaC[delta]=(deltaC[delta]||0)+1;
+    });
+    var h='';
+    h+='<div class="nx-trend-section"><div class="nx-trend-title" style="color:var(--ora)">🔥 Hot Sums</div>';
+    h+=nxTrendBars(sumC,'var(--ora)');
+    h+='</div>';
+    h+='<div class="nx-trend-section"><div class="nx-trend-title" style="color:#06b6d4">🧊 Hot TD</div>';
+    h+=nxTrendBars(tdC,'#06b6d4');
+    h+='</div>';
+    h+='<div class="nx-trend-section"><div class="nx-trend-title" style="color:var(--pri)">📐 Hot |Δ|</div>';
+    h+=nxTrendBars(deltaC,'var(--pri)');
+    h+='</div>';
+    // After-seed match sums
+    var afterM=nexusMatches.filter(function(d){return d.date_diff<0});
+    if(afterM.length){
+        var aSum={};
+        afterM.forEach(function(m){var s=m.sums!=null?m.sums:0;aSum[s]=(aSum[s]||0)+1});
+        h+='<div style="border-top:1px dashed var(--border);margin:6px 0 4px;padding-top:6px">';
+        h+='<div class="nx-trend-title" style="color:var(--warn)">⚡ After-Seed Sums</div>';
+        h+=nxTrendBars(aSum,'var(--warn)');
+        h+='</div>';
+    }
+    document.getElementById('nexusHotTrendsContent').innerHTML=h;
+}
+function nxTrendBars(counts,color){
+    var arr=Object.entries(counts).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+    var mx=arr.length?arr[0][1]:1;
+    var h='';
+    arr.forEach(function(e){
+        var pct=(e[1]/mx*100).toFixed(0);
+        h+='<div class="nx-trend-row">';
+        h+='<span class="nx-trend-lbl">'+e[0]+'</span>';
+        h+='<div class="nx-trend-bar"><div class="nx-trend-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+        h+='<span class="nx-trend-cnt">'+e[1]+'</span>';
+        h+='</div>';
+    });
+    return h;
+}
+
+// === NEXUS: Past Winners view — each seed with Sum/TD/Δ and match counts ===
+function renderNexusPastWinners(){
+    var byNorm={};
+    nexusMatches.forEach(function(m){if(!byNorm[m.norm])byNorm[m.norm]=[];byNorm[m.norm].push(m)});
+
+    // Stats row
+    var avgS=0,avgT=0,avgD=0;
+    nexusSeeds.forEach(function(s){
+        avgS+=(s.sums||0);avgT+=(s.td||0);avgD+=Math.abs((s.sums||0)-(s.td||0));
+    });
+    if(nexusSeeds.length){avgS=(avgS/nexusSeeds.length).toFixed(1);avgT=(avgT/nexusSeeds.length).toFixed(1);avgD=(avgD/nexusSeeds.length).toFixed(1)}
+
+    var h='<div class="stats-grid">';
+    h+=sc('Seeds',nexusSeeds.length,'in range','var(--pri)');
+    h+=sc('Matches',nexusMatches.length,'permuted','var(--ok)');
+    var aft=nexusMatches.filter(function(d){return d.date_diff<0}).length;
+    h+=sc('AFTER Seed',aft,'predictive','var(--warn)');
+    h+=sc('Avg Sum',avgS,'','var(--ora)');
+    h+=sc('Avg TD',avgT,'','#06b6d4');
+    h+=sc('Avg |Δ|',avgD,'Sum−TD','var(--pri)');
+    h+='</div>';
+
+    // Past Winners table
+    h+='<div class="card" style="padding:8px;overflow-x:auto"><h3>🏆 Past Winners — SumTD Breakdown</h3>';
+    h+='<div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">Each seed draw (past winner) showing how <span style="color:var(--ora);font-weight:700">Sum</span>, <span style="color:#06b6d4;font-weight:700">TD</span>, and <span style="color:var(--pri);font-weight:700">Δ (Sum−TD)</span> relate. <strong>After</strong> = matches found after the seed date (predictive validation).</div>';
+    h+='<table class="sp-table"><thead><tr>';
+    h+='<th>#</th><th>Date</th><th>TOD</th><th style="color:var(--warn)">Winner</th><th>Norm</th>';
+    h+='<th style="color:var(--ora)">Sum</th><th style="color:#06b6d4">TD</th><th style="color:var(--pri)">Δ</th>';
+    h+='<th>Before</th><th style="color:var(--ok)">After</th><th>Total</th><th>Unique Dates</th>';
+    h+='</tr></thead><tbody>';
+
+    nexusSeeds.forEach(function(s,i){
+        var sum=s.sums||0;
+        var td=s.td||0;
+        var delta=sum-td;
+        var matches=byNorm[s.norm]||[];
+        var before=matches.filter(function(m){return m.date<s.date}).length;
+        var after=matches.filter(function(m){return m.date>s.date}).length;
+        var uniqueD={};matches.forEach(function(m){uniqueD[m.date]=true});
+        var afterColor=after>0?'var(--ok)':'var(--text3)';
+
+        h+='<tr'+(after>0?' class="wr"':'')+'>';
+        h+='<td style="font-weight:700;color:var(--text3)">'+(i+1)+'</td>';
+        h+='<td style="font-size:.75rem">'+s.date+'</td>';
+        h+='<td style="font-size:.72rem;color:var(--text3)">'+(s.tod||'—')+'</td>';
+        h+='<td class="cand" style="color:var(--warn)">'+s.value+'</td>';
+        h+='<td class="cand" style="font-size:.72rem;color:var(--text2)">'+(s.norm||'')+'</td>';
+        h+='<td><span style="display:inline-block;padding:1px 5px;border-radius:4px;font-size:.72rem;font-weight:700;font-family:monospace;background:var(--ora-g);color:var(--ora)">'+sum+'</span></td>';
+        h+='<td><span style="display:inline-block;padding:1px 5px;border-radius:4px;font-size:.72rem;font-weight:700;font-family:monospace;background:rgba(6,182,212,.1);color:#06b6d4">'+td+'</span></td>';
+        h+='<td><span style="display:inline-block;padding:1px 5px;border-radius:4px;font-size:.72rem;font-weight:700;font-family:monospace;background:var(--pri-g);color:var(--pri)">'+delta+'</span></td>';
+        h+='<td style="text-align:center">'+before+'</td>';
+        h+='<td style="text-align:center;font-weight:800;color:'+afterColor+'">'+after+'</td>';
+        h+='<td style="text-align:center;font-weight:700">'+matches.length+'</td>';
+        h+='<td style="text-align:center;color:var(--text2)">'+Object.keys(uniqueD).length+'</td>';
+        h+='</tr>';
+    });
+    h+='</tbody></table>';
+
+    // Averages summary
+    h+='<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">';
+    h+='<span class="pw-avg" style="background:var(--ora-g);color:var(--ora)">Avg Sum: '+avgS+'</span>';
+    h+='<span class="pw-avg" style="background:rgba(6,182,212,.1);color:#06b6d4">Avg TD: '+avgT+'</span>';
+    h+='<span class="pw-avg" style="background:var(--pri-g);color:var(--pri)">Avg |Δ|: '+avgD+'</span>';
+    h+='</div>';
+
+    // Sum/TD cross-reference: which Sum+TD combos appear most
+    var stCombo={};
+    nexusSeeds.forEach(function(s){
+        var k=(s.sums||0)+'/'+(s.td||0);
+        stCombo[k]=(stCombo[k]||0)+1;
+    });
+    var stArr=Object.entries(stCombo).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
+    if(stArr.length>1){
+        h+='<div style="margin-top:12px"><div style="font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:4px">🔗 Top Sum/TD Combos (Seeds)</div>';
+        h+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
+        stArr.forEach(function(e){
+            var hot=e[1]>=3;
+            h+='<span style="padding:3px 8px;border-radius:6px;font-family:monospace;font-size:.72rem;font-weight:700;border:1px solid '+(hot?'var(--ora)':'var(--border)')+';background:'+(hot?'var(--ora-g)':'var(--surface)')+';color:'+(hot?'var(--ora)':'var(--text2)')+'">'+e[0]+' <span style="font-weight:400;color:var(--text3)">×'+e[1]+'</span></span>';
+        });
+        h+='</div></div>';
+    }
+
+    h+='</div>';
+    return h;
+}
+
+// === NEXUS: Hots 4DP — extract C(5,4) from each seed, frequency rank ===
+function renderNexusHots4DP(){
+    // Check if pick5
+    var numDigits=5;
+    if(nexusSeeds.length>0){
+        var val=nexusSeeds[0].value||'';
+        var clean=val.replace(/[^0-9]/g,'');
+        numDigits=clean.length;
+    }
+    if(numDigits!==5){
+        return '<div class="card"><h3>🌶️ Hots 4DP</h3><div style="color:var(--text3);padding:20px;text-align:center">4DP analysis requires Pick 5 seeds (detected '+numDigits+' digits).</div></div>';
+    }
+
+    // Extract all C(5,4)=5 four-digit subsets from each seed's norm
+    var dpCounts={};  // 4-digit sorted string → count
+    var dpSeeds={};   // 4-digit sorted string → array of seed values it came from
+    nexusSeeds.forEach(function(s){
+        var norm=s.norm||(s.value||'').split('').sort().join('');
+        var digits=norm.split('');
+        // C(5,4): pick 4 of 5 (leave out each position once)
+        for(var skip=0;skip<5;skip++){
+            var sub=[];
+            for(var j=0;j<5;j++){if(j!==skip)sub.push(digits[j])}
+            var key=sub.sort().join('');
+            dpCounts[key]=(dpCounts[key]||0)+1;
+            if(!dpSeeds[key])dpSeeds[key]=[];
+            if(dpSeeds[key].indexOf(s.value)===-1)dpSeeds[key].push(s.value);
+        }
+    });
+
+    var dpArr=Object.entries(dpCounts).sort(function(a,b){return b[1]-a[1]});
+    var maxC=dpArr.length?dpArr[0][1]:1;
+
+    // Stats
+    var h='<div class="stats-grid">';
+    h+=sc('Seeds',nexusSeeds.length,'','var(--pri)');
+    h+=sc('4DP Combos',dpArr.length,'unique','var(--ora)');
+    var hot=dpArr.filter(function(e){return e[1]>=3}).length;
+    h+=sc('Hot (3+)',hot,'','var(--err)');
+    var warm=dpArr.filter(function(e){return e[1]===2}).length;
+    h+=sc('Warm (2)',warm,'','var(--warn)');
+    h+='</div>';
+
+    // 4DP chips — hot first
+    h+='<div class="card card-ora"><h3>🌶️ 4-Digit Pairs — Frequency Ranked</h3>';
+    h+='<div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">Each Pick 5 seed yields <strong>5</strong> four-digit subsets (C(5,4)). Combos appearing across multiple seeds are hotter. Click to expand to Pick 5 candidates.</div>';
+    h+='<div class="dp4-grid">';
+    dpArr.forEach(function(e){
+        var cls=e[1]>=3?'dp4-hot':e[1]>=2?'dp4-warm':'';
+        h+='<div class="dp4-chip '+cls+'" onclick="expand4DP(\''+e[0]+'\',this)" title="From: '+dpSeeds[e[0]].join(', ')+'">'+e[0]+'<span class="dp4c">×'+e[1]+'</span></div>';
+    });
+    h+='</div></div>';
+
+    // Expansion area
+    h+='<div id="dp4ExpandArea"></div>';
+
+    // Auto-expand top 5 hot ones
+    h+='<div class="card"><h3>🎯 Top 4DP → Pick 5 Expansions</h3>';
+    h+='<div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">Hottest 4DP combos expanded by adding each missing digit (0–9) to form valid Pick 5 candidates.</div>';
+    var topDP=dpArr.filter(function(e){return e[1]>=2}).slice(0,8);
+    if(!topDP.length)topDP=dpArr.slice(0,5);
+
+    // Build set of all seed norms for checking overlap
+    var seedNormSet={};
+    nexusSeeds.forEach(function(s){seedNormSet[s.norm||(s.value||'').split('').sort().join('')]=true});
+
+    // Build set of all match norms
+    var matchNormSet={};
+    nexusMatches.forEach(function(m){matchNormSet[m.norm]=true});
+    var afterNormSet={};
+    nexusMatches.filter(function(m){return m.date_diff<0}).forEach(function(m){afterNormSet[m.norm]=true});
+
+    topDP.forEach(function(e){
+        var dp=e[0];
+        var dpDigits=dp.split('');
+        h+='<div class="dp4-expand"><div class="dp4-expand-title">'+dp+' <span style="color:var(--text3);font-weight:500">(×'+e[1]+' from: '+dpSeeds[dp].join(', ')+')</span></div>';
+        h+='<div class="dp4-exp-chips">';
+        // For each digit 0-9, add it and sort to get a Pick 5 norm
+        var expanded=[];
+        for(var d=0;d<=9;d++){
+            var five=dpDigits.concat([String(d)]).sort().join('');
+            if(expanded.indexOf(five)===-1)expanded.push(five);
+        }
+        expanded.sort();
+        expanded.forEach(function(norm){
+            var isSeed=seedNormSet[norm];
+            var isAfter=afterNormSet[norm];
+            var isMatch=matchNormSet[norm];
+            var cls='';
+            var title='';
+            if(isSeed){cls='winner';title='= SEED (past winner)'}
+            else if(isAfter){cls='winner';title='= AFTER-seed match'}
+            else if(isMatch){cls='';title='Historical match';/* slight highlight */}
+            h+='<span class="dp4-exp '+cls+'" title="'+title+'" style="'+(isMatch&&!isSeed&&!isAfter?'border-color:var(--pri);color:var(--pri)':'')+'">';
+            h+=norm;
+            if(isSeed)h+=' 🌱';
+            if(isAfter)h+=' ✅';
+            h+='</span>';
+        });
+        h+='</div></div>';
+    });
+    h+='</div>';
+
+    return h;
+}
+
+function expand4DP(dp,el){
+    var area=document.getElementById('dp4ExpandArea');
+    var dpDigits=dp.split('');
+    var seedNormSet={};
+    nexusSeeds.forEach(function(s){seedNormSet[s.norm||(s.value||'').split('').sort().join('')]=true});
+    var afterNormSet={};
+    nexusMatches.filter(function(m){return m.date_diff<0}).forEach(function(m){afterNormSet[m.norm]=true});
+    var expanded=[];
+    for(var d=0;d<=9;d++){
+        var five=dpDigits.concat([String(d)]).sort().join('');
+        if(expanded.indexOf(five)===-1)expanded.push(five);
+    }
+    expanded.sort();
+    var h='<div class="card" style="border-left:3px solid var(--ora)"><h3>🎯 '+dp+' → Pick 5 Candidates</h3>';
+    h+='<div class="dp4-exp-chips">';
+    expanded.forEach(function(norm){
+        var isSeed=seedNormSet[norm];
+        var isAfter=afterNormSet[norm];
+        h+='<span class="dp4-exp '+(isSeed||isAfter?'winner':'')+'">'+norm+(isSeed?' 🌱':'')+(isAfter?' ✅':'')+'</span>';
+    });
+    h+='</div></div>';
+    area.innerHTML=h;
 }
 
 // Listen for nexus view change
