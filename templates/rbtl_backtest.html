@@ -806,15 +806,20 @@ function updateHotDigits(){
 
     // === 4DP Quads (Pick 5 only) ===
     var numDigits=0;
-    if(selectedSeeds.length>0){
-        var firstDraw=recentDraws[selectedSeeds[0]];
-        if(firstDraw)numDigits=(firstDraw.actual||firstDraw.value).length;
+    for(var si=0;si<selectedSeeds.length;si++){
+        var firstDraw=recentDraws[selectedSeeds[si]];
+        if(firstDraw){
+            var testNorm=(firstDraw.actual||firstDraw.value||'').replace(/[^0-9]/g,'');
+            numDigits=testNorm.length;
+            break;
+        }
     }
-    if(numDigits===5){
+    if(numDigits>=5){
         var quads={};
         selectedSeeds.forEach(function(i){
             var d=recentDraws[i];if(!d)return;
-            var norm=(d.actual||d.value).split('');
+            var norm=(d.actual||d.value||'').replace(/[^0-9]/g,'').split('').sort();
+            if(norm.length<5)return;
             var seenQuads={};
             for(var a=0;a<norm.length;a++)for(var b=a+1;b<norm.length;b++)for(var c=b+1;c<norm.length;c++)for(var dd=c+1;dd<norm.length;dd++){
                 var quad=norm[a]+norm[b]+norm[c]+norm[dd];
