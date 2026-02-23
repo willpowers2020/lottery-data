@@ -906,11 +906,6 @@ def backtest_page():
     """Backtest/proof page."""
     return render_template('rbtl_backtest.html')
 
-@app.route('/backtest/v5')
-def backtest_v5_page():
-    """V5 connected mockup — date-based pipeline with hybrid compute engine."""
-    return render_template('backtest_mockup_v5.html')
-
 
 @app.route('/analysis/rbtl')
 def analysis_rbtl_page():

@@ -455,7 +455,7 @@
         <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
         <div class="fg"><label>DP Filter</label><select id="dpSize"><option value="0">None</option><option value="2" selected>2DP on last seed</option><option value="3">3DP on last seed</option></select></div>
         <div class="fg"><label>Show Top</label><select id="sugLimit"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="500">500</option></select></div>
-        <div class="query-guard" id="queryGuard"><div class="query-guard-title">⚡ Query Cost Estimate</div><div class="query-guard-meter"><div class="query-guard-fill" id="queryGuardFill" style="width:15%;background:var(--ok)"></div></div><div class="query-guard-stats"><span>Seeds: <span id="estSeeds">10</span></span><span>Cands: <span id="estCands">~330</span></span><span>Time: <span id="estTime">~2s</span></span></div><div class="query-guard-cap">📏 No caps in mockup mode</div></div>
+        <div class="query-guard" id="queryGuard"><div class="query-guard-title">⚡ Query Cost Estimate</div><div class="query-guard-meter"><div class="query-guard-fill" id="queryGuardFill" style="width:15%;background:var(--ok)"></div></div><div class="query-guard-stats"><span>Seeds: <span id="estSeeds">10</span></span><span>Cands: <span id="estCands">~330</span></span><span>Time: <span id="estTime">~2s</span></span></div><div class="query-guard-cap">📏 Max: <strong>90 days</strong> single state · <strong>14 days</strong> All States</div></div>
         <div class="mode-toggle"><input type="radio" name="mode" id="modeBacktest" value="backtest" checked onchange="switchMode('backtest')"><label for="modeBacktest"><span class="mode-icon">🧪</span>Backtest<span class="mode-sub">Validate past draws</span></label><input type="radio" name="mode" id="modePrediction" value="prediction" onchange="switchMode('prediction')"><label for="modePrediction"><span class="mode-icon">🎯</span>Prediction<span class="mode-sub">Forward-looking plays</span></label></div>
         <button class="btn btn-run" id="runBtn" onclick="runAction()"><span id="runBtnIcon">🧪</span> <span id="runBtnText">Run Backtest</span></button>
     </div>
@@ -677,7 +677,7 @@
 <div class="admin-sidebar">
     <div class="admin-info"><div class="admin-badge">👤 Admin</div><div class="admin-stats"><div class="admin-stat"><span class="label">Last Draw:</span><span class="value">2026-02-21</span></div><div class="admin-stat"><span class="label">Total Draws:</span><span class="value">847,293</span></div><div class="admin-stat"><span class="label">Date Range:</span><span class="value">1990–2026</span></div><div class="admin-stat"><span class="label">DB Size:</span><span class="value">2.1 GB</span></div></div></div>
     <div class="admin-health"><h4>🩺 System Health</h4><div class="health-row"><div class="health-dot green"></div><span class="health-label">MongoDB</span><span class="health-value">OK</span></div><div class="health-row"><div class="health-dot green"></div><span class="health-label">API Latency</span><span class="health-value">42ms</span></div><div class="health-row"><div class="health-dot yellow"></div><span class="health-label">Active Queries</span><span class="health-value" style="color:var(--warn)">3/5</span></div><div class="health-row"><div class="health-dot green"></div><span class="health-label">Cache Hit</span><span class="health-value">87%</span></div></div>
-    <div class="admin-limits"><h4>📏 Query Limits</h4><div class="limit-row"><span class="limit-label">Max Date Range</span><span class="limit-value">90 days</span></div><div class="limit-row"><span class="limit-label">All States Cap</span><span class="limit-value">14 days</span></div><div class="limit-row"><span class="limit-label">Max Seeds</span><span class="limit-value">∞</span></div><div class="limit-row"><span class="limit-label">Max Candidates</span><span class="limit-value">5,000</span></div><div style="margin-top:8px"><div class="limit-row"><span class="limit-label">Today's Queries</span><span class="limit-value">12 / 50</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:24%;background:var(--ok)"></div></div></div><div style="margin-top:6px"><div class="limit-row"><span class="limit-label">Heavy Queries</span><span class="limit-value" style="color:var(--warn)">2 / 5</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:40%;background:var(--warn)"></div></div></div></div>
+    <div class="admin-limits"><h4>📏 Query Limits</h4><div class="limit-row"><span class="limit-label">Max Date Range</span><span class="limit-value">90 days</span></div><div class="limit-row"><span class="limit-label">All States Cap</span><span class="limit-value">14 days</span></div><div class="limit-row"><span class="limit-label">Max Seeds</span><span class="limit-value">180</span></div><div class="limit-row"><span class="limit-label">Max Candidates</span><span class="limit-value">5,000</span></div><div style="margin-top:8px"><div class="limit-row"><span class="limit-label">Today's Queries</span><span class="limit-value">12 / 50</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:24%;background:var(--ok)"></div></div></div><div style="margin-top:6px"><div class="limit-row"><span class="limit-label">Heavy Queries</span><span class="limit-value" style="color:var(--warn)">2 / 5</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:40%;background:var(--warn)"></div></div></div></div>
     <div class="admin-recent"><h4>🕑 Recent Queries</h4><div class="recent-query"><span class="rq-state">Florida</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.2s</span><div class="rq-date">02-21 18:42 · 5d · Evening</div></div><div class="recent-query"><span class="rq-state">All States</span> · <span class="rq-game">Pick 5</span> <span class="rq-cost heavy">12.4s</span><div class="rq-date">02-21 17:55 · 14d · All</div></div><div class="recent-query"><span class="rq-state">Georgia</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.8s</span><div class="rq-date">02-21 16:30 · 7d · Midday</div></div><div class="recent-query"><span class="rq-state">Ohio</span> · <span class="rq-game">Pick 3</span> <span class="rq-cost light">0.1s</span><div class="rq-date">02-21 15:12 · 3d · Evening</div></div></div>
 </div>
 
@@ -779,7 +779,7 @@ function updateQueryEstimate(){
     var maxDays=state==='All'?14:90;if(days>maxDays){days=maxDays;if(start){var c=new Date(start);c.setDate(c.getDate()+maxDays-1);document.getElementById('endDate').value=c.toISOString().split('T')[0]}}
     var seedsPerDay=state==='All'?8:2;var estSeeds=days*seedsPerDay;
     var candMap={pick2:10,pick3:55,pick4:330,pick5:715};var estCands=candMap[game]||330;
-    var estTime=((estSeeds*estCands*0.0001)+0.5).toFixed(1);var pct=Math.min(100,Math.round((estSeeds/500)*100));
+    var estTime=((estSeeds*estCands*0.0001)+0.5).toFixed(1);var pct=Math.min(100,Math.round((estSeeds/180)*100));
     document.getElementById('estSeeds').textContent=estSeeds;document.getElementById('estCands').textContent='~'+estCands;document.getElementById('estTime').textContent='~'+estTime+'s';
     fill.style.width=pct+'%';
     if(pct<40){fill.style.background='var(--ok)';guard.className='query-guard'}
@@ -787,8 +787,8 @@ function updateQueryEstimate(){
     else{fill.style.background='var(--err)';guard.className='query-guard danger'}
     var btn=document.getElementById('runBtn'),text=document.getElementById('runBtnText'),icon=document.getElementById('runBtnIcon');
     var isPred=document.getElementById('modePrediction').checked;
-    btn.disabled=false;text.textContent=isPred?'Run Prediction':'Run Backtest';icon.textContent=isPred?'🎯':'🧪'//
-    //cap removed
+    if(estSeeds>180){btn.disabled=true;text.textContent='Too many seeds ('+estSeeds+'/180)';icon.textContent='⛔'}
+    else{btn.disabled=false;text.textContent=isPred?'Run Prediction':'Run Backtest';icon.textContent=isPred?'🎯':'🧪'}
 }
 
 function saveCustom(){var name=document.getElementById('customStratName').value.trim();if(!name)return;var chip=document.createElement('div');chip.className='date-chip';chip.innerHTML='<span class="si">⭐</span> '+name;chip.onclick=function(){clearAllActive();chip.classList.add('active')};document.getElementById('dateGrid').appendChild(chip);document.getElementById('customStratName').value=''}
@@ -802,19 +802,13 @@ function saveCustom(){var name=document.getElementById('customStratName').value.
 
 // ── Mock Database (60 FL Pick 4 draws, Feb 2026) ──
 var MOCK_DB=(function(){
-    var draws=[],base=new Date('2026-01-01');
+    var draws=[],base=new Date('2026-02-01');
     var nums=['5618','8927','7058','8821','5635','6031','5075','5590','1494','0047',
         '3916','7204','2069','1754','5292','8271','1726','5137','4819','2750',
         '6033','9257','9572','5890','0985','6029','3182','6401','9235','7764',
         '4508','0638','2933','2627','4544','1339','1636','2725','1717','3535',
         '2626','1555','3733','0917','0278','0935','1609','1708','2608','3508',
-        '6703','5704','2707','1519','1618','1809','2907','7803','2808','1719',
-        '4231','3095','6814','7729','0552','8463','9140','1376','2084','5961',
-        '3847','7502','0619','4183','8256','6470','1938','5307','2741','9685',
-        '0274','8316','4950','7628','3192','6547','1803','5069','2435','9781',
-        '4612','8053','3297','7480','0166','5824','9738','1459','6301','2945',
-        '7183','0526','4870','8694','3017','5342','9258','1706','6491','2830',
-        '4175','8609','3543','7967','0381','5234','9076','1428','6752','2063'];
+        '6703','5704','2707','1519','1618','1809','2907','7803','2808','1719'];
     for(var i=0;i<nums.length;i++){
         var d=new Date(base);d.setDate(d.getDate()+Math.floor(i/2));
         var n=nums[i],digs=n.split('').map(Number);
@@ -826,61 +820,6 @@ var MOCK_DB=(function(){
     }
     return draws;
 })();
-
-var USE_LIVE_API = true; // set false to use mock DB offline
-
-// ── API Helper ──
-function apiUrl(path){return path}
-
-// ── Fetch seeds from live MongoDB via /api/draws/recent ──
-async function fetchLiveSeeds(state, gameType, startDate, endDate, tod){
-    var res = await fetch(apiUrl('/api/draws/recent'), {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({state:state, game_type:gameType, start_date:startDate, end_date:endDate})
-    });
-    if(!res.ok) throw new Error('API '+res.status);
-    var data = await res.json();
-    if(data.error) throw new Error(data.error);
-    var seeds = [];
-    data.draws.forEach(function(d){
-        if(tod && d.tod && d.tod.toLowerCase().indexOf(tod)===-1) return;
-        var digs = d.value.split('').map(Number);
-        seeds.push({
-            number:d.value, date:d.date, tod:d.tod||'', state:state, game:gameType,
-            digits:digs, normalized:d.actual||digs.slice().sort().join(''),
-            sum:digs.reduce(function(a,b){return a+b},0), td:0
-        });
-    });
-    return seeds;
-}
-
-// ── Fetch TD values from /api/td/lookup ──
-async function fetchTDValues(seeds, state, gameType){
-    var norms=seeds.map(function(s){return s.normalized}).filter(function(v,i,a){return a.indexOf(v)===i});
-    if(!norms.length)return;
-    try{
-        var res=await fetch(apiUrl('/api/td/lookup'),{
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({candidates:norms, state:state, game_type:gameType})
-        });
-        if(!res.ok)return;
-        var data=await res.json();
-        var tdMap=data.td||{};
-        seeds.forEach(function(s){if(tdMap[s.normalized])s.td=tdMap[s.normalized]});
-    }catch(e){console.warn('TD lookup failed:',e)}
-}
-
-// ── Mock fallback ──
-function fetchMockSeeds(state, startDate, endDate, tod){
-    return MOCK_DB.filter(function(d){
-        if(state!=='All'&&d.state!==state)return false;
-        if(startDate&&d.date<startDate)return false;
-        if(endDate&&d.date>endDate)return false;
-        if(tod&&d.tod.toLowerCase().indexOf(tod)===-1)return false;
-        return true;
-    });
-}
 
 // ── Utility ──
 function getCombos(arr,k){if(k===1)return arr.map(function(x){return[x]});var r=[];arr.forEach(function(x,i){getCombos(arr.slice(i+1),k-1).forEach(function(c){r.push([x].concat(c))})});return r}
@@ -900,36 +839,32 @@ function analyzeSeeds(seeds){
     return{dp1:dp1,dp2:dp2,dp3:dp3,dp4:dp4,sums:sums,tds:tds,deltas:deltas};
 }
 
-// ── Get selected seeds (uses live data store, falls back to mock) ──
-var _allLoadedSeeds = [];
-
+// ── Get selected seeds (works with both static chips and dynamic ones) ──
 function getSelectedSeeds(){
     var chips=document.querySelectorAll('#seedGrid .seed-chip.selected');
     var seeds=[];
     chips.forEach(function(c){
         var num=c.dataset.number;
         if(!num){
+            // Static chips: extract number from text content
             var txt=c.textContent.trim();
-            var match=txt.match(/\d{3,5}$/);
+            var match=txt.match(/\d{4}$/);
             if(match)num=match[0];
         }
         if(!num)return;
-        var date=c.dataset.date||'';
-        // Look up in loaded seeds first (has real TD from API)
-        var found=null;
-        _allLoadedSeeds.forEach(function(s){if(s.number===num&&(!date||s.date===date))found=s});
-        if(!found) MOCK_DB.forEach(function(d){if(d.number===num)found=d});
-        if(!found){
-            var digs=num.split('').map(Number);
-            found={number:num,date:date,digits:digs,normalized:digs.slice().sort().join(''),
-                sum:digs.reduce(function(a,b){return a+b},0),td:0};
-        }
-        seeds.push(found);
+        var digs=num.split('').map(Number);
+        var date=c.dataset.date||'2026-02-21';
+        // Try to find in mock DB for TD value
+        var dbMatch=null;
+        MOCK_DB.forEach(function(d){if(d.number===num)dbMatch=d});
+        seeds.push(dbMatch||{
+            number:num,date:date,digits:digs,
+            normalized:digs.slice().sort().join(''),
+            sum:digs.reduce(function(a,b){return a+b},0),
+            td:20+((parseInt(num,10)*7)%41)
+        });
     });
-    // Dedupe
-    var seen={},unique=[];
-    seeds.forEach(function(s){var k=s.number+(s.date||'');if(!seen[k]){seen[k]=1;unique.push(s)}});
-    return unique;
+    return seeds;
 }
 
 // ── Renderers (generate HTML matching v5 structure exactly) ──
@@ -1090,7 +1025,6 @@ function renderDeltaSumTD(a){
 }
 
 function renderSeeds(draws){
-    _allLoadedSeeds = draws; // store globally for getSelectedSeeds
     var grid=document.getElementById('seedGrid');
     var info=document.getElementById('seedInfo');
     grid.innerHTML='';
@@ -1098,13 +1032,8 @@ function renderSeeds(draws){
     draws.forEach(function(d){
         var chip=document.createElement('div');
         chip.className='seed-chip selected';
-        chip.dataset.number=d.number;chip.dataset.date=d.date||'';
-        var todLabel=d.tod||'';
-        if(todLabel.toLowerCase().indexOf('mid')>=0)todLabel='M';
-        else if(todLabel.toLowerCase().indexOf('eve')>=0||todLabel.toLowerCase().indexOf('night')>=0)todLabel='E';
-        else todLabel=todLabel.slice(0,3);
-        chip.innerHTML='<span class="tod">'+(d.date||'').slice(5)+' '+todLabel+'</span> '+d.number;
-        if(d.td)chip.title='TD:'+d.td+' Σ:'+d.sum;
+        chip.dataset.number=d.number;chip.dataset.date=d.date;
+        chip.innerHTML='<span class="tod">'+d.date.slice(5)+' '+(d.tod==='midday'?'M':'E')+'</span> '+d.number;
         chip.onclick=function(){this.classList.toggle('selected');recompute()};
         grid.appendChild(chip);
     });
@@ -1336,59 +1265,41 @@ function runAutopsy(){
 })();
 
 // ── Run Backtest (queries mock DB, replaces seed chips, triggers full recompute) ──
-async function runAction(){
+function runAction(){
     var btn=document.getElementById('runBtn'),text=document.getElementById('runBtnText'),icon=document.getElementById('runBtnIcon');
     var state=document.getElementById('stateSelect').value;
-    var game=document.getElementById('gameType').value;
     var start=document.getElementById('startDate').value;
     var end=document.getElementById('endDate').value;
     var tod=document.getElementById('targetTOD').value;
 
-    btn.disabled=true;icon.textContent='⏳';text.textContent='Fetching seeds...';
+    btn.disabled=true;icon.textContent='⏳';text.textContent='Running...';
 
-    try {
-        var seeds;
-        if(USE_LIVE_API){
-            // Try live MongoDB
-            seeds = await fetchLiveSeeds(state, game, start, end, tod);
-            if(seeds.length){
-                text.textContent='Fetching TD values...';
-                await fetchTDValues(seeds, state, game);
-            }
+    setTimeout(function(){
+        var results=MOCK_DB.filter(function(d){
+            if(state!=='All'&&d.state!==state)return false;
+            if(start&&d.date<start)return false;
+            if(end&&d.date>end)return false;
+            if(tod&&d.tod!==tod)return false;
+            return true;
+        });
+
+        if(results.length){
+            renderSeeds(results);
         } else {
-            // Use mock DB
-            seeds = fetchMockSeeds(state, start, end, tod);
+            document.getElementById('seedInfo').textContent='No draws found. Try widening dates.';
+            document.getElementById('seedGrid').innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">No matching draws in mock DB for this date range.</div>';
         }
 
-        if(seeds.length){
-            renderSeeds(seeds);
-            document.getElementById('seedInfo').textContent=seeds.length+' draws from '+
-                (USE_LIVE_API?'MongoDB':'mock DB')+' ('+start+' → '+end+')';
-        } else {
-            document.getElementById('seedInfo').textContent='No draws found. Try widening dates or check state/game.';
-            document.getElementById('seedGrid').innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">No matching draws found.</div>';
-        }
-    } catch(e) {
-        console.error('Live API failed, falling back to mock:', e);
-        // Fallback to mock DB
-        var mockSeeds = fetchMockSeeds(state, start, end, tod);
-        if(mockSeeds.length){
-            renderSeeds(mockSeeds);
-            document.getElementById('seedInfo').textContent=mockSeeds.length+' draws from mock DB (API unavailable: '+e.message+')';
-        } else {
-            document.getElementById('seedInfo').textContent='API error: '+e.message+'. Mock DB also empty for this range.';
-        }
-    }
-
-    var isPred=document.getElementById('modePrediction').checked;
-    btn.disabled=false;
-    icon.textContent=isPred?'🎯':'🧪';
-    text.textContent=isPred?'Run Prediction':'Run Backtest';
+        var isPred=document.getElementById('modePrediction').checked;
+        btn.disabled=false;
+        icon.textContent=isPred?'🎯':'🧪';
+        text.textContent=isPred?'Run Prediction':'Run Backtest';
+    },600);
 }
 
 // ── Init (dates only — NO auto-run, static HTML shows first) ──
 (function(){
-    var t=new Date('2026-02-22'),a=new Date('2026-01-01');
+    var t=new Date('2026-02-22'),a=new Date('2026-02-16');
     document.getElementById('startDate').value=a.toISOString().split('T')[0];
     document.getElementById('endDate').value=t.toISOString().split('T')[0];
     document.getElementById('stateSelect').value='Florida';
