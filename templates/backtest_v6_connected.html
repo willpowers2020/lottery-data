@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Backtest — Prediction Strategies</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        :root[data-theme="light"]{
+            --bg:#f5f7fa;--surface:#fff;--surface2:#f0f2f5;--border:#e0e4e8;--border2:#eaeef2;
+            --text:#1e293b;--text2:#64748b;--text3:#94a3b8;
+            --pri:#6366f1;--pri2:#4f46e5;--pri-g:rgba(99,102,241,.08);
+            --ok:#10b981;--ok-g:rgba(16,185,129,.1);
+            --warn:#f59e0b;--warn-g:rgba(245,158,11,.1);
+            --err:#ef4444;--err-g:rgba(239,68,68,.08);
+            --ora:#e65100;--ora-g:rgba(230,81,0,.08);
+            --blue:#3b82f6;--shadow:0 1px 3px rgba(0,0,0,.08);
+            --nav-bg:#1e1e2e;--nav-t:#cdd6f4;--nav-m:#6c7086;--nav-s:#313244;
+            --cyan:#06b6d4;--cyan-g:rgba(6,182,212,.08);
+            --amber:#d97706;--amber-g:rgba(217,119,6,.08);
+        }
+        :root[data-theme="dark"]{
+            --bg:#0f1117;--surface:#161922;--surface2:#1c1f2e;--border:#2a2d3e;--border2:#363952;
+            --text:#e8eaed;--text2:#9ca3af;--text3:#6b7280;
+            --pri:#818cf8;--pri2:#6366f1;--pri-g:rgba(99,102,241,.15);
+            --ok:#34d399;--ok-g:rgba(16,185,129,.15);
+            --warn:#fbbf24;--warn-g:rgba(245,158,11,.15);
+            --err:#f87171;--err-g:rgba(239,68,68,.15);
+            --ora:#fb923c;--ora-g:rgba(251,146,60,.15);
+            --blue:#60a5fa;--shadow:0 1px 3px rgba(0,0,0,.3);
+            --nav-bg:#0b0d14;--nav-t:#cdd6f4;--nav-m:#6c7086;--nav-s:#1c1f2e;
+            --cyan:#22d3ee;--cyan-g:rgba(6,182,212,.15);
+            --amber:#fbbf24;--amber-g:rgba(217,119,6,.15);
+        }
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        .navbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;position:sticky;top:0;z-index:1000;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+        :root[data-theme="dark"] .navbar{background:rgba(22,25,34,.85)}
+        :root[data-theme="light"] .navbar{background:rgba(255,255,255,.85)}
+        .nav-c{max-width:1600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:44px}
+        .nav-brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-weight:900;font-size:15px;letter-spacing:-.3px}
+        .nav-brand .nb-logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--pri2),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
+        .nav-brand .nb-mld{opacity:.45;font-weight:600;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-left:2px}
+        .nav-right{display:flex;align-items:center;gap:6px}
+        .nav-breadcrumb{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);font-weight:500}
+        .nav-breadcrumb .nb-sep{opacity:.3;font-size:10px}
+        .nav-breadcrumb .nb-current{color:var(--pri);font-weight:700;padding:2px 8px;background:var(--pri-g);border-radius:5px}
+        .theme-pill{display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px;cursor:pointer;transition:all .2s}
+        .theme-pill .tp-opt{padding:4px 10px;border-radius:18px;font-size:12px;transition:all .2s;line-height:1;display:flex;align-items:center}
+        .theme-pill .tp-opt.active{background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+        :root[data-theme="dark"] .theme-pill .tp-opt.active{background:var(--border);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+        .container{max-width:1600px;margin:0 auto;padding:20px}
+        .layout{display:flex;gap:16px;align-items:flex-start}
+        .sidebar{width:290px;flex-shrink:0}
+        .main{flex:1;min-width:0}
+        .admin-sidebar{width:260px;flex-shrink:0;position:sticky;top:60px}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px;transition:box-shadow .4s,border-color .4s}
+        .card h3{font-size:.88rem;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+        .card-ora{border-left:4px solid var(--ora)}.card-cyan{border-left:4px solid var(--cyan)}
+        .card.highlight-pulse{animation:cardPulse .8s ease}
+        @keyframes cardPulse{0%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,.1)}100%{box-shadow:var(--shadow)}}
+
+        /* Welcome */
+        .welcome-card{background:linear-gradient(135deg,var(--pri2),#7c3aed);border:none;color:#fff;padding:16px;position:relative;overflow:hidden}
+        .welcome-card::before{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;background:rgba(255,255,255,.06);border-radius:50%}
+        .welcome-name{font-size:1rem;font-weight:800;margin-bottom:2px}
+        .welcome-sub{font-size:.72rem;opacity:.85;margin-bottom:6px;line-height:1.4}
+        .pick-edge{display:inline-flex;align-items:center;gap:0;font-size:.95rem;font-weight:900;letter-spacing:-.5px;margin-bottom:6px}
+        .pick-edge .pe-pick{opacity:.7}
+        .pick-edge .pe-num{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);border-radius:6px;padding:1px 7px;margin:0 2px;font-size:1.05rem;min-width:24px;text-align:center;transition:all .3s}
+        .pick-edge .pe-num.active{background:rgba(255,255,255,.35);transform:scale(1.15);box-shadow:0 0 12px rgba(255,255,255,.2)}
+        .pick-edge .pe-edge{background:linear-gradient(90deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+        /* Preset section labels */
+        .preset-section-label{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+        .preset-section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+        .preset-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:10px 0}
+
+        /* Date chips */
+        .date-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
+        .date-chip{padding:5px 9px;border-radius:8px;border:2px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s;font-size:.68rem;font-weight:700;display:flex;align-items:center;gap:4px}
+        .date-chip:hover{border-color:var(--pri);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+        .date-chip.active{border-color:var(--pri);background:var(--pri-g);color:var(--pri);box-shadow:0 0 0 2px var(--pri-g)}
+        .date-chip .si{font-size:.85rem}
+        .stag{font-size:.48rem;font-weight:800;padding:0 3px;border-radius:2px;margin-left:1px}
+        .stag-win{background:var(--ok-g);color:var(--ok)}.stag-new{background:var(--warn-g);color:var(--warn)}
+
+        /* Date-based description */
+        .strat-desc{font-size:.66rem;color:var(--text3);margin-top:6px;padding:6px 8px;background:var(--surface2);border-radius:8px;line-height:1.4}
+        .strat-desc strong{color:var(--text)}
+        .strat-desc .strat-config-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+        .sct{font-size:.56rem;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--text2)}
+        .sct.hl{background:var(--ora-g);color:var(--ora);border-color:rgba(230,81,0,.2)}
+        .save-custom{display:flex;gap:4px;margin-top:6px}
+        .save-custom input{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:.7rem}
+        .save-custom button{padding:5px 10px;border:1px solid var(--pri);border-radius:6px;background:var(--pri);color:#fff;font-size:.65rem;font-weight:700;cursor:pointer;white-space:nowrap}
+
+        /* ===== TREND TYPE TABS ===== */
+        .trend-tabs{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+        .trend-tab{padding:4px 8px;border-radius:7px;border:2px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s;font-size:.6rem;font-weight:800;display:flex;align-items:center;gap:4px;position:relative;user-select:none}
+        .trend-tab:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.06)}
+        .trend-tab .tt-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+        .trend-tab .tt-count{font-size:.5rem;font-weight:700;padding:0 3px;border-radius:3px;margin-left:1px}
+        .trend-tab .tt-arrow{font-size:.5rem;margin-left:1px;transition:transform .2s}
+        .trend-tab.open .tt-arrow{transform:rotate(180deg)}
+        /* Tab colors */
+        .trend-tab.tt-sums{border-color:var(--ora)}.trend-tab.tt-sums .tt-dot{background:var(--ora)}.trend-tab.tt-sums .tt-count{background:var(--ora-g);color:var(--ora)}.trend-tab.tt-sums.open{background:var(--ora-g)}
+        .trend-tab.tt-td{border-color:var(--ok)}.trend-tab.tt-td .tt-dot{background:var(--ok)}.trend-tab.tt-td .tt-count{background:var(--ok-g);color:var(--ok)}.trend-tab.tt-td.open{background:var(--ok-g)}
+        .trend-tab.tt-delta{border-color:var(--cyan)}.trend-tab.tt-delta .tt-dot{background:var(--cyan)}.trend-tab.tt-delta .tt-count{background:var(--cyan-g);color:var(--cyan)}.trend-tab.tt-delta.open{background:var(--cyan-g)}
+        .trend-tab.tt-dp{border-color:var(--pri)}.trend-tab.tt-dp .tt-dot{background:var(--pri)}.trend-tab.tt-dp .tt-count{background:var(--pri-g);color:var(--pri)}.trend-tab.tt-dp.open{background:var(--pri-g)}
+        .trend-tab.tt-monthly{border-color:var(--amber)}.trend-tab.tt-monthly .tt-dot{background:var(--amber)}.trend-tab.tt-monthly .tt-count{background:var(--amber-g);color:var(--amber)}.trend-tab.tt-monthly.open{background:var(--amber-g)}
+        .trend-tab.has-fire::after{content:'🔥';position:absolute;top:-5px;right:-4px;font-size:.5rem}
+
+        /* Trend group (collapsible) */
+        .trend-group{overflow:hidden;max-height:0;transition:max-height .3s ease;margin-bottom:0}
+        .trend-group.open{max-height:500px;margin-bottom:4px}
+
+        /* Trend rows inside groups */
+        .trend-table{width:100%;border-collapse:separate;border-spacing:0 2px}
+        .trend-table td{padding:3px 5px;font-size:.62rem;font-weight:600;vertical-align:middle;cursor:pointer;transition:all .15s}
+        .trow{background:var(--surface);border-radius:6px}
+        .trow:hover{background:var(--surface2)}
+        .trow.active td{background:var(--pri-g)}
+        .trow td:first-child{border-radius:6px 0 0 6px;width:14px}
+        .trow td:last-child{border-radius:0 6px 6px 0;text-align:center}
+        .tdot{width:6px;height:6px;border-radius:50%;display:inline-block}
+        .tdot-sums{background:var(--ora)}.tdot-td{background:var(--ok)}.tdot-delta{background:var(--cyan)}.tdot-dp{background:var(--pri)}.tdot-monthly{background:var(--amber)}
+        .tval{font-family:'Courier New',monospace;font-weight:800;letter-spacing:.5px}
+        .tstreak{font-family:'Courier New',monospace;font-weight:800;font-size:.58rem;padding:1px 4px;border-radius:4px;display:inline-block}
+        .tstreak-sums{background:var(--ora-g);color:var(--ora)}.tstreak-td{background:var(--ok-g);color:var(--ok)}.tstreak-delta{background:var(--cyan-g);color:var(--cyan)}.tstreak-dp{background:var(--pri-g);color:var(--pri)}.tstreak-monthly{background:var(--amber-g);color:var(--amber)}
+        .tstatus{font-size:.5rem;font-weight:800;padding:1px 4px;border-radius:3px;white-space:nowrap}
+        .tstatus-live{background:var(--ok-g);color:var(--ok)}.tstatus-broke{background:var(--err-g);color:var(--err)}
+
+        /* FIRE GLOW for streaks ≥ 5 */
+        .trow.on-fire{animation:fireGlow 1.5s ease-in-out infinite alternate;position:relative}
+        .trow.on-fire td:first-child::before{content:'🔥';position:absolute;left:-1px;top:50%;transform:translateY(-50%);font-size:.45rem}
+        @keyframes fireGlow{
+            0%{background:rgba(230,81,0,.06);box-shadow:inset 0 0 0 1px rgba(230,81,0,.12)}
+            33%{background:rgba(239,68,68,.07);box-shadow:inset 0 0 0 1px rgba(239,68,68,.15)}
+            66%{background:rgba(245,158,11,.08);box-shadow:inset 0 0 0 1px rgba(245,158,11,.15)}
+            100%{background:rgba(251,146,60,.06);box-shadow:inset 0 0 0 1px rgba(251,146,60,.12)}
+        }
+        :root[data-theme="dark"] .trow.on-fire{animation:fireGlowDark 1.5s ease-in-out infinite alternate}
+        @keyframes fireGlowDark{
+            0%{background:rgba(251,146,60,.12);box-shadow:inset 0 0 0 1px rgba(251,146,60,.2)}
+            33%{background:rgba(239,68,68,.12);box-shadow:inset 0 0 0 1px rgba(239,68,68,.2)}
+            66%{background:rgba(245,158,11,.14);box-shadow:inset 0 0 0 1px rgba(245,158,11,.2)}
+            100%{background:rgba(251,146,60,.1);box-shadow:inset 0 0 0 1px rgba(251,146,60,.18)}
+        }
+
+        /* Form */
+        .fg{margin-bottom:10px}
+        .fg label{display:block;font-size:.7rem;font-weight:700;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+        .fg select,.fg input[type=date],.fg input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.82rem}
+        .fg select:focus,.fg input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-g)}
+        .btn{width:100%;padding:10px;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;transition:.2s}
+        .btn-run{background:linear-gradient(90deg,var(--ora),var(--err));color:#fff}
+        .btn-run.prediction-mode{background:linear-gradient(90deg,var(--pri2),#7c3aed)}
+        .btn-run:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.15)}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+        .mode-toggle{display:flex;gap:0;margin-bottom:10px;background:var(--surface2);border-radius:10px;padding:3px;border:1px solid var(--border)}
+        .mode-toggle input[type=radio]{display:none}
+        .mode-toggle label{flex:1;padding:8px 6px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;text-align:center;transition:.2s;color:var(--text2);line-height:1.3}
+        .mode-toggle label .mode-icon{display:block;font-size:1.1rem;margin-bottom:2px}
+        .mode-toggle label .mode-sub{display:block;font-size:.58rem;font-weight:500;color:var(--text3);margin-top:1px}
+        .mode-toggle input:checked+label{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+        .mode-toggle input#modePrediction:checked+label{background:var(--pri-g);color:var(--pri);border:1px solid rgba(99,102,241,.2)}
+        .query-guard{background:var(--warn-g);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+        .query-guard-title{font-size:.72rem;font-weight:800;color:var(--warn);margin-bottom:4px}
+        .query-guard-meter{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin:6px 0}
+        .query-guard-fill{height:100%;border-radius:3px;transition:width .3s,background .3s}
+        .query-guard-stats{display:flex;gap:8px;font-size:.65rem;color:var(--text2);flex-wrap:wrap}
+        .query-guard-stats span{font-weight:700}
+        .query-guard.danger{background:var(--err-g);border-color:rgba(239,68,68,.25)}
+        .query-guard.danger .query-guard-title{color:var(--err)}
+        .query-guard-cap{font-size:.6rem;color:var(--text3);margin-top:4px;padding:3px 6px;background:var(--surface);border-radius:4px}
+
+        /* Seeds + Hots + Bands + Delta + Autopsy — unchanged from v4 */
+        .seed-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+        .seed-chip{padding:5px 10px;border-radius:8px;font-size:.73rem;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--surface);transition:.15s;font-family:'Courier New',monospace;letter-spacing:1px}
+        .seed-chip:hover{border-color:var(--pri)}
+        .seed-chip.selected{border-color:var(--ok);background:var(--ok-g);color:var(--ok)}
+        .seed-chip .tod{font-size:.58rem;font-weight:400;color:var(--text3);font-family:Arial,sans-serif;letter-spacing:0}
+        .seed-info{font-size:.7rem;color:var(--text3);margin-bottom:6px}
+        .norm-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+        .norm-tag{font-size:.66rem;padding:2px 6px;border-radius:5px;background:var(--pri-g);color:var(--pri);font-family:monospace;font-weight:700}
+        .hd-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+        .hd-chip{padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface);font-family:monospace;transition:.15s}
+        .hd-chip:hover{border-color:var(--warn);background:var(--warn-g)}
+        .hd-chip.active{border-color:var(--warn);background:var(--warn-g);color:var(--warn)}
+        .hd-chip .cnt{font-size:.62rem;color:var(--text3);font-family:Arial;margin-left:2px}
+        .hd-label{font-size:.66rem;font-weight:700;color:var(--text2);margin-bottom:3px}
+        .band-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+        .band-group{border:1px solid var(--border);border-radius:8px;padding:5px 7px;background:var(--surface);cursor:pointer;transition:.15s;position:relative}
+        .band-group:hover{border-color:var(--pri);background:var(--pri-g)}
+        .band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
+        .band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .band-header{display:flex;align-items:center;gap:4px;margin-bottom:3px}
+        .band-name{font-size:.68rem;font-weight:800;color:var(--text);font-family:monospace}
+        .band-count{font-size:.58rem;color:var(--text3)}
+        .band-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:3px}
+        .band-bar-fill{height:100%;border-radius:2px}
+        .band-pairs{display:flex;flex-wrap:wrap;gap:2px}
+        .band-pair{font-size:.6rem;font-family:monospace;color:var(--text2);padding:1px 3px;border-radius:3px;background:var(--surface2)}
+        .band-divider{width:100%;height:1px;background:var(--border);margin:8px 0 6px}
+        .sum-stat{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:.66rem;font-weight:600;background:var(--surface);border:1px solid var(--border)}
+        .sum-stat .sv{font-weight:800;font-family:monospace;color:var(--text)}
+        .sum-range-bar{display:flex;align-items:flex-end;gap:1px;height:36px;margin:6px 0}
+        .sum-bar-col{flex:1;min-width:0;border-radius:2px 2px 0 0;cursor:pointer;transition:.15s}
+        .sum-bar-col:hover{opacity:.8;transform:scaleY(1.05);transform-origin:bottom}
+        .sum-band-group{border:1px solid var(--border);border-radius:8px;padding:5px 7px;background:var(--surface);cursor:pointer;transition:.15s;position:relative;min-width:65px}
+        .sum-band-group:hover{border-color:var(--ora);background:var(--ora-g)}
+        .sum-band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
+        .sum-band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .td-band-group{border:1px solid var(--border);border-radius:8px;padding:5px 7px;background:var(--surface);cursor:pointer;transition:.15s;position:relative;min-width:60px}
+        .td-band-group:hover{border-color:#10b981;background:rgba(16,185,129,.06)}
+        .td-band-group.hot{border-color:var(--ora);background:var(--ora-g)}
+        .td-band-group.hot::after{content:'🔥';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .td-band-group.cold{border-color:rgba(99,195,255,.35);background:rgba(99,195,255,.06)}
+        .td-band-group.cold::after{content:'❄️';position:absolute;top:-6px;right:-4px;font-size:.55rem}
+        .delta-bar-row{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+        .delta-lbl{width:36px;font-size:.68rem;text-align:right;font-weight:700;font-family:'Courier New',monospace;flex-shrink:0}
+        .delta-bar{flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden}
+        .delta-bar-fill{height:100%;border-radius:3px}
+        .delta-cnt{width:30px;font-size:.62rem;font-weight:700;color:var(--text2);font-family:'Courier New',monospace}
+        .dp4-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+        .dp4-chip{padding:5px 9px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:'Courier New',monospace;font-size:.76rem;font-weight:700;letter-spacing:1.5px;min-width:50px;transition:.15s;cursor:pointer;text-align:center}
+        .dp4-chip:hover{border-color:var(--pri);transform:translateY(-1px)}
+        .dp4-chip .dp4c{font-size:.58rem;color:var(--text3);font-weight:600;font-family:Arial;display:block;letter-spacing:0}
+        .dp4-hot{border-color:var(--ora);background:var(--ora-g);color:var(--ora)}
+        .dp4-warm{border-color:var(--warn);background:var(--warn-g);color:var(--warn)}
+        .dp5-chip{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:'Courier New',monospace;font-size:.72rem;font-weight:700;letter-spacing:1.5px;transition:.15s;cursor:pointer}
+        .dp5-chip:hover{border-color:var(--pri)}
+        .dp5-chip.winner{background:var(--ok-g);border-color:var(--ok);color:var(--ok)}
+        .autopsy-input{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .autopsy-input input{width:160px;font-family:'Courier New',monospace;text-align:center;font-size:.95rem;letter-spacing:2px;padding:6px 10px;border:2px solid var(--pri);border-radius:8px;background:var(--pri-g)}
+        .autopsy-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--pri);background:var(--pri);color:#fff;font-weight:700;font-size:.8rem;cursor:pointer}
+        .admin-info{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow);margin-bottom:12px}
+        .admin-badge{font-size:.78rem;font-weight:700;color:var(--pri);margin-bottom:6px}
+        .admin-stats{display:flex;flex-direction:column;gap:6px}
+        .admin-stat{font-size:.72rem;display:flex;justify-content:space-between}
+        .admin-stat .label{color:var(--text3)}.admin-stat .value{color:var(--text);font-weight:600;font-family:monospace}
+        .admin-health{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow);margin-bottom:12px}
+        .admin-health h4,.admin-limits h4,.admin-recent h4{font-size:.78rem;margin-bottom:8px}
+        .health-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.7rem}
+        .health-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.health-dot.green{background:#10b981}.health-dot.yellow{background:#f59e0b}
+        .health-label{flex:1;color:var(--text2)}.health-value{font-weight:700;font-family:monospace;color:var(--text)}
+        .admin-limits{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow);margin-bottom:12px}
+        .limit-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:.7rem}
+        .limit-label{color:var(--text2)}.limit-value{font-weight:700;font-family:monospace;color:var(--text);padding:2px 6px;background:var(--surface2);border-radius:4px}
+        .limit-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:2px;overflow:hidden}
+        .limit-bar-fill{height:100%;border-radius:2px}
+        .admin-recent{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow)}
+        .recent-query{padding:6px 8px;border-radius:6px;background:var(--surface2);margin-bottom:4px;font-size:.68rem;border:1px solid transparent;cursor:pointer;transition:.15s}
+        .recent-query:hover{border-color:var(--pri);background:var(--pri-g)}
+        .rq-state{font-weight:700;color:var(--text)}.rq-game{color:var(--pri);font-weight:600}
+        .rq-date{color:var(--text3);font-size:.62rem}
+        .rq-cost{float:right;font-weight:700;font-family:monospace}.rq-cost.heavy{color:var(--err)}.rq-cost.light{color:var(--ok)}
+        /* Investigation / Candidates Panel */
+        .inv-panel{border-top:3px solid var(--pri)}
+        .inv-tabs{display:flex;border-bottom:2px solid var(--border);margin:-14px -14px 12px;padding:0 14px}
+        .inv-tab{padding:10px 16px;font-size:.76rem;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--text3);transition:.15s;margin-bottom:-2px}
+        .inv-tab:hover{color:var(--text)}
+        .inv-tab.active{color:var(--pri);border-bottom-color:var(--pri)}
+        .inv-tab .inv-badge{font-size:.55rem;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:middle}
+        .inv-pane{display:none}.inv-pane.active{display:block}
+
+        /* Investigation table */
+        .inv-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.66rem}
+        .inv-table thead th{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);padding:5px 6px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)}
+        .inv-table tbody td{padding:5px 6px;border-bottom:1px solid var(--border2);vertical-align:middle}
+        .inv-table tbody tr{cursor:pointer;transition:.1s}
+        .inv-table tbody tr:hover{background:var(--pri-g)}
+        .inv-table tbody tr.selected{background:var(--ok-g)}
+        .inv-table tbody tr.selected td{font-weight:700}
+        .inv-table .inv-cb{width:14px;height:14px;accent-color:var(--pri);cursor:pointer;vertical-align:middle}
+        .inv-mono{font-family:'Courier New',monospace;font-weight:700;letter-spacing:.5px;font-size:.64rem}
+        .inv-pw{font-size:.56rem;color:var(--text3);font-family:'Courier New',monospace;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .inv-pw-count{font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:4px}
+        .inv-table-wrap{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+        .inv-summary{font-size:.68rem;color:var(--text2);margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap}
+        .inv-summary strong{color:var(--text)}
+
+        /* Candidate filters */
+        .cand-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+        .cand-fg{display:flex;flex-direction:column;gap:2px}
+        .cand-fg label{font-size:.56rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px}
+        .cand-fg input[type=text]{padding:4px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:.68rem;width:90px;font-family:'Courier New',monospace}
+        .cand-toggles{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+        .cand-toggle{padding:3px 8px;border-radius:5px;font-size:.58rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:.15s;display:flex;align-items:center;gap:3px;user-select:none}
+        .cand-toggle:hover{border-color:var(--pri)}
+        .cand-toggle.on{border-color:var(--pri);background:var(--pri-g);color:var(--pri)}
+        .cand-toggle .ct-check{width:10px;height:10px;border-radius:2px;border:1.5px solid var(--border);display:inline-block;transition:.15s}
+        .cand-toggle.on .ct-check{background:var(--pri);border-color:var(--pri)}
+        .cand-type-toggles{display:flex;gap:3px;margin-bottom:6px}
+        .cand-type-btn{padding:2px 7px;border-radius:4px;font-size:.56rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text3)}
+        .cand-type-btn.on{background:var(--pri-g);border-color:var(--pri);color:var(--pri)}
+
+        /* Candidate numbers grid */
+        .cand-grid{display:flex;flex-wrap:wrap;gap:3px;max-height:200px;overflow-y:auto;padding:4px 0}
+        .cand-num{padding:3px 7px;border-radius:5px;font-family:'Courier New',monospace;font-size:.68rem;font-weight:700;letter-spacing:1px;border:1px solid var(--border);background:var(--surface);transition:.15s;cursor:pointer}
+        .cand-num:hover{border-color:var(--pri);background:var(--pri-g)}
+        .cand-num.pw{border-color:var(--ok);background:var(--ok-g);color:var(--ok)}
+        .cand-month-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:.6rem;font-weight:700;background:var(--pri-g);color:var(--pri);border:1px solid rgba(99,102,241,.15);margin-bottom:6px;cursor:pointer}
+        .cand-month-tag .cmt-x{font-size:.55rem;cursor:pointer;opacity:.6}
+        .cand-month-tag .cmt-x:hover{opacity:1}
+        /* Trend category sub-tabs */
+        .tc-tabs{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+        .tc-tab{padding:5px 10px;border-radius:7px;border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:.62rem;font-weight:700;transition:all .15s;display:flex;align-items:center;gap:4px}
+        .tc-tab:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.06)}
+        .tc-tab .tc-dot{width:6px;height:6px;border-radius:50%}
+        .tc-tab .tc-cnt{font-size:.5rem;font-weight:800;padding:0 4px;border-radius:3px;margin-left:1px}
+        .tc-tab.tc-sums{border-color:var(--ora)}.tc-tab.tc-sums .tc-dot{background:var(--ora)}.tc-tab.tc-sums .tc-cnt{background:var(--ora-g);color:var(--ora)}.tc-tab.tc-sums.active{background:var(--ora-g);color:var(--ora)}
+        .tc-tab.tc-td{border-color:var(--ok)}.tc-tab.tc-td .tc-dot{background:var(--ok)}.tc-tab.tc-td .tc-cnt{background:var(--ok-g);color:var(--ok)}.tc-tab.tc-td.active{background:var(--ok-g);color:var(--ok)}
+        .tc-tab.tc-delta{border-color:var(--cyan)}.tc-tab.tc-delta .tc-dot{background:var(--cyan)}.tc-tab.tc-delta .tc-cnt{background:var(--cyan-g);color:var(--cyan)}.tc-tab.tc-delta.active{background:var(--cyan-g);color:var(--cyan)}
+        .tc-tab.tc-dp{border-color:var(--pri)}.tc-tab.tc-dp .tc-dot{background:var(--pri)}.tc-tab.tc-dp .tc-cnt{background:var(--pri-g);color:var(--pri)}.tc-tab.tc-dp.active{background:var(--pri-g);color:var(--pri)}
+        .tc-tab.tc-monthly{border-color:var(--amber)}.tc-tab.tc-monthly .tc-dot{background:var(--amber)}.tc-tab.tc-monthly .tc-cnt{background:var(--amber-g);color:var(--amber)}.tc-tab.tc-monthly.active{background:var(--amber-g);color:var(--amber)}
+        .tc-pane{display:none}.tc-pane.active{display:block}
+
+        /* Trend investigation table (wide, horizontally scrollable) */
+        .trend-inv-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;max-height:280px;overflow-y:auto}
+        .trend-inv-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;font-size:.6rem}
+        .trend-inv-table thead th{font-size:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text3);padding:4px 5px;text-align:left;border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--surface);white-space:nowrap;z-index:2}
+        .trend-inv-table thead th.th-group{border-bottom:2px solid var(--pri);color:var(--pri)}
+        .trend-inv-table thead th.th-group-ora{border-bottom:2px solid var(--ora);color:var(--ora)}
+        .trend-inv-table thead th.th-group-cyan{border-bottom:2px solid var(--cyan);color:var(--cyan)}
+        .trend-inv-table tbody td{padding:4px 5px;border-bottom:1px solid var(--border2);vertical-align:top;white-space:nowrap}
+        .trend-inv-table tbody tr{cursor:pointer;transition:.1s}
+        .trend-inv-table tbody tr:hover{background:var(--pri-g)}
+        .trend-inv-table tbody tr.selected{background:var(--ok-g)}
+        .trend-inv-table .ti-vals{font-family:'Courier New',monospace;font-size:.58rem;line-height:1.5;white-space:pre-wrap;max-width:60px}
+        .trend-inv-table .ti-dp{font-family:'Courier New',monospace;font-size:.56rem;line-height:1.4;white-space:pre-wrap;max-width:50px}
+        .ti-dp-s{color:var(--text)}.ti-dp-d{color:var(--ora)}.ti-dp-dd{color:var(--err)}.ti-dp-t{color:var(--pri)}.ti-dp-q{color:var(--cyan)}
+        .ti-state{font-size:.54rem;font-weight:600;color:var(--pri)}
+
+        /* Candidate checkboxes: select-all row + column */
+        .cand-select-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)}
+        .cand-select-bar label{font-size:.62rem;font-weight:700;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px}
+        .cand-select-bar input[type=checkbox]{accent-color:var(--pri);width:13px;height:13px;cursor:pointer}
+        .cand-select-bar .cs-info{font-size:.58rem;color:var(--text3);margin-left:auto}
+        .cand-grid-sel{display:flex;flex-wrap:wrap;gap:3px;max-height:220px;overflow-y:auto;padding:4px 0}
+        .cand-item{display:flex;align-items:center;gap:2px}
+        .cand-item input[type=checkbox]{width:11px;height:11px;accent-color:var(--pri);cursor:pointer;flex-shrink:0}
+        .cand-item .cand-num{margin:0}
+        @media(max-width:1200px){.admin-sidebar{display:none}}
+        @media(max-width:900px){.layout{flex-direction:column}.sidebar{width:100%}.nav-breadcrumb{display:none}}
+    </style>
+</head>
+<body>
+
+<nav class="navbar"><div class="nav-c">
+    <a href="#" class="nav-brand"><span class="nb-logo">🎰</span> MyLottoData <span class="nb-mld">v2</span></a>
+    <div class="nav-breadcrumb">
+        <span>Home</span><span class="nb-sep">›</span><span>Tools</span><span class="nb-sep">›</span><span class="nb-current">🧪 Backtest</span>
+    </div>
+    <div class="nav-right">
+        <div class="theme-pill" onclick="toggleTheme()">
+            <span class="tp-opt active" id="tpLight">☀️</span>
+            <span class="tp-opt" id="tpDark">🌙</span>
+        </div>
+    </div>
+</div></nav>
+
+<div class="container"><div class="layout">
+
+<!-- ===== LEFT SIDEBAR ===== -->
+<div class="sidebar">
+    <div class="card welcome-card">
+        <div class="welcome-name">Welcome, Will Powers 👋</div>
+        <div class="pick-edge"><span class="pe-pick">Pick</span><span class="pe-num" data-game="pick2">2</span><span class="pe-num" data-game="pick3">3</span><span class="pe-num active" data-game="pick4">4</span><span class="pe-num" data-game="pick5">5</span><span class="pe-edge">Edge</span></div>
+        <div class="welcome-sub">Stop guessing and start winning.<br>Use the presets below or build your own strategy.</div>
+    </div>
+
+    <!-- PRESETS CARD -->
+    <div class="card" style="padding:12px">
+        <!-- ─── DATE-BASED ─── -->
+        <div class="preset-section-label">📅 Date-Based</div>
+        <div class="date-grid" id="dateGrid">
+            <div class="date-chip active" onclick="applyStrat('sniper',this)"><span class="si">🎯</span> Sniper <span class="stag stag-win">WIN</span></div>
+            <div class="date-chip" onclick="applyStrat('widenet',this)"><span class="si">🕸️</span> Wide Net <span class="stag stag-win">WIN</span></div>
+            <div class="date-chip" onclick="applyStrat('shadow',this)"><span class="si">👥</span> Shadow <span class="stag stag-win">WIN</span></div>
+            <div class="date-chip" onclick="applyStrat('rewind',this)"><span class="si">⏪</span> Rewind</div>
+            <div class="date-chip" onclick="applyStrat('hots',this)"><span class="si">🌶️</span> Hots <span class="stag stag-new">NEW</span></div>
+            <div class="date-chip" onclick="applyStrat('nexus',this)"><span class="si">🔮</span> Nexus</div>
+        </div>
+        <!-- Date-based description sits HERE, below date chips, above divider -->
+        <div class="strat-desc" id="stratDesc">
+            <strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list.<br><em style="color:var(--ok)">Win #1: Rank #18/226 → $8,100 (72x ROI)</em>
+            <div class="strat-config-tags"><span class="sct">FL</span><span class="sct">Pick 4</span><span class="sct">1 seed</span><span class="sct hl">2DP filter</span><span class="sct">Evening</span><span class="sct">2019-09-15</span></div>
+        </div>
+        <div class="save-custom"><input type="text" placeholder="My custom strategy..." id="customStratName"><button onclick="saveCustom()">💾 Save</button></div>
+
+        <div class="preset-divider"></div>
+
+        <!-- ─── TREND-BASED TABLE ─── -->
+        <div class="preset-section-label">📈 Trend-Based <span style="font-weight:500;font-size:.5rem;text-transform:none;letter-spacing:0">&nbsp;consecutive day · breaks reset streak</span></div>
+        <div class="trend-tabs">
+            <div class="trend-tab tt-sums has-fire open" onclick="toggleTrendGroup('sums')"><span class="tt-dot"></span> Sums <span class="tt-count">3</span><span class="tt-arrow">▾</span></div>
+            <div class="trend-tab tt-td has-fire" onclick="toggleTrendGroup('td')"><span class="tt-dot"></span> TD <span class="tt-count">2</span><span class="tt-arrow">▾</span></div>
+            <div class="trend-tab tt-delta has-fire" onclick="toggleTrendGroup('delta')"><span class="tt-dot"></span> ΔSumTD <span class="tt-count">3</span><span class="tt-arrow">▾</span></div>
+            <div class="trend-tab tt-dp" onclick="toggleTrendGroup('dp')"><span class="tt-dot"></span> DP <span class="tt-count">3</span><span class="tt-arrow">▾</span></div>
+            <div class="trend-tab tt-monthly has-fire" onclick="toggleTrendGroup('monthly')"><span class="tt-dot"></span> yyyy-mm <span class="tt-count">2</span><span class="tt-arrow">▾</span></div>
+        </div>
+
+        <!-- Sums group -->
+        <div class="trend-group open" id="tg-sums">
+            <table class="trend-table"><tbody>
+                <tr class="trow on-fire" onclick="clickTrend(this)" data-target="hotSumsCard"><td><span class="tdot tdot-sums"></span></td><td class="tval">Σ19</td><td><span class="tstreak tstreak-sums">7d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotSumsCard"><td><span class="tdot tdot-sums"></span></td><td class="tval">Σ24</td><td><span class="tstreak tstreak-sums">3d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotSumsCard"><td><span class="tdot tdot-sums"></span></td><td class="tval">Σ15</td><td><span class="tstreak tstreak-sums">2d</span></td><td><span class="tstatus tstatus-broke">✕ BROKE</span></td></tr>
+            </tbody></table>
+        </div>
+
+        <!-- TD group -->
+        <div class="trend-group" id="tg-td">
+            <table class="trend-table"><tbody>
+                <tr class="trow on-fire" onclick="clickTrend(this)" data-target="hotTDCard"><td><span class="tdot tdot-td"></span></td><td class="tval">TD32</td><td><span class="tstreak tstreak-td">6d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotTDCard"><td><span class="tdot tdot-td"></span></td><td class="tval">TD45</td><td><span class="tstreak tstreak-td">3d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+            </tbody></table>
+        </div>
+
+        <!-- ΔSumTD group -->
+        <div class="trend-group" id="tg-delta">
+            <table class="trend-table"><tbody>
+                <tr class="trow on-fire" onclick="clickTrend(this)" data-target="deltaSumTDCard"><td><span class="tdot tdot-delta"></span></td><td class="tval">|14|</td><td><span class="tstreak tstreak-delta">8d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow on-fire" onclick="clickTrend(this)" data-target="deltaSumTDCard"><td><span class="tdot tdot-delta"></span></td><td class="tval">|6|</td><td><span class="tstreak tstreak-delta">5d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="deltaSumTDCard"><td><span class="tdot tdot-delta"></span></td><td class="tval">|22|</td><td><span class="tstreak tstreak-delta">2d</span></td><td><span class="tstatus tstatus-broke">✕ BROKE</span></td></tr>
+            </tbody></table>
+        </div>
+
+        <!-- DP group -->
+        <div class="trend-group" id="tg-dp">
+            <table class="trend-table"><tbody>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotDigitsCard"><td><span class="tdot tdot-dp"></span></td><td class="tval">05</td><td><span class="tstreak tstreak-dp">4d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotDigitsCard"><td><span class="tdot tdot-dp"></span></td><td class="tval">57</td><td><span class="tstreak tstreak-dp">2d</span></td><td><span class="tstatus tstatus-broke">✕ BROKE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotDigitsCard"><td><span class="tdot tdot-dp"></span></td><td class="tval">78</td><td><span class="tstreak tstreak-dp">1d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+            </tbody></table>
+        </div>
+
+        <!-- Monthly group -->
+        <div class="trend-group" id="tg-monthly">
+            <table class="trend-table"><tbody>
+                <tr class="trow on-fire" onclick="clickTrend(this)" data-target="hotSumsCard"><td><span class="tdot tdot-monthly"></span></td><td class="tval">2025-02</td><td><span class="tstreak tstreak-monthly">9d</span></td><td><span class="tstatus tstatus-live">● LIVE</span></td></tr>
+                <tr class="trow" onclick="clickTrend(this)" data-target="hotSumsCard"><td><span class="tdot tdot-monthly"></span></td><td class="tval">2024-02</td><td><span class="tstreak tstreak-monthly">4d</span></td><td><span class="tstatus tstatus-broke">✕ BROKE</span></td></tr>
+            </tbody></table>
+        </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="card card-ora">
+        <h3>⚙️ Configuration</h3>
+        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="New York">New York</option><option value="Ohio">Ohio</option><option value="Pennsylvania">Pennsylvania</option><option value="Texas">Texas</option></select></div>
+        <div class="fg"><label>Game</label><select id="gameType" onchange="updateGame()"><option value="pick2">Pick 2 (1DP–2DP)</option><option value="pick3">Pick 3 (1DP–3DP)</option><option value="pick4" selected>Pick 4 (1DP–4DP)</option><option value="pick5">Pick 5 (1DP–5DP)</option></select></div>
+        <div class="fg"><label>Start Date</label><input type="date" id="startDate" onchange="updateQueryEstimate()"></div>
+        <div class="fg"><label>End Date</label><input type="date" id="endDate" onchange="updateQueryEstimate()"></div>
+        <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
+        <div class="fg"><label>DP Filter</label><select id="dpSize"><option value="0">None</option><option value="2" selected>2DP on last seed</option><option value="3">3DP on last seed</option></select></div>
+        <div class="fg"><label>Show Top</label><select id="sugLimit"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="500">500</option></select></div>
+        <div class="query-guard" id="queryGuard"><div class="query-guard-title">⚡ Query Cost Estimate</div><div class="query-guard-meter"><div class="query-guard-fill" id="queryGuardFill" style="width:15%;background:var(--ok)"></div></div><div class="query-guard-stats"><span>Seeds: <span id="estSeeds">10</span></span><span>Cands: <span id="estCands">~330</span></span><span>Time: <span id="estTime">~2s</span></span></div><div class="query-guard-cap">📏 Max: <strong>90 days</strong> single state · <strong>14 days</strong> All States</div></div>
+        <div class="mode-toggle"><input type="radio" name="mode" id="modeBacktest" value="backtest" checked onchange="switchMode('backtest')"><label for="modeBacktest"><span class="mode-icon">🧪</span>Backtest<span class="mode-sub">Validate past draws</span></label><input type="radio" name="mode" id="modePrediction" value="prediction" onchange="switchMode('prediction')"><label for="modePrediction"><span class="mode-icon">🎯</span>Prediction<span class="mode-sub">Forward-looking plays</span></label></div>
+        <button class="btn btn-run" id="runBtn" onclick="runAction()"><span id="runBtnIcon">🧪</span> <span id="runBtnText">Run Backtest</span></button>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main">
+
+<!-- ===== MAIN CONTENT (DYNAMIC) ===== -->
+<div class="main">
+    <div class="card" id="seedCard"><h3>🌱 Seed Selection <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(click to select/deselect)</span></h3>
+        <div class="seed-info" id="seedInfo">Click "Run Backtest" to load seeds...</div>
+        <div class="seed-grid" id="seedGrid"></div>
+        <div class="norm-tags" id="normTags" style="display:none"></div>
+    </div>
+
+    <div class="card" id="hotDigitsCard"><h3>🔥 Hot Digits <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(from selected seeds)</span></h3>
+        <div id="hotDigitsBody"><div style="color:var(--text3);font-size:.7rem;padding:10px">Run backtest to populate...</div></div>
+    </div>
+
+    <div class="card" id="hotSumsCard"><h3>🔢 Hot Sums <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(digit sum frequency)</span></h3>
+        <div id="hotSumsBody"><div style="color:var(--text3);font-size:.7rem;padding:10px">Run backtest to populate...</div></div>
+    </div>
+
+    <div class="card" id="hotTDCard"><h3>📈 Hot TD <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(times drawn)</span></h3>
+        <div id="hotTDBody"><div style="color:var(--text3);font-size:.7rem;padding:10px">Run backtest to populate...</div></div>
+    </div>
+
+    <div class="card card-cyan" id="deltaSumTDCard"><h3>📐 ΔSumTD <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(Δ = Sum − TD)</span></h3>
+        <div id="deltaSumTDBody"><div style="color:var(--text3);font-size:.7rem;padding:10px">Run backtest to populate...</div></div>
+    </div>
+
+    <div class="card"><h3>🔬 Winner Autopsy <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(reverse-engineer against hot lists)</span></h3><div class="autopsy-input"><input type="text" placeholder="e.g. 8821 or 8821,3556" maxlength="30" id="autopsyInput"><button class="autopsy-btn" onclick="runAutopsy()">🔬 Autopsy</button><span style="font-size:.65rem;color:var(--text3)">Enter drawn number(s)</span></div></div>
+
+    <!-- ===== BOTTOM PANELS: Date-Based / Trend-Based toggle ===== -->
+    <div class="card" style="padding:0;overflow:hidden;border-top:3px solid var(--pri)">
+        <!-- Mode Toggle -->
+        <div style="display:flex;border-bottom:2px solid var(--border);background:var(--surface2)">
+            <div class="inv-tab active" onclick="switchBottomMode('date')" id="bmTab-date" style="flex:1;text-align:center;padding:10px">📅 Date-Based</div>
+            <div class="inv-tab" onclick="switchBottomMode('trend')" id="bmTab-trend" style="flex:1;text-align:center;padding:10px">📈 Trend-Based</div>
+        </div>
+
+        <!-- ====== DATE-BASED PANEL ====== -->
+        <div id="bm-date" style="padding:14px">
+            <div class="inv-tabs" style="margin:0 0 10px;padding:0;border-bottom:0">
+                <div class="inv-tab active" onclick="switchInvTab('d-inv',this)" style="font-size:.7rem;padding:6px 12px">🔍 Investigation <span class="inv-badge" style="background:var(--cyan-g);color:var(--cyan)">3</span></div>
+                <div class="inv-tab" onclick="switchInvTab('d-cand',this)" style="font-size:.7rem;padding:6px 12px">🎯 Candidates <span class="inv-badge" style="background:var(--ok-g);color:var(--ok)" id="dCandBadge">60</span></div>
+            </div>
+
+            <!-- Date Investigation -->
+            <div class="inv-pane active" id="pane-d-inv">
+                <div class="inv-summary"><span>Total rows: <strong>3</strong></span><span>Selected: <strong id="invSelCount">1</strong></span><span>Total count: <strong>18</strong></span><span>Past winners: <strong style="color:var(--ok)">6</strong></span></div>
+                <div class="inv-table-wrap">
+                    <table class="inv-table"><thead><tr><th style="width:24px"></th><th>Year</th><th>Month</th><th>Count</th><th>PWs</th><th>Pairs(2)</th><th>Pairs(3)</th><th>All Winners</th></tr></thead>
+                    <tbody>
+                        <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono">2019</td><td class="inv-mono">2019-11</td><td>6</td><td><span class="inv-pw-count" style="background:var(--ok-g);color:var(--ok)">6</span></td><td class="inv-mono" style="font-size:.56rem">27 79 59 29 57 25<br>47 24 16 17 12 26</td><td class="inv-mono" style="font-size:.56rem">257 279 259 579<br>147 247 127 126</td><td class="inv-pw">0685 2631 5691 8419 7295 3664 8306 8545 3480 0467</td></tr>
+                        <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono">2021</td><td class="inv-mono">2021-04</td><td>6</td><td><span class="inv-pw-count" style="background:var(--ok-g);color:var(--ok)">6</span></td><td class="inv-mono" style="font-size:.56rem">59 09 29 08 58 89<br>69 02 26 06 79 57</td><td class="inv-mono" style="font-size:.56rem">089 589 058 059<br>029 269 026 257</td><td class="inv-pw">1929 8011 0124 1728 4902 2164 6724 7010 5042 2438</td></tr>
+                        <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono">2025</td><td class="inv-mono">2025-11</td><td>6</td><td><span class="inv-pw-count" style="background:var(--warn-g);color:var(--warn)">0</span></td><td class="inv-mono" style="font-size:.56rem">59 09 29 08 58 89<br>79 57 27 25 69 02</td><td class="inv-mono" style="font-size:.56rem">089 589 058 059<br>279 259 579 069</td><td class="inv-pw">0589 0589 2975 2975 6029 6029</td></tr>
+                    </tbody></table>
+                </div>
+            </div>
+
+            <!-- Date Candidates -->
+            <div class="inv-pane" id="pane-d-cand">
+                <div class="cand-filters"><div class="cand-fg"><label>Digits incl.</label><input type="text" placeholder="2,4,9-12"></div><div class="cand-fg"><label>Sums incl.</label><input type="text" placeholder="2,4,9-12"></div><div class="cand-fg"><label>TD incl.</label><input type="text" placeholder="2,4,9-12"></div><div style="display:flex;gap:3px;align-items:flex-end"><div class="cand-type-btn on" onclick="this.classList.toggle('on')">S</div><div class="cand-type-btn on" onclick="this.classList.toggle('on')">D</div><div class="cand-type-btn" onclick="this.classList.toggle('on')">DD</div><div class="cand-type-btn on" onclick="this.classList.toggle('on')">T</div><div class="cand-type-btn" onclick="this.classList.toggle('on')">Q</div></div></div>
+                <div class="cand-toggles"><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Incl PWs</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Excl PWs</div><div class="cand-toggle on" onclick="this.classList.toggle('on')"><span class="ct-check"></span> De-dupe</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Unique</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Excl non-dup</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Neighbors</div></div>
+                <div class="cand-select-bar"><label><input type="checkbox" onclick="toggleAllCands(this,'dCandGrid')"> Select all</label><span class="cs-info">Showing: <strong>60</strong> · PWs: <strong style="color:var(--ok)">6</strong> · From: 72</span></div>
+                <div class="cand-grid-sel" id="dCandGrid">
+                    <div class="cand-item"><input type="checkbox"><span class="cand-num pw">1929</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">8011</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">0124</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">1728</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">4902</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2164</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">6724</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">7010</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">5042</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2438</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">9150</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">3752</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">1940</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1106</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">8022</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">9620</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">0635</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">7360</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">3806</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">4904</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">8570</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">5890</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">8807</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1812</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">9811</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2135</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1345</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">6713</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">9415</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">1899</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== TREND-BASED PANEL ====== -->
+        <div id="bm-trend" style="padding:14px;display:none">
+            <!-- Category tabs row -->
+            <div class="tc-tabs">
+                <div class="tc-tab tc-sums active" onclick="switchTrendCat('sums')"><span class="tc-dot"></span> Sums <span class="tc-cnt">3</span></div>
+                <div class="tc-tab tc-td" onclick="switchTrendCat('td')"><span class="tc-dot"></span> TD <span class="tc-cnt">2</span></div>
+                <div class="tc-tab tc-delta" onclick="switchTrendCat('delta')"><span class="tc-dot"></span> ΔSumTD <span class="tc-cnt">3</span></div>
+                <div class="tc-tab tc-dp" onclick="switchTrendCat('dp')"><span class="tc-dot"></span> DP <span class="tc-cnt">2</span></div>
+                <div class="tc-tab tc-monthly" onclick="switchTrendCat('monthly')"><span class="tc-dot"></span> yyyy-mm <span class="tc-cnt">2</span></div>
+            </div>
+
+            <!-- Inner tabs: Data / Candidates -->
+            <div class="inv-tabs" style="margin:0 0 10px;padding:0;border-bottom:0">
+                <div class="inv-tab active" onclick="switchInvTab('t-data',this)" id="tDataTab" style="font-size:.7rem;padding:6px 12px">🔍 Consecutive Data <span class="inv-badge" style="background:var(--ora-g);color:var(--ora)" id="tDataBadge">Sums</span></div>
+                <div class="inv-tab" onclick="switchInvTab('t-cand',this)" style="font-size:.7rem;padding:6px 12px">🎯 Candidates <span class="inv-badge" style="background:var(--ok-g);color:var(--ok)" id="tCandBadge">42</span></div>
+            </div>
+
+            <!-- === DATA PANE (switches by category) === -->
+            <div class="inv-pane active" id="pane-t-data">
+
+                <!-- SUMS -->
+                <div class="tc-pane active" id="tc-sums">
+                    <div class="inv-summary"><span>Type: <strong style="color:var(--ora)">Consecutive Sums</strong></span><span>Rows: <strong>3</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>
+                    <div class="trend-inv-wrap">
+                        <table class="trend-inv-table"><thead><tr>
+                            <th style="width:24px"></th><th>Sums</th><th>Cnt</th><th>Values</th><th>State</th><th>TD</th>
+                            <th class="th-group">1DPPs</th><th class="th-group">12DPPs</th>
+                            <th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-ora">2DPP(DD)</th><th class="th-group-ora">2DPP(T|TD)</th><th class="th-group-ora">2DPP(QF)</th>
+                            <th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th><th class="th-group-cyan">3DPP(D)</th>
+                            <th class="th-group">4DPPs</th><th class="th-group">4DPP(S)</th>
+                        </tr></thead><tbody>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">16</td><td>2</td><td class="ti-vals">1726<br>5137</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">60 48</td><td class="inv-mono" style="font-size:.54rem">1 2 6 7 1<br>3 5 7</td><td class="inv-mono" style="font-size:.54rem">217 617<br>317 517</td><td class="ti-dp" style="font-size:.52rem">12 16 17<br>26 27 67</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1609</span><br><span style="color:var(--ora)">1708</span><br><span style="color:var(--ora)">2608</span><br>3508<br>6703</td><td class="ti-dp ti-dp-d" style="font-size:.52rem"><span style="color:var(--ora)">2707</span><br>1519<br><span style="color:var(--ora)">1618</span><br>1339</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem"><span style="color:var(--err)">1717</span> 3535<br>2626</td><td class="ti-dp" style="font-size:.52rem">1555 3733</td><td class="ti-dp" style="font-size:.52rem">126 127<br>167 267<br>135 137</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">1267<br>1357</td><td class="ti-dp"></td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">17</td><td>2</td><td class="ti-vals">2069<br>1754</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">54 36</td><td class="inv-mono" style="font-size:.54rem">0 2 6 9 1<br>4 5 7</td><td class="inv-mono" style="font-size:.54rem">null</td><td class="ti-dp" style="font-size:.52rem">02 06 09<br>26 29 69</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">0917</span><br><span style="color:var(--ora)">0278</span><br>0935<br>0638</td><td class="ti-dp ti-dp-d" style="font-size:.52rem"><span style="color:var(--ora)">2627</span><br>2933<br>2636</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem">4544</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">026 029<br>069 269<br>145 147</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">0269<br>1457</td><td class="ti-dp"></td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">18</td><td>2</td><td class="ti-vals">5292<br>8271</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">24 50</td><td class="inv-mono" style="font-size:.54rem">2 5 9 1 2<br>7 8</td><td class="inv-mono" style="font-size:.54rem">null</td><td class="ti-dp" style="font-size:.52rem">22 25 29</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1809</span><br><span style="color:var(--ora)">2907</span><br>7803</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">2808<br>1719<br>1737</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem"><span style="color:var(--err)">1818</span> 2277</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">225 229<br>259</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">2259<br>1278</td><td class="ti-dp"></td></tr>
+                        </tbody></table>
+                    </div>
+                </div>
+
+                <!-- TD -->
+                <div class="tc-pane" id="tc-td">
+                    <div class="inv-summary"><span>Type: <strong style="color:var(--ok)">Consecutive TDs</strong></span><span>Rows: <strong>2</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>
+                    <div class="trend-inv-wrap">
+                        <table class="trend-inv-table"><thead><tr>
+                            <th style="width:24px"></th><th>TD</th><th>Cnt</th><th>Values</th><th>State</th><th>Sum</th>
+                            <th class="th-group">1DPPs</th><th class="th-group">12DPPs</th>
+                            <th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th>
+                            <th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th>
+                            <th class="th-group">4DPPs</th>
+                        </tr></thead><tbody>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">32</td><td>3</td><td class="ti-vals">4819<br>2750<br>6033</td><td><span class="ti-state">Florida<br>Florida<br>Florida</span></td><td class="inv-mono">22 14 12</td><td class="inv-mono" style="font-size:.54rem">1 4 8 9<br>0 2 5 7<br>0 3 3 6</td><td class="inv-mono" style="font-size:.54rem">148 189<br>025 257</td><td class="ti-dp" style="font-size:.52rem">14 18 19<br>48 49 89<br>02 05 25</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1432</span><br>1832<br><span style="color:var(--ora)">4932</span><br>0232</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">1948<br>8914<br>2750<br>0533</td><td class="ti-dp" style="font-size:.52rem">148 189<br>149 489<br>025 027</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">1489</span></td><td class="ti-dp" style="font-size:.52rem">1489<br>0257</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">45</td><td>2</td><td class="ti-vals">3916<br>7204</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">19 13</td><td class="inv-mono" style="font-size:.54rem">1 3 6 9<br>0 2 4 7</td><td class="inv-mono" style="font-size:.54rem">136 139</td><td class="ti-dp" style="font-size:.52rem">13 16 19<br>36 39 69<br>02 04 07</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">1345<br><span style="color:var(--ora)">3945</span><br>0245</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">1639<br>6913<br>0724</td><td class="ti-dp" style="font-size:.52rem">136 139<br>169 369<br>024 027</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">1369<br>0247</td></tr>
+                        </tbody></table>
+                    </div>
+                </div>
+
+                <!-- ΔSumTD -->
+                <div class="tc-pane" id="tc-delta">
+                    <div class="inv-summary"><span>Type: <strong style="color:var(--cyan)">Consecutive ΔSumTD</strong></span><span>Rows: <strong>3</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>
+                    <div class="trend-inv-wrap">
+                        <table class="trend-inv-table"><thead><tr>
+                            <th style="width:24px"></th><th>ΔSum<br>TD</th><th>Cnt</th><th>Values</th><th>State</th><th>TD</th>
+                            <th class="th-group">1DPPs</th>
+                            <th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th>
+                            <th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th>
+                            <th class="th-group">4DPPs</th>
+                        </tr></thead><tbody>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">8</td><td>2</td><td class="ti-vals">7244<br>9257</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">25 15</td><td class="inv-mono" style="font-size:.54rem">2 4 4 7<br>2 5 7 9</td><td class="ti-dp" style="font-size:.52rem">24 27 44<br>47 25 29<br>57 59 79</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">2408</span><br>4708<br>2508<br>5908</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">7244<br>2747<br>9257<br>5972</td><td class="ti-dp" style="font-size:.52rem">244 247<br>447 259<br>257 279</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">2447</span></td><td class="ti-dp" style="font-size:.52rem">2447<br>2579</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">21</td><td>2</td><td class="ti-vals">9257<br>9572</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">15 44</td><td class="inv-mono" style="font-size:.54rem">2 5 7 9<br>2 5 7 9</td><td class="ti-dp" style="font-size:.52rem">25 27 29<br>57 59 79</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">2521<br>2721<br><span style="color:var(--ora)">5921</span></td><td class="ti-dp ti-dp-d" style="font-size:.52rem">9257<br>5729<br>7952</td><td class="ti-dp" style="font-size:.52rem">257 259<br>279 579</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">2579</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">14</td><td>3</td><td class="ti-vals">5890<br>0985<br>6029</td><td><span class="ti-state">Florida<br>Florida<br>Florida</span></td><td class="inv-mono">22 32 29</td><td class="inv-mono" style="font-size:.54rem">0 5 8 9<br>0 5 8 9<br>0 2 6 9</td><td class="ti-dp" style="font-size:.52rem">05 08 09<br>58 59 89<br>02 06 26</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">0514<br><span style="color:var(--ora)">0814</span><br>5914<br>0214</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">5890<br>0985<br>8905<br>6029</td><td class="ti-dp" style="font-size:.52rem">058 059<br>089 589<br>026 029</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">0589</span></td><td class="ti-dp" style="font-size:.52rem">0589<br>0269</td></tr>
+                        </tbody></table>
+                    </div>
+                </div>
+
+                <!-- DP -->
+                <div class="tc-pane" id="tc-dp">
+                    <div class="inv-summary"><span>Type: <strong style="color:var(--pri)">Consecutive DP (Digit Pairs)</strong></span><span>Rows: <strong>2</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>
+                    <div class="trend-inv-wrap">
+                        <table class="trend-inv-table"><thead><tr>
+                            <th style="width:24px"></th><th>DP</th><th>Cnt</th><th>Values</th><th>State</th><th>Sum</th><th>TD</th>
+                            <th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-ora">2DPP(DD)</th><th class="th-group-ora">2DPP(T|TD)</th>
+                            <th class="th-group-cyan">3DPPs</th>
+                            <th class="th-group">4DPPs</th>
+                        </tr></thead><tbody>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">05</td><td>4</td><td class="ti-vals">5075<br>5590<br>0047<br>5978</td><td><span class="ti-state">FL<br>FL<br>FL<br>FL</span></td><td class="inv-mono">17 19<br>11 29</td><td class="inv-mono">42 38<br>55 31</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">0542</span><br>0538<br>0555<br><span style="color:var(--ora)">0531</span></td><td class="ti-dp ti-dp-d" style="font-size:.52rem">5075<br>5590<br>0047<br>5978</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">057 055<br>005 059<br>057 058</td><td class="ti-dp" style="font-size:.52rem">0557<br>0559<br>0578</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">57</td><td>3</td><td class="ti-vals">5075<br>7058<br>5978</td><td><span class="ti-state">FL<br>FL<br>FL</span></td><td class="inv-mono">17 20<br>29</td><td class="inv-mono">42 35<br>31</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">5742</span><br>5735<br>5731</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">5075<br>7058<br>5978</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">057 257<br>578 579</td><td class="ti-dp" style="font-size:.52rem">0557<br>0578<br>5789</td></tr>
+                        </tbody></table>
+                    </div>
+                </div>
+
+                <!-- yyyy-mm -->
+                <div class="tc-pane" id="tc-monthly">
+                    <div class="inv-summary"><span>Type: <strong style="color:var(--amber)">Monthly Pattern (yyyy-mm)</strong></span><span>Rows: <strong>2</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>
+                    <div class="trend-inv-wrap">
+                        <table class="trend-inv-table"><thead><tr>
+                            <th style="width:24px"></th><th>Month</th><th>Cnt</th><th>Values</th><th>State</th><th>Sum</th><th>TD</th>
+                            <th class="th-group">1DPPs</th>
+                            <th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th>
+                            <th class="th-group-cyan">3DPPs</th>
+                            <th class="th-group">4DPPs</th>
+                        </tr></thead><tbody>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">2025-02</td><td>6</td><td class="ti-vals">5618<br>5978<br>8927<br>7058<br>8821<br>5635</td><td><span class="ti-state">FL<br>FL<br>FL<br>FL<br>FL<br>FL</span></td><td class="inv-mono">20 29<br>26 20<br>19 20</td><td class="inv-mono">45 31<br>29 35<br>51 38</td><td class="inv-mono" style="font-size:.54rem">1 5 6 8<br>5 7 8 9<br>2 7 8 9</td><td class="ti-dp" style="font-size:.52rem">15 16 18<br>56 58 68<br>57 59 78</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1545</span><br>5645<br><span style="color:var(--ora)">5831</span><br>7829</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">5618<br>5978<br>8927<br>7058</td><td class="ti-dp" style="font-size:.52rem">156 158<br>168 568<br>578 579</td><td class="ti-dp" style="font-size:.52rem">1568<br>5789<br>2789</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">2024-02</td><td>4</td><td class="ti-vals">3182<br>6401<br>9235<br>7764</td><td><span class="ti-state">FL<br>FL<br>FL<br>FL</span></td><td class="inv-mono">14 11<br>19 24</td><td class="inv-mono">28 42<br>36 33</td><td class="inv-mono" style="font-size:.54rem">1 2 3 8<br>0 1 4 6<br>2 3 5 9</td><td class="ti-dp" style="font-size:.52rem">12 13 18<br>23 28 38<br>01 04 06</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">1228<br>1342<br><span style="color:var(--ora)">2836</span></td><td class="ti-dp ti-dp-d" style="font-size:.52rem">3182<br>6401<br>9235</td><td class="ti-dp" style="font-size:.52rem">123 128<br>138 238<br>014 016</td><td class="ti-dp" style="font-size:.52rem">1238<br>0146</td></tr>
+                        </tbody></table>
+                    </div>
+                </div>
+
+                <div style="font-size:.58rem;color:var(--text3);margin-top:6px">💡 Scroll horizontally for all DP columns. <span style="color:var(--ora)">Orange</span> = straight, <span style="color:var(--err)">Red</span> = double/triple. Check rows → Candidates tab.</div>
+            </div>
+
+            <!-- === TREND CANDIDATES (shared) === -->
+            <div class="inv-pane" id="pane-t-cand">
+                <div class="cand-filters"><div class="cand-fg"><label>Digits incl.</label><input type="text" placeholder="2,4,9-12"></div><div class="cand-fg"><label>Sums incl.</label><input type="text" placeholder="2,4,9-12"></div><div class="cand-fg"><label>TD incl.</label><input type="text" placeholder="2,4,9-12"></div><div style="display:flex;gap:3px;align-items:flex-end"><div class="cand-type-btn on" onclick="this.classList.toggle('on')">S</div><div class="cand-type-btn on" onclick="this.classList.toggle('on')">D</div><div class="cand-type-btn" onclick="this.classList.toggle('on')">DD</div><div class="cand-type-btn on" onclick="this.classList.toggle('on')">T</div><div class="cand-type-btn" onclick="this.classList.toggle('on')">Q</div></div></div>
+                <div class="cand-toggles"><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Incl PWs</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Excl PWs</div><div class="cand-toggle on" onclick="this.classList.toggle('on')"><span class="ct-check"></span> De-dupe</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Unique</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Excl non-dup</div><div class="cand-toggle" onclick="this.classList.toggle('on')"><span class="ct-check"></span> Neighbors</div></div>
+                <div class="cand-select-bar"><label><input type="checkbox" onclick="toggleAllCands(this,'tCandGrid')"> Select all</label><span class="cs-info">Showing: <strong>42</strong> · PWs: <strong style="color:var(--ok)">4</strong> · From: 56</span></div>
+                <div class="cand-grid-sel" id="tCandGrid">
+                    <div class="cand-item"><input type="checkbox"><span class="cand-num pw">1609</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">1708</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2608</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">3508</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">6703</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">5704</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2707</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1519</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">1618</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1339</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1636</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2725</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1717</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">3535</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2626</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1555</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">3733</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">0917</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">0278</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">0935</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">0638</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">4508</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2627</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2933</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">4544</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num pw">1809</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2907</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">7803</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2808</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1719</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">1818</span></div><div class="cand-item"><input type="checkbox"><span class="cand-num">2277</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- ===== RIGHT ADMIN ===== -->
+<div class="admin-sidebar">
+    <div class="admin-info"><div class="admin-badge">👤 Admin</div><div class="admin-stats"><div class="admin-stat"><span class="label">Last Draw:</span><span class="value">2026-02-21</span></div><div class="admin-stat"><span class="label">Total Draws:</span><span class="value">847,293</span></div><div class="admin-stat"><span class="label">Date Range:</span><span class="value">1990–2026</span></div><div class="admin-stat"><span class="label">DB Size:</span><span class="value">2.1 GB</span></div></div></div>
+    <div class="admin-health"><h4>🩺 System Health</h4><div class="health-row"><div class="health-dot green"></div><span class="health-label">MongoDB</span><span class="health-value">OK</span></div><div class="health-row"><div class="health-dot green"></div><span class="health-label">API Latency</span><span class="health-value">42ms</span></div><div class="health-row"><div class="health-dot yellow"></div><span class="health-label">Active Queries</span><span class="health-value" style="color:var(--warn)">3/5</span></div><div class="health-row"><div class="health-dot green"></div><span class="health-label">Cache Hit</span><span class="health-value">87%</span></div></div>
+    <div class="admin-limits"><h4>📏 Query Limits</h4><div class="limit-row"><span class="limit-label">Max Date Range</span><span class="limit-value">90 days</span></div><div class="limit-row"><span class="limit-label">All States Cap</span><span class="limit-value">14 days</span></div><div class="limit-row"><span class="limit-label">Max Seeds</span><span class="limit-value">180</span></div><div class="limit-row"><span class="limit-label">Max Candidates</span><span class="limit-value">5,000</span></div><div style="margin-top:8px"><div class="limit-row"><span class="limit-label">Today's Queries</span><span class="limit-value">12 / 50</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:24%;background:var(--ok)"></div></div></div><div style="margin-top:6px"><div class="limit-row"><span class="limit-label">Heavy Queries</span><span class="limit-value" style="color:var(--warn)">2 / 5</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:40%;background:var(--warn)"></div></div></div></div>
+    <div class="admin-recent"><h4>🕑 Recent Queries</h4><div class="recent-query"><span class="rq-state">Florida</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.2s</span><div class="rq-date">02-21 18:42 · 5d · Evening</div></div><div class="recent-query"><span class="rq-state">All States</span> · <span class="rq-game">Pick 5</span> <span class="rq-cost heavy">12.4s</span><div class="rq-date">02-21 17:55 · 14d · All</div></div><div class="recent-query"><span class="rq-state">Georgia</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.8s</span><div class="rq-date">02-21 16:30 · 7d · Midday</div></div><div class="recent-query"><span class="rq-state">Ohio</span> · <span class="rq-game">Pick 3</span> <span class="rq-cost light">0.1s</span><div class="rq-date">02-21 15:12 · 3d · Evening</div></div></div>
+</div>
+
+</div></div>
+
+<script>
+// ======== MOCK DATABASE ========
+// ~80 FL Pick 4 draws, 2 per day (M/E), with realistic TD and Sum values
+var MOCK_DB = (function(){
+    var draws = [];
+    var base = new Date('2026-02-01');
+    var nums = [
+        '5618','8927','7058','8821','5635','6031','5075','5590','1494','0047',
+        '3916','7204','2069','1754','5292','8271','1726','5137','4819','2750',
+        '6033','9257','9572','5890','0985','6029','3182','6401','9235','7764',
+        '4508','0638','2933','2627','4544','1339','1636','2725','1717','3535',
+        '2626','1555','3733','0917','0278','0935','1609','1708','2608','3508',
+        '6703','5704','2707','1519','1618','1809','2907','7803','2808','1719',
+        '1818','2277','0589','2975','6029','3776','1350','8624','5917','0445',
+        '5414','6672','3178','1535','3259','5197','2650','8906','3428','8810'
+    ];
+    for(var i=0;i<nums.length;i++){
+        var dayOff = Math.floor(i/2);
+        var d = new Date(base);
+        d.setDate(d.getDate() + dayOff);
+        var tod = i%2===0 ? 'midday' : 'evening';
+        var n = nums[i];
+        var digits = n.split('').map(Number);
+        var sum = digits.reduce(function(a,b){return a+b},0);
+        // Simulate TD: semi-random but realistic (20-60 range)
+        var td = 20 + ((parseInt(n,10) * 7 + i*13) % 41);
+        draws.push({
+            number: n,
+            date: d.toISOString().split('T')[0],
+            tod: tod,
+            state: 'Florida',
+            game: 'pick4',
+            digits: digits,
+            normalized: digits.slice().sort().join(''),
+            sum: sum,
+            td: td
+        });
+    }
+    return draws;
+})();
+
+// ======== UTILITY FUNCTIONS ========
+function normalize(n){ return n.split('').sort().join('') }
+function digitSum(n){ return n.split('').reduce(function(a,b){return a+parseInt(b)},0) }
+function getCombos(arr,k){
+    if(k===1) return arr.map(function(x){return [x]});
+    var result=[];
+    arr.forEach(function(x,i){
+        getCombos(arr.slice(i+1),k-1).forEach(function(c){result.push([x].concat(c))});
+    });
+    return result;
+}
+function median(arr){
+    var s=arr.slice().sort(function(a,b){return a-b});
+    var m=Math.floor(s.length/2);
+    return s.length%2?s[m]:((s[m-1]+s[m])/2);
+}
+
+// ======== CORE ANALYSIS ENGINE ========
+function analyzeSeeds(seeds){
+    var dp1={},dp2={},dp3={},dp4={};
+    var sums=[],tds=[],deltas=[];
+
+    seeds.forEach(function(s){
+        var d = s.digits;
+        // 1DP
+        d.forEach(function(dig){ dp1[dig]=(dp1[dig]||0)+1 });
+        // 2DP (sorted pairs)
+        getCombos(d,2).forEach(function(p){
+            var k=p.slice().sort().join('');
+            dp2[k]=(dp2[k]||0)+1;
+        });
+        // 3DP (sorted triples)
+        getCombos(d,3).forEach(function(p){
+            var k=p.slice().sort().join('');
+            dp3[k]=(dp3[k]||0)+1;
+        });
+        // 4DP (sorted, the full normalized number)
+        dp4[s.normalized]=(dp4[s.normalized]||0)+1;
+
+        sums.push(s.sum);
+        tds.push(s.td);
+        deltas.push(Math.abs(s.sum - s.td));
+    });
+
+    return {dp1:dp1, dp2:dp2, dp3:dp3, dp4:dp4, sums:sums, tds:tds, deltas:deltas};
+}
+
+function sortedEntries(obj){
+    return Object.entries(obj).sort(function(a,b){return b[1]-a[1]});
+}
+
+// ======== RENDER: SEEDS ========
+function renderSeeds(draws){
+    var grid = document.getElementById('seedGrid');
+    var info = document.getElementById('seedInfo');
+    var norm = document.getElementById('normTags');
+    grid.innerHTML='';
+    info.textContent = draws.length+' draws from date range';
+    draws.forEach(function(d){
+        var chip = document.createElement('div');
+        chip.className = 'seed-chip selected';
+        chip.dataset.number = d.number;
+        chip.dataset.date = d.date;
+        chip.innerHTML = '<span class="tod">'+d.date.slice(5)+' '+(d.tod==='midday'?'M':'E')+'</span> '+d.number;
+        chip.onclick = function(){ this.classList.toggle('selected'); recompute() };
+        grid.appendChild(chip);
+    });
+    norm.style.display='flex';
+    updateNormTags(draws);
+    recompute();
+}
+
+function updateNormTags(draws){
+    var n=document.getElementById('normTags');
+    var norms={};
+    draws.forEach(function(d){norms[d.normalized]=1});
+    n.innerHTML='<span style="font-size:.68rem;color:var(--text3);margin-right:4px">Normalized:</span>';
+    Object.keys(norms).sort().forEach(function(k){
+        n.innerHTML+='<span class="norm-tag">'+k+'</span>';
+    });
+}
+
+function getSelectedSeeds(){
+    var chips = document.querySelectorAll('#seedGrid .seed-chip.selected');
+    var selected = [];
+    chips.forEach(function(c){
+        var num = c.dataset.number;
+        MOCK_DB.forEach(function(d){
+            if(d.number===num && d.date===c.dataset.date) selected.push(d);
+        });
+    });
+    return selected;
+}
+
+// ======== RENDER: HOT DIGITS ========
+function renderHotDigits(analysis){
+    var body = document.getElementById('hotDigitsBody');
+    var h = '';
+
+    // 1DP
+    h += '<div class="hd-label">1DP Digits</div><div class="hd-row">';
+    sortedEntries(analysis.dp1).forEach(function(e){
+        h += '<span class="hd-chip" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    h += '</div>';
+
+    // 2DP
+    var dp2s = sortedEntries(analysis.dp2).filter(function(e){return e[1]>=2});
+    h += '<div class="hd-label" style="margin-top:8px">2DP Pairs</div><div class="hd-row">';
+    dp2s.slice(0,12).forEach(function(e){
+        h += '<span class="hd-chip" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    h += '</div>';
+
+    // 2DP Bands
+    var bands2 = {};
+    Object.entries(analysis.dp2).forEach(function(e){
+        var lead = e[0][0]+'x';
+        if(!bands2[lead]) bands2[lead]={total:0,pairs:[]};
+        bands2[lead].total += e[1];
+        if(e[1]>=2) bands2[lead].pairs.push({k:e[0],c:e[1]});
+    });
+    var bArr2 = Object.entries(bands2).sort(function(a,b){return b[1].total-a[1].total});
+    var maxB2 = bArr2.length?bArr2[0][1].total:1;
+    h += '<div class="band-row">';
+    bArr2.slice(0,5).forEach(function(b){
+        var pct = Math.round(b[1].total/maxB2*100);
+        var hot = pct>70;
+        h += '<div class="band-group'+(hot?'':' cold')+'"><div class="band-header"><span class="band-name">'+b[0]+'</span><span class="band-count">'+b[1].total+'</span></div>';
+        h += '<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'var(--ora)':'rgba(99,195,255,.7)')+'"></div></div>';
+        if(b[1].pairs.length){
+            h += '<div class="band-pairs">';
+            b[1].pairs.slice(0,4).forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});
+            h += '</div>';
+        }
+        h += '</div>';
+    });
+    h += '</div><div class="band-divider"></div>';
+
+    // 3DP
+    var dp3s = sortedEntries(analysis.dp3).filter(function(e){return e[1]>=2});
+    h += '<div class="hd-label">3DP Triples</div><div class="hd-row">';
+    dp3s.slice(0,8).forEach(function(e){
+        h += '<span class="hd-chip" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+    });
+    if(!dp3s.length) h+='<span style="font-size:.6rem;color:var(--text3)">No triples with 2+ hits</span>';
+    h += '</div>';
+
+    body.innerHTML = h;
+}
+
+// ======== RENDER: HOT SUMS ========
+function renderHotSums(analysis){
+    var body = document.getElementById('hotSumsBody');
+    var sums = analysis.sums;
+    if(!sums.length){body.innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">No data</div>';return}
+
+    var min=Math.min.apply(null,sums), max=Math.max.apply(null,sums);
+    var avg=(sums.reduce(function(a,b){return a+b},0)/sums.length).toFixed(1);
+    var med=median(sums);
+
+    // Stats row
+    var h = '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">';
+    h += '<span class="sum-stat">Min <span class="sv">'+min+'</span></span>';
+    h += '<span class="sum-stat">Max <span class="sv">'+max+'</span></span>';
+    h += '<span class="sum-stat">Avg <span class="sv">'+avg+'</span></span>';
+    h += '<span class="sum-stat">Med <span class="sv">'+med+'</span></span></div>';
+
+    // Frequency histogram
+    var freq={};
+    sums.forEach(function(s){freq[s]=(freq[s]||0)+1});
+    var maxFreq=Math.max.apply(null,Object.values(freq));
+    h += '<div class="sum-range-bar">';
+    for(var s=min;s<=max;s++){
+        var f=freq[s]||0;
+        var ht = f?Math.max(8,Math.round(f/maxFreq*40)):2;
+        var col = f===0?'var(--border)':f>=maxFreq*0.7?'var(--ora)':f>=maxFreq*0.4?'var(--pri)':'rgba(99,195,255,.7)';
+        h += '<div class="sum-bar-col" style="height:'+ht+'px;background:'+col+'" title="Σ'+s+': '+f+'x"></div>';
+    }
+    h += '</div>';
+
+    // Bands (groups of 5)
+    var bandSize=5;
+    var bandStart=Math.floor(min/bandSize)*bandSize;
+    var bandEnd=Math.ceil((max+1)/bandSize)*bandSize;
+    var bands=[];
+    for(var b=bandStart;b<bandEnd;b+=bandSize){
+        var cnt=0;
+        sums.forEach(function(s){if(s>=b&&s<b+bandSize)cnt++});
+        bands.push({name:'Σ'+b+'-'+(b+bandSize-1),count:cnt});
+    }
+    var maxBand=Math.max.apply(null,bands.map(function(b){return b.count}));
+    h += '<div class="band-row">';
+    bands.forEach(function(b){
+        var pct=maxBand?Math.round(b.count/maxBand*100):0;
+        var hot=pct>=70;
+        h += '<div class="sum-band-group'+(hot?'':' cold')+'"><div class="band-header"><span class="band-name">'+b.name+'</span><span class="band-count">'+b.count+'</span></div>';
+        h += '<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'var(--ora)':'rgba(99,195,255,.7)')+'"></div></div></div>';
+    });
+    h += '</div>';
+    body.innerHTML = h;
+}
+
+// ======== RENDER: HOT TD ========
+function renderHotTD(analysis){
+    var body = document.getElementById('hotTDBody');
+    var tds = analysis.tds;
+    if(!tds.length){body.innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">No data</div>';return}
+
+    var min=Math.min.apply(null,tds),max=Math.max.apply(null,tds);
+    var avg=(tds.reduce(function(a,b){return a+b},0)/tds.length).toFixed(1);
+
+    var h = '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">';
+    h += '<span class="sum-stat">Min <span class="sv">'+min+'</span></span>';
+    h += '<span class="sum-stat">Max <span class="sv">'+max+'</span></span>';
+    h += '<span class="sum-stat">Avg <span class="sv">'+avg+'</span></span></div>';
+
+    // TD frequency for pairs
+    var freq={};
+    tds.forEach(function(t){freq[t]=(freq[t]||0)+1});
+
+    // Bands of 10
+    var bandSize=10;
+    var bandStart=Math.floor(min/bandSize)*bandSize;
+    var bandEnd=Math.ceil((max+1)/bandSize)*bandSize;
+    var bands=[];
+    for(var b=bandStart;b<bandEnd;b+=bandSize){
+        var cnt=0,pairs=[];
+        tds.forEach(function(t){if(t>=b&&t<b+bandSize)cnt++});
+        Object.entries(freq).forEach(function(e){
+            var tv=parseInt(e[0]);
+            if(tv>=b&&tv<b+bandSize&&e[1]>=1) pairs.push({k:e[0],c:e[1]});
+        });
+        pairs.sort(function(a,b){return b.c-a.c});
+        bands.push({name:'TD '+b+'-'+(b+bandSize-1),count:cnt,pairs:pairs.slice(0,4)});
+    }
+    var maxBand=Math.max.apply(null,bands.map(function(b){return b.count}));
+
+    h += '<div class="band-row">';
+    bands.forEach(function(b){
+        var pct=maxBand?Math.round(b.count/maxBand*100):0;
+        var hot=pct>=60;
+        h += '<div class="td-band-group'+(hot?' hot':' cold')+'"><div class="band-header"><span class="band-name">'+b.name+'</span><span class="band-count">'+b.count+'</span></div>';
+        h += '<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'#10b981':'rgba(99,195,255,.7)')+'"></div></div>';
+        if(b.pairs.length){
+            h += '<div class="band-pairs">';
+            b.pairs.forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});
+            h += '</div>';
+        }
+        h += '</div>';
+    });
+    h += '</div>';
+    body.innerHTML = h;
+}
+
+// ======== RENDER: ΔSumTD ========
+function renderDeltaSumTD(analysis){
+    var body = document.getElementById('deltaSumTDBody');
+    var sums=analysis.sums, tds=analysis.tds, deltas=analysis.deltas;
+    if(!sums.length){body.innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">No data</div>';return}
+
+    function renderSubSection(label,color,emoji,values,bandPrefix,bandSize){
+        var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
+        var avg=(values.reduce(function(a,b){return a+b},0)/values.length).toFixed(1);
+        var med=median(values);
+        var h='<div class="hd-label" style="color:'+color+'">'+emoji+' '+label+'</div>';
+        h+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">';
+        h+='<span class="sum-stat">Min <span class="sv">'+min+'</span></span>';
+        h+='<span class="sum-stat">Max <span class="sv">'+max+'</span></span>';
+        h+='<span class="sum-stat">Avg <span class="sv">'+avg+'</span></span>';
+        h+='<span class="sum-stat">Med <span class="sv">'+med+'</span></span></div>';
+
+        var freq={};values.forEach(function(v){freq[v]=(freq[v]||0)+1});
+        var bs=bandSize||10;
+        var bStart=Math.floor(min/bs)*bs;
+        var bEnd=Math.ceil((max+1)/bs)*bs;
+        var bands=[];
+        for(var b=bStart;b<bEnd;b+=bs){
+            var cnt=0,pairs=[];
+            values.forEach(function(v){if(v>=b&&v<b+bs)cnt++});
+            Object.entries(freq).forEach(function(e){
+                var tv=parseInt(e[0]);
+                if(tv>=b&&tv<b+bs&&e[1]>=1) pairs.push({k:e[0],c:e[1]});
+            });
+            pairs.sort(function(a,b){return b.c-a.c});
+            bands.push({name:bandPrefix+b+'-'+(b+bs-1),count:cnt,pairs:pairs.slice(0,4)});
+        }
+        var maxB=Math.max.apply(null,bands.map(function(b){return b.count}));
+        h+='<div class="band-row">';
+        bands.forEach(function(b){
+            var pct=maxB?Math.round(b.count/maxB*100):0;
+            var hot=pct>=60;
+            h+='<div class="td-band-group'+(hot?' hot':'')+'"><div class="band-header"><span class="band-name">'+b.name+'</span><span class="band-count">'+b.count+'</span></div>';
+            h+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?color:'rgba(99,195,255,.7)')+'"></div></div>';
+            if(b.pairs.length){h+='<div class="band-pairs">';b.pairs.forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});h+='</div>';}
+            h+='</div>';
+        });
+        h+='</div><div class="band-divider"></div>';
+        return h;
+    }
+
+    var h = '';
+    h += renderSubSection('ΔSum (sum values)','var(--ora)','🔥',sums,'Σ',5);
+    h += renderSubSection('ΔTD (times drawn)','var(--cyan)','🧊',tds,'TD ',10);
+    h += renderSubSection('|Δ| Bands (|Sum − TD|)','var(--pri)','📐',deltas,'|Δ| ',10);
+    body.innerHTML = h;
+}
+
+// ======== RECOMPUTE ALL (triggered on seed selection change) ========
+function recompute(){
+    var seeds = getSelectedSeeds();
+    if(!seeds.length){
+        ['hotDigitsBody','hotSumsBody','hotTDBody','deltaSumTDBody'].forEach(function(id){
+            document.getElementById(id).innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">Select at least one seed...</div>';
+        });
+        return;
+    }
+    var analysis = analyzeSeeds(seeds);
+    renderHotDigits(analysis);
+    renderHotSums(analysis);
+    renderHotTD(analysis);
+    renderDeltaSumTD(analysis);
+    updateNormTags(seeds);
+    // Update seed info bar
+    document.getElementById('seedInfo').textContent = seeds.length + ' of ' +
+        document.querySelectorAll('#seedGrid .seed-chip').length + ' seeds selected';
+}
+
+// ======== RUN BACKTEST (queries mock DB) ========
+function runAction(){
+    var btn=document.getElementById('runBtn'), text=document.getElementById('runBtnText'), icon=document.getElementById('runBtnIcon');
+    var state=document.getElementById('stateSelect').value;
+    var game=document.getElementById('gameType').value;
+    var start=document.getElementById('startDate').value;
+    var end=document.getElementById('endDate').value;
+    var tod=document.getElementById('targetTOD').value;
+
+    btn.disabled=true; icon.textContent='⏳'; text.textContent='Running...';
+
+    setTimeout(function(){
+        // Query mock DB
+        var results = MOCK_DB.filter(function(d){
+            if(state!=='All' && d.state!==state) return false;
+            if(game && d.game!==game) return false;
+            if(start && d.date<start) return false;
+            if(end && d.date>end) return false;
+            if(tod && d.tod!==tod) return false;
+            return true;
+        });
+
+        if(!results.length){
+            document.getElementById('seedInfo').textContent='No draws found for this config. Try widening dates.';
+            document.getElementById('seedGrid').innerHTML='';
+            btn.disabled=false; icon.textContent='🧪'; text.textContent='Run Backtest';
+            return;
+        }
+
+        renderSeeds(results);
+        btn.disabled=false;
+        var isPred = document.getElementById('modePrediction').checked;
+        icon.textContent=isPred?'🎯':'🧪';
+        text.textContent=isPred?'Run Prediction':'Run Backtest';
+
+        // Scroll to seed card
+        document.getElementById('seedCard').scrollIntoView({behavior:'smooth',block:'start'});
+    }, 600);
+}
+
+// ======== AUTOPSY ========
+function runAutopsy(){
+    var input = document.getElementById('autopsyInput').value.trim();
+    if(!input) return;
+    var nums = input.split(',').map(function(s){return s.trim()});
+    var analysis = analyzeSeeds(getSelectedSeeds());
+    var results = [];
+    nums.forEach(function(n){
+        var digits = n.split('').map(Number);
+        var sum = digits.reduce(function(a,b){return a+b},0);
+        var norm = digits.slice().sort().join('');
+        var hits = [];
+        // Check 1DP
+        digits.forEach(function(d){if(analysis.dp1[d]>=3)hits.push('1DP:'+d+'('+analysis.dp1[d]+'x)')});
+        // Check 2DP
+        getCombos(digits,2).forEach(function(p){
+            var k=p.sort().join('');
+            if(analysis.dp2[k]>=2)hits.push('2DP:'+k+'('+analysis.dp2[k]+'x)');
+        });
+        // Check sum
+        var sumFreq={};analysis.sums.forEach(function(s){sumFreq[s]=(sumFreq[s]||0)+1});
+        if(sumFreq[sum])hits.push('Σ'+sum+'('+sumFreq[sum]+'x)');
+        results.push(n+' → '+(hits.length?hits.join(', '):'No hot matches'));
+    });
+    alert('🔬 Autopsy Results:\n\n'+results.join('\n'));
+}
+
+// ======== PRESET/CONFIG/THEME (preserved from v5) ========
+var STRATS={
+    sniper:{desc:'<strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list.<br><em style="color:var(--ok)">Win #1: Rank #18/226 → $8,100 (72x ROI)</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'1 seed'},{t:'2DP filter',hl:1},{t:'Evening'},{t:'2019-09-15'}],config:{state:'Florida',game:'pick4',tod:'evening',dp:'2'}},
+    widenet:{desc:'<strong>🕸️ Wide Net:</strong> Many seeds, broad coverage, 2DP narrows.<br><em style="color:var(--ok)">Win #1: Rank #161/230.</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'5+ seeds'},{t:'2DP filter',hl:1},{t:'Evening'}],config:{state:'Florida',game:'pick4',tod:'evening',dp:'2'}},
+    shadow:{desc:'<strong>👥 Shadow:</strong> 2 seeds, NO DP filter. Co-occurrence only.<br><em style="color:var(--ok)">Win #2: 156 candidates → $24 box.</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'2 seeds'},{t:'No DP'},{t:'Excl non-dupes',hl:1},{t:'Midday'}],config:{state:'Florida',game:'pick4',tod:'midday',dp:'0'}},
+    rewind:{desc:'<strong>⏪ Rewind:</strong> Post-hoc. Include the winner in seeds to learn WHY it hit.',tags:[{t:'Any State'},{t:'Any Game'},{t:'Include winner'},{t:'All TOD'}],config:{state:'Florida',game:'pick4',tod:'',dp:'0'}},
+    hots:{desc:'<strong>🌶️ Hots:</strong> Cherry-pick from hot digit properties — 1DP, 2DP bands, sum range, 3DP.',tags:[{t:'Any State'},{t:'Manual build',hl:1},{t:'No grouping'}],config:{state:'Florida',game:'pick4',tod:'',dp:'0'}},
+    nexus:{desc:'<strong>🔮 Nexus:</strong> ΔSumsTD consecutive trending across ALL states.',tags:[{t:'All States',hl:1},{t:'Pick 5'},{t:'Date range'},{t:'All TOD'}],config:{state:'All',game:'pick5',tod:'',dp:'0'}}
+};
+
+function clearAllActive(){document.querySelectorAll('.date-chip').forEach(function(c){c.classList.remove('active')});document.querySelectorAll('.trow').forEach(function(r){r.classList.remove('active')})}
+
+function applyStrat(name,el){
+    clearAllActive();el.classList.add('active');
+    var s=STRATS[name],h=s.desc+'<div class="strat-config-tags">';
+    s.tags.forEach(function(t){h+='<span class="sct'+(t.hl?' hl':'')+'">'+t.t+'</span>'});h+='</div>';
+    document.getElementById('stratDesc').innerHTML=h;
+    if(s.config.state)document.getElementById('stateSelect').value=s.config.state;
+    if(s.config.game){document.getElementById('gameType').value=s.config.game;updateGame()}
+    if(s.config.tod!==undefined)document.getElementById('targetTOD').value=s.config.tod;
+    if(s.config.dp)document.getElementById('dpSize').value=s.config.dp;
+    updateQueryEstimate();
+}
+
+function clickTrend(row){
+    clearAllActive();row.classList.add('active');
+    var target=row.getAttribute('data-target');
+    if(target){var card=document.getElementById(target);if(card){card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.remove('highlight-pulse');void card.offsetWidth;card.classList.add('highlight-pulse');setTimeout(function(){card.classList.remove('highlight-pulse')},1000)}}
+}
+
+function updateGame(){var game=document.getElementById('gameType').value;document.querySelectorAll('.pe-num').forEach(function(n){n.classList.toggle('active',n.dataset.game===game)});updateQueryEstimate()}
+
+function switchMode(mode){var btn=document.getElementById('runBtn'),icon=document.getElementById('runBtnIcon'),text=document.getElementById('runBtnText');if(mode==='prediction'){icon.textContent='🎯';text.textContent='Run Prediction';btn.className='btn btn-run prediction-mode'}else{icon.textContent='🧪';text.textContent='Run Backtest';btn.className='btn btn-run'}}
+
+function updateQueryEstimate(){
+    var state=document.getElementById('stateSelect').value,game=document.getElementById('gameType').value;
+    var start=document.getElementById('startDate').value,end=document.getElementById('endDate').value;
+    var fill=document.getElementById('queryGuardFill');
+    var days=5;if(start&&end){var d1=new Date(start),d2=new Date(end);days=Math.max(1,Math.ceil((d2-d1)/(1000*60*60*24))+1)}
+    var maxDays=state==='All'?14:90;if(days>maxDays){days=maxDays;if(start){var c=new Date(start);c.setDate(c.getDate()+maxDays-1);document.getElementById('endDate').value=c.toISOString().split('T')[0]}}
+    var seedsPerDay=state==='All'?8:2;var estSeeds=days*seedsPerDay;
+    var candMap={pick2:10,pick3:55,pick4:330,pick5:715};var estCands=candMap[game]||330;
+    var estTime=((estSeeds*estCands*0.0001)+0.5).toFixed(1);var pct=Math.min(100,Math.round((estSeeds/180)*100));
+    document.getElementById('estSeeds').textContent=estSeeds;document.getElementById('estCands').textContent='~'+estCands;document.getElementById('estTime').textContent='~'+estTime+'s';
+    fill.style.width=pct+'%';
+    fill.style.background=pct<40?'var(--ok)':pct<75?'var(--warn)':'var(--err)';
+    var btn=document.getElementById('runBtn'),text=document.getElementById('runBtnText'),icon=document.getElementById('runBtnIcon');
+    var isPred=document.getElementById('modePrediction').checked;
+    if(estSeeds>180){btn.disabled=true;text.textContent='Too many seeds ('+estSeeds+'/180)';icon.textContent='⛔'}
+    else{btn.disabled=false;text.textContent=isPred?'Run Prediction':'Run Backtest';icon.textContent=isPred?'🎯':'🧪'}
+}
+
+function toggleTheme(){var h=document.documentElement,c=h.getAttribute('data-theme'),n=c==='light'?'dark':'light';h.setAttribute('data-theme',n);document.getElementById('tpLight').classList.toggle('active',n==='light');document.getElementById('tpDark').classList.toggle('active',n==='dark')}
+
+function saveCustom(){var name=document.getElementById('customStratName').value.trim();if(!name)return;var chip=document.createElement('div');chip.className='date-chip';chip.innerHTML='<span class="si">⭐</span> '+name;chip.onclick=function(){clearAllActive();chip.classList.add('active')};document.getElementById('dateGrid').appendChild(chip);document.getElementById('customStratName').value=''}
+
+function toggleTrendGroup(type){
+    var group=document.getElementById('tg-'+type);
+    document.querySelectorAll('.trend-tab.tt-'+type).forEach(function(t){t.classList.toggle('open')});
+    if(group) group.classList.toggle('open');
+}
+
+// Bottom panel functions
+function switchTrendCat(cat){
+    document.querySelectorAll('.tc-tab').forEach(function(t){t.classList.remove('active')});
+    document.querySelectorAll('.tc-pane').forEach(function(p){p.classList.remove('active')});
+    var tab=document.querySelector('.tc-tab.tc-'+cat);if(tab)tab.classList.add('active');
+    var pane=document.getElementById('tc-'+cat);if(pane)pane.classList.add('active');
+    var badge=document.getElementById('tDataBadge');
+    var labels={sums:'Sums',td:'TD',delta:'ΔSumTD',dp:'DP',monthly:'yyyy-mm'};
+    if(badge)badge.textContent=labels[cat]||cat;
+}
+
+function switchBottomMode(mode){
+    document.getElementById('bm-date').style.display=mode==='date'?'block':'none';
+    document.getElementById('bm-trend').style.display=mode==='trend'?'block':'none';
+    document.getElementById('bmTab-date').classList.toggle('active',mode==='date');
+    document.getElementById('bmTab-trend').classList.toggle('active',mode==='trend');
+}
+
+function switchInvTab(paneId,el){
+    var parent=el.closest('[id^="bm-"]')||el.closest('.card');
+    parent.querySelectorAll('.inv-tab').forEach(function(t){t.classList.remove('active')});
+    parent.querySelectorAll('.inv-pane').forEach(function(p){p.classList.remove('active')});
+    document.getElementById('pane-'+paneId).classList.add('active');
+    el.classList.add('active');
+}
+
+function toggleInvRow(tr){
+    tr.classList.toggle('selected');
+    var cb=tr.querySelector('.inv-cb');
+    cb.checked=tr.classList.contains('selected');
+}
+
+function toggleAllCands(masterCb,gridId){
+    var grid=document.getElementById(gridId);
+    grid.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.checked=masterCb.checked});
+}
+
+// ======== INIT ========
+(function(){
+    var t=new Date('2026-02-22'),a=new Date('2026-02-16');
+    document.getElementById('startDate').value=a.toISOString().split('T')[0];
+    document.getElementById('endDate').value=t.toISOString().split('T')[0];
+    document.getElementById('stateSelect').value='Florida';
+    updateGame();
+    // Auto-run on load to show data immediately
+    setTimeout(runAction, 300);
+})();
+</script>
+</body>
+</html>
