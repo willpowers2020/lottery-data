@@ -780,7 +780,7 @@ function updateQueryEstimate(){
     var start=document.getElementById('startDate').value,end=document.getElementById('endDate').value;
     var guard=document.getElementById('queryGuard'),fill=document.getElementById('queryGuardFill');
     var days=5;if(start&&end){var d1=new Date(start),d2=new Date(end);days=Math.max(1,Math.ceil((d2-d1)/(1000*60*60*24))+1)}
-    var maxDays=365;if(days>maxDays){days=maxDays;if(start){var c=new Date(start);c.setDate(c.getDate()+maxDays-1);document.getElementById('endDate').value=c.toISOString().split('T')[0]}}
+    var maxDays=state==='All'?14:90;if(days>maxDays){days=maxDays;if(start){var c=new Date(start);c.setDate(c.getDate()+maxDays-1);document.getElementById('endDate').value=c.toISOString().split('T')[0]}}
     var seedsPerDay=state==='All'?8:2;var estSeeds=days*seedsPerDay;
     var candMap={pick2:10,pick3:55,pick4:330,pick5:715};var estCands=candMap[game]||330;
     var estTime=((estSeeds*estCands*0.0001)+0.5).toFixed(1);var pct=Math.min(100,Math.round((estSeeds/500)*100));
@@ -836,34 +836,8 @@ var USE_LIVE_API = true; // set false to use mock DB offline
 // ── API Helper ──
 function apiUrl(path){return path}
 
-// ── Pick 5 states list (matches server) ──
-var PICK5_STATES=['Maryland','Florida','Virginia','Delaware','Ohio','Pennsylvania','Georgia','Washington DC','Louisiana'];
-
 // ── Fetch seeds from live MongoDB via /api/draws/recent ──
 async function fetchLiveSeeds(state, gameType, startDate, endDate, tod){
-    // If "All" states, fetch from each state individually
-    if(state==='All'){
-        var stateList;
-        try{
-            var stRes=await fetch('/api/consecutive/states?game_type='+gameType);
-            stateList=await stRes.json();
-        }catch(e){
-            // Fallback to known list
-            stateList=(gameType==='pick5')?PICK5_STATES:['Florida','Georgia','Ohio','Pennsylvania','New York','Texas','Maryland','Virginia'];
-        }
-        var allSeeds=[];
-        for(var i=0;i<stateList.length;i++){
-            try{
-                var seeds=await fetchLiveSeedsForState(stateList[i], gameType, startDate, endDate, tod);
-                allSeeds=allSeeds.concat(seeds);
-            }catch(e){console.warn('Skip '+stateList[i]+': '+e.message)}
-        }
-        return allSeeds;
-    }
-    return fetchLiveSeedsForState(state, gameType, startDate, endDate, tod);
-}
-
-async function fetchLiveSeedsForState(state, gameType, startDate, endDate, tod){
     var res = await fetch(apiUrl('/api/draws/recent'), {
         method:'POST',
         headers:{'Content-Type':'application/json'},
