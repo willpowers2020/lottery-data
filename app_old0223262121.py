@@ -911,11 +911,6 @@ def backtest_v5_page():
     """V5 connected mockup — date-based pipeline with hybrid compute engine."""
     return render_template('backtest_mockup_v5.html')
 
-@app.route('/tools/consecutive-sums')
-def consecutive_sums_scanner():
-    """Consecutive sums scanner — finds repeating sums across all states."""
-    return render_template('consecutive_sums_scanner.html')
-
 
 @app.route('/analysis/rbtl')
 def analysis_rbtl_page():
