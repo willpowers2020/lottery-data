@@ -455,8 +455,8 @@
     <!-- CONFIG -->
     <div class="card card-ora">
         <h3>⚙️ Configuration</h3>
-        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Florida" selected>Florida</option><option value="Georgia">Georgia</option><option value="Ohio">Ohio</option><option value="Pennsylvania">Pennsylvania</option><option value="Maryland">Maryland</option><option value="Virginia">Virginia</option><option value="Delaware">Delaware</option><option value="Washington DC">Washington DC</option><option value="Louisiana">Louisiana</option><option value="New York">New York</option><option value="Texas">Texas</option></select></div>
-        <div class="fg"><label>Game</label><select id="gameType" onchange="updateGame()"><option value="pick2">Pick 2 (1DP–2DP)</option><option value="pick3">Pick 3 (1DP–3DP)</option><option value="pick4">Pick 4 (1DP–4DP)</option><option value="pick5" selected>Pick 5 (1DP–5DP)</option></select></div>
+        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="New York">New York</option><option value="Ohio">Ohio</option><option value="Pennsylvania">Pennsylvania</option><option value="Texas">Texas</option></select></div>
+        <div class="fg"><label>Game</label><select id="gameType" onchange="updateGame()"><option value="pick2">Pick 2 (1DP–2DP)</option><option value="pick3">Pick 3 (1DP–3DP)</option><option value="pick4" selected>Pick 4 (1DP–4DP)</option><option value="pick5">Pick 5 (1DP–5DP)</option></select></div>
         <div class="fg"><label>Start Date</label><input type="date" id="startDate" onchange="updateQueryEstimate()"></div>
         <div class="fg"><label>End Date</label><input type="date" id="endDate" onchange="updateQueryEstimate()"></div>
         <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
@@ -760,9 +760,12 @@ function applyStrat(name,el){
     clearAllActive();el.classList.add('active');
     var s=STRATS[name],h=s.desc+'<div class="strat-config-tags">';
     s.tags.forEach(function(t){h+='<span class="sct'+(t.hl?' hl':'')+'">'+t.t+'</span>'});h+='</div>';
-    h+='<div style="font-size:.55rem;color:var(--text3);margin-top:4px">ℹ️ Preset is display-only. Configure settings below independently.</div>';
     document.getElementById('stratDesc').innerHTML=h;
-    // Presets NO LONGER set config values — config operates independently
+    if(s.config.state)document.getElementById('stateSelect').value=s.config.state;
+    if(s.config.game){document.getElementById('gameType').value=s.config.game;updateGame()}
+    if(s.config.tod!==undefined)document.getElementById('targetTOD').value=s.config.tod;
+    if(s.config.dp)document.getElementById('dpSize').value=s.config.dp;
+    updateQueryEstimate();
 }
 
 function clickTrend(row){
@@ -1145,125 +1148,51 @@ function recompute(){
     renderDateCandidates(seeds,a);
 }
 
-// ── Classify a number by digit pattern ──
-function classifyDigits(digits){
-    var freq={};digits.forEach(function(d){freq[d]=(freq[d]||0)+1});
-    var counts=Object.values(freq).sort().reverse();
-    var n=digits.length;
-    if(n===5){
-        if(counts[0]===5)return 'QN';
-        if(counts[0]===4)return 'Q';
-        if(counts[0]===3&&counts.length>1&&counts[1]===2)return 'FH';
-        if(counts[0]===3)return 'T';
-        if(counts[0]===2&&counts.length>1&&counts[1]===2)return 'DD';
-        if(counts[0]===2)return 'D';
-        return 'S';
-    } else { // pick4
-        if(counts[0]===4)return 'Q';
-        if(counts[0]===3)return 'T';
-        if(counts[0]===2&&counts.length>1&&counts[1]===2)return 'DD';
-        if(counts[0]===2)return 'D';
-        return 'S';
-    }
-}
-
-// ── Pick 5: Generate 5-digit candidates from a 3DP + 2 remaining digits ──
-// This is the PRIMARY generator for Pick 5 (mirrors pick5_gen.py)
-function gen5From3DP(triple, targetSum){
-    var d1=parseInt(triple[0]),d2=parseInt(triple[1]),d3=parseInt(triple[2]);
-    var rem=targetSum-d1-d2-d3;
-    if(rem<0||rem>18)return{S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-    var result={S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-    for(var a=0;a<=9;a++){
-        var b=rem-a;
-        if(b<a||b>9)continue; // a<=b to avoid dupes
-        var digits=[d1,d2,d3,a,b].sort();
-        var norm=digits.join('');
-        var type=classifyDigits(digits);
-        if(!result[type])result[type]={};
-        result[type][norm]=1;
-    }
-    return result;
-}
-
-// ── Pick 5: Generate from 4DP + 1 remaining digit ──
-function gen5From4DP(quad, targetSum){
-    var dsum=0;for(var i=0;i<4;i++)dsum+=parseInt(quad[i]);
-    var rem=targetSum-dsum;
-    if(rem<0||rem>9)return{S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-    var digits=[];for(var i=0;i<4;i++)digits.push(parseInt(quad[i]));
-    digits.push(rem);
-    digits.sort();
-    var norm=digits.join('');
-    var type=classifyDigits(digits);
-    var result={S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-    if(!result[type])result[type]={};
-    result[type][norm]=1;
-    return result;
-}
-
-// ── Pick 4 backwards-compat: gen from 2DP + 2 remaining ──
-function gen4From2DP(pair, targetSum){
-    var d1=parseInt(pair[0]),d2=parseInt(pair[1]);
+// ── DPP Candidate Generator (remainder-based) ──
+// Given a 2DP pair like [6,7] and a target sum (22), remainder = 22-6-7 = 9
+// Generate all 4-digit numbers containing that pair where other 2 digits sum to remainder
+function gen2DPPCandidates(pair, targetSum){
+    var d1=parseInt(pair[0]), d2=parseInt(pair[1]);
     var rem=targetSum-d1-d2;
-    if(rem<0||rem>18)return{S:{},D:{},DD:{},T:{},Q:{}};
-    var result={S:{},D:{},DD:{},T:{},Q:{}};
+    if(rem<0||rem>18)return{S:[],D:[],DD:[],T:[],Q:[]};
+    var result={S:[],D:[],DD:[],T:[],Q:[]};
     for(var a=0;a<=9;a++){
         var b=rem-a;
-        if(b<a||b>9)continue;
+        if(b<0||b>9)continue;
+        if(a>b)continue; // avoid dupes, a<=b
         var digits=[d1,d2,a,b].sort();
         var norm=digits.join('');
-        var type=classifyDigits(digits);
-        result[type][norm]=1;
+        var freq={};digits.forEach(function(x){freq[x]=(freq[x]||0)+1});
+        var counts=Object.values(freq).sort().reverse();
+        var type;
+        if(counts[0]===4)type='Q';
+        else if(counts[0]===3)type='T';
+        else if(counts[0]===2&&counts[1]===2)type='DD';
+        else if(counts[0]===2)type='D';
+        else type='S';
+        // Check if already in this type array
+        if(result[type].indexOf(norm)===-1)result[type].push(norm);
     }
     return result;
 }
 
-// ── Pick 4: gen from 3DP + 1 remaining ──
-function gen4From3DP(triple, targetSum){
+// Same for 3DP → find 1 remaining digit
+function gen3DPPCandidates(triple, targetSum){
     var d1=parseInt(triple[0]),d2=parseInt(triple[1]),d3=parseInt(triple[2]);
     var rem=targetSum-d1-d2-d3;
-    if(rem<0||rem>9)return{S:{},D:{},DD:{},T:{},Q:{}};
+    if(rem<0||rem>9)return{S:[],D:[],DD:[],T:[],Q:[]};
     var digits=[d1,d2,d3,rem].sort();
     var norm=digits.join('');
-    var type=classifyDigits(digits);
-    var result={S:{},D:{},DD:{},T:{},Q:{}};
-    result[type][norm]=1;
-    return result;
-}
-
-// ── Unified: generate candidates based on game type ──
-function genCandidatesFromDP(dp, dpSize, targetSum, gameType){
-    if(gameType==='pick5'){
-        if(dpSize===3)return gen5From3DP(dp, targetSum);
-        if(dpSize===4)return gen5From4DP(dp, targetSum);
-        // 2DP for pick5: need 3 remaining digits → more complex
-        return gen5From2DP(dp, targetSum);
-    } else {
-        if(dpSize===2)return gen4From2DP(dp, targetSum);
-        if(dpSize===3)return gen4From3DP(dp, targetSum);
-    }
-    return {};
-}
-
-// ── Pick 5: Generate from 2DP + 3 remaining digits summing to remainder ──
-function gen5From2DP(pair, targetSum){
-    var d1=parseInt(pair[0]),d2=parseInt(pair[1]);
-    var rem=targetSum-d1-d2;
-    if(rem<0||rem>27)return{S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-    var result={S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-    for(var a=0;a<=9;a++){
-        if(a>rem)break;
-        for(var b=a;b<=9;b++){
-            var c=rem-a-b;
-            if(c<b||c>9)continue;
-            var digits=[d1,d2,a,b,c].sort();
-            var norm=digits.join('');
-            var type=classifyDigits(digits);
-            if(!result[type])result[type]={};
-            result[type][norm]=1;
-        }
-    }
+    var freq={};digits.forEach(function(x){freq[x]=(freq[x]||0)+1});
+    var counts=Object.values(freq).sort().reverse();
+    var type;
+    if(counts[0]===4)type='Q';
+    else if(counts[0]===3)type='T';
+    else if(counts[0]===2&&counts[1]===2)type='DD';
+    else if(counts[0]===2)type='D';
+    else type='S';
+    var result={S:[],D:[],DD:[],T:[],Q:[]};
+    result[type].push(norm);
     return result;
 }
 
@@ -1285,54 +1214,27 @@ function renderTrendSums(seeds, a){
 
     var endDate = document.getElementById('endDate').value || '2099-12-31';
 
-    // Pre-compute per sum group: deduped candidate pools
-    var gameType = document.getElementById('gameType').value || 'pick5';
-    var isPick5 = (gameType === 'pick5');
+    // Pre-compute per sum group: deduped candidate pools + 2DP freqs
     var sumDataMap = {};
-
     sumKeys.forEach(function(sumKey){
         var group = bySum[sumKey], sum = parseInt(sumKey);
-        var dp2Freq={}, dp3Freq={};
-        // Pool keys: S, D, DD, T, FH (pick5 only), Q
-        var pool = {S:{},D:{},DD:{},T:{},FH:{},Q:{}};
+        var dp2Freq={};
+        var pool = {S:{},D:{},DD:{},TQ:{}};
+        var pool3 = {S:{},DT:{}};
 
         group.forEach(function(s){
             var pairs = getPerms(s.digits, 2);
             pairs.forEach(function(p){dp2Freq[p]=(dp2Freq[p]||0)+1});
-            var triples = getPerms(s.digits, 3);
-            triples.forEach(function(t){dp3Freq[t]=(dp3Freq[t]||0)+1});
-
-            if(isPick5){
-                // PRIMARY: 3DP → 2 remaining digits
-                triples.forEach(function(t){
-                    var c = gen5From3DP(t, sum);
-                    Object.keys(c).forEach(function(type){
-                        Object.keys(c[type]).forEach(function(n){pool[type][n]=1});
-                    });
-                });
-                // SECONDARY: 4DP → 1 remaining digit
-                getPerms(s.digits, 4).forEach(function(q){
-                    var c = gen5From4DP(q, sum);
-                    Object.keys(c).forEach(function(type){
-                        Object.keys(c[type]).forEach(function(n){pool[type][n]=1});
-                    });
-                });
-            } else {
-                // Pick 4: 2DP → 2 remaining
-                pairs.forEach(function(p){
-                    var c = gen4From2DP(p, sum);
-                    Object.keys(c).forEach(function(type){
-                        if(pool[type])Object.keys(c[type]).forEach(function(n){pool[type][n]=1});
-                    });
-                });
-                // 3DP → 1 remaining
-                triples.forEach(function(t){
-                    var c = gen4From3DP(t, sum);
-                    Object.keys(c).forEach(function(type){
-                        if(pool[type])Object.keys(c[type]).forEach(function(n){pool[type][n]=1});
-                    });
-                });
-            }
+            pairs.forEach(function(p){
+                var c = gen2DPPCandidates(p, sum);
+                c.S.forEach(function(n){pool.S[n]=1});c.D.forEach(function(n){pool.D[n]=1});
+                c.DD.forEach(function(n){pool.DD[n]=1});c.T.forEach(function(n){pool.TQ[n]=1});c.Q.forEach(function(n){pool.TQ[n]=1});
+            });
+            getPerms(s.digits, 3).forEach(function(t){
+                var c = gen3DPPCandidates(t, sum);
+                c.S.forEach(function(n){pool3.S[n]=1});
+                ['D','DD','T','Q'].forEach(function(tp){c[tp].forEach(function(n){pool3.DT[n]=1})});
+            });
         });
 
         var trendCount = 0;
@@ -1340,39 +1242,28 @@ function renderTrendSums(seeds, a){
             var d1=new Date(group[gi].date), d2=new Date(group[gi+1].date);
             if(Math.round((d1-d2)/(1000*60*60*24))<=1)trendCount++;
         }
-        sumDataMap[sumKey] = {group:group, sum:sum, dp2Freq:dp2Freq, dp3Freq:dp3Freq, pool:pool, trendCount:trendCount, isPick5:isPick5};
+        sumDataMap[sumKey] = {group:group, sum:sum, dp2Freq:dp2Freq, pool:pool, pool3:pool3, trendCount:trendCount};
     });
 
     window._sumDataMap = sumDataMap;
 
     var totalRows = 0;
     sumKeys.forEach(function(k){totalRows+=bySum[k].length});
-    var h = '<div class="inv-summary"><span>Type: <strong style="color:var(--ora)">Consecutive Sums</strong></span><span>Game: <strong>'+(isPick5?'Pick 5':'Pick 4')+'</strong></span><span>Sums: <strong>'+sumKeys.length+'</strong></span><span>Rows: <strong>'+totalRows+'</strong></span><span>Source: <strong>'+(USE_LIVE_API?'MongoDB':'Mock')+'</strong></span><span>Gen: <strong>'+(isPick5?'3DP→2rem':'2DP→2rem')+'</strong></span></div>';
+    var h = '<div class="inv-summary"><span>Type: <strong style="color:var(--ora)">Consecutive Sums</strong></span><span>Sums: <strong>'+sumKeys.length+'</strong></span><span>Rows: <strong>'+totalRows+'</strong></span><span>Source: <strong>'+(USE_LIVE_API?'MongoDB':'Mock')+'</strong></span></div>';
 
     // Table header with column checkboxes
     h += '<div class="trend-inv-wrap"><table class="trend-inv-table"><thead>';
-    var cbCols = isPick5 ? 5 : 4; // S D DD T FH(pick5) or S D DD TQ(pick4)
-    h += '<tr style="border-bottom:0"><th colspan="'+(isPick5?8:9)+'"></th>';
+    h += '<tr style="border-bottom:0"><th colspan="9"></th>';
     h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" checked class="dpp-col-cb" data-col="S" onchange="updateTrendCands()" title="Straights"></th>';
     h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" checked class="dpp-col-cb" data-col="D" onchange="updateTrendCands()" title="Doubles"></th>';
     h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" class="dpp-col-cb" data-col="DD" onchange="updateTrendCands()" title="Double-Doubles"></th>';
-    h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" class="dpp-col-cb" data-col="T" onchange="updateTrendCands()" title="Triples"></th>';
-    if(isPick5) h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" class="dpp-col-cb" data-col="FH" onchange="updateTrendCands()" title="Full House"></th>';
-    h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" class="dpp-col-cb" data-col="Q" onchange="updateTrendCands()" title="Quads"></th>';
-    h += '<th colspan="2" style="border-bottom:0"></th></tr>';
-
-    // Column label row
+    h += '<th class="th-group-ora" style="border-bottom:0;padding:2px"><input type="checkbox" class="dpp-col-cb" data-col="TQ" onchange="updateTrendCands()" title="Triples/Quads"></th>';
+    h += '<th colspan="4" style="border-bottom:0"></th></tr>';
     h += '<tr><th style="width:24px"></th><th>Sum</th><th>Date</th><th>Days<br>Ago</th><th>PW</th><th>State</th><th>TD</th>';
-    if(isPick5){
-        h += '<th class="th-group-cyan">3DPPs</th>';
-        h += '<th class="th-group-ora">Cands(S)</th><th class="th-group-ora">Cands(D)</th><th class="th-group-ora">Cands(DD)</th><th class="th-group-ora">Cands(T)</th><th class="th-group-ora">Cands(FH)</th><th class="th-group-ora">Cands(Q)</th>';
-        h += '<th class="th-group-cyan">4DPPs</th><th class="th-group">5DP</th>';
-    } else {
-        h += '<th class="th-group">1DPPs</th><th class="th-group-ora">2DPPs</th>';
-        h += '<th class="th-group-ora">Cands(S)</th><th class="th-group-ora">Cands(D)</th><th class="th-group-ora">Cands(DD)</th><th class="th-group-ora">Cands(T|Q)</th>';
-        h += '<th class="th-group-cyan">3DPPs</th><th class="th-group">4DP</th>';
-    }
-    h += '</tr></thead><tbody>';
+    h += '<th class="th-group">1DPPs</th><th class="th-group-ora">2DPPs</th>';
+    h += '<th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-ora">2DPP(DD)</th><th class="th-group-ora">2DPP(T|Q)</th>';
+    h += '<th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th><th class="th-group-cyan">3DPP(D|T)</th>';
+    h += '<th class="th-group">4DPPs</th></tr></thead><tbody>';
 
     function fmtNum(n){
         var drawn=false;
@@ -1382,9 +1273,7 @@ function renderTrendSums(seeds, a){
 
     sumKeys.forEach(function(sumKey, si){
         var sd = sumDataMap[sumKey], group=sd.group, sum=sd.sum;
-        var hotDPs = isPick5
-            ? Object.entries(sd.dp3Freq||{}).filter(function(e){return e[1]>=2}).sort(function(a,b){return b[1]-a[1]})
-            : Object.entries(sd.dp2Freq).filter(function(e){return e[1]>=2}).sort(function(a,b){return b[1]-a[1]});
+        var hotPairs = Object.entries(sd.dp2Freq).filter(function(e){return e[1]>=2}).sort(function(a,b){return b[1]-a[1]});
         var fireStr = sd.trendCount>=2?'🔥🔥🔥 CONSECUTIVE':sd.trendCount>=1?'🔥 TRENDING':'';
 
         // Header row
@@ -1394,19 +1283,17 @@ function renderTrendSums(seeds, a){
         h += '<td colspan="2" style="font-weight:700;font-size:.56rem">'+group.length+' draws · '+sd.trendCount+' trending</td>';
         h += '<td colspan="2" style="font-size:.52rem;color:var(--ora)">'+fireStr+'</td><td></td>';
         h += '<td style="font-size:.48rem">';
-        hotDPs.slice(0,5).forEach(function(p){h+='<span class="dp-hot">'+p[0]+'('+p[1]+'x)🔥</span> '});
-        h += '</td>';
-        // Aggregate candidate counts from unified pool
-        var pS=Object.keys(sd.pool.S).length, pD=Object.keys(sd.pool.D).length;
-        var pDD=Object.keys(sd.pool.DD).length, pT=Object.keys(sd.pool.T).length;
-        var pFH=Object.keys(sd.pool.FH||{}).length, pQ=Object.keys(sd.pool.Q).length;
-        h += '<td style="font-size:.46rem;color:var(--ora)"><strong>'+pS+'</strong></td>';
-        h += '<td style="font-size:.46rem"><strong>'+pD+'</strong></td>';
-        h += '<td style="font-size:.46rem"><strong>'+pDD+'</strong></td>';
-        h += '<td style="font-size:.46rem"><strong>'+pT+'</strong></td>';
-        if(isPick5) h += '<td style="font-size:.46rem;color:var(--err)"><strong>'+pFH+'</strong></td>';
-        h += '<td style="font-size:.46rem;color:var(--err)"><strong>'+pQ+'</strong></td>';
-        h += '<td></td><td></td></tr>';
+        hotPairs.slice(0,5).forEach(function(p){h+='<span class="dp-hot">'+p[0]+'('+p[1]+'x)🔥</span> '});
+        h += '</td><td></td>';
+        var sK=Object.keys(sd.pool.S),dK=Object.keys(sd.pool.D),ddK=Object.keys(sd.pool.DD),tqK=Object.keys(sd.pool.TQ);
+        h += '<td style="font-size:.46rem;color:var(--ora)"><strong>'+sK.length+'</strong></td>';
+        h += '<td style="font-size:.46rem"><strong>'+dK.length+'</strong></td>';
+        h += '<td style="font-size:.46rem"><strong>'+ddK.length+'</strong></td>';
+        h += '<td style="font-size:.46rem;color:var(--err)"><strong>'+tqK.length+'</strong></td>';
+        h += '<td style="font-size:.46rem"><strong>—</strong></td>';
+        h += '<td style="font-size:.46rem"><strong>'+Object.keys(sd.pool3.S).length+'</strong></td>';
+        h += '<td style="font-size:.46rem"><strong>'+Object.keys(sd.pool3.DT).length+'</strong></td>';
+        h += '<td></td></tr>';
 
         // PW rows
         group.forEach(function(s, idx){
@@ -1416,82 +1303,52 @@ function renderTrendSums(seeds, a){
                 daysAgo=gap;daysHot=(gap<=1);
             }
             var isFuture=s.date>endDate;
+            var pairs=getPerms(s.digits,2);
+            var dp2html=pairs.map(function(p){
+                var cnt=sd.dp2Freq[p]||1;
+                return cnt>=2?'<span class="dp-hot">'+p+'('+cnt+'x)🔥</span>':p;
+            }).join(' ');
 
-            // Per-row candidates using game-aware generators
-            var rowPool={S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-            if(isPick5){
-                // Pick5: 3DP primary
-                var triples=getPerms(s.digits,3);
-                var dp3html=triples.map(function(t){
-                    var cnt=(sd.dp3Freq||{})[t]||1;
-                    return cnt>=2?'<span class="dp-hot">'+t+'('+cnt+'x)🔥</span>':t;
-                }).join(' ');
-                triples.forEach(function(t){
-                    var c=gen5From3DP(t,sum);
-                    Object.keys(c).forEach(function(type){Object.keys(c[type]).forEach(function(n){if(rowPool[type])rowPool[type][n]=1})});
-                });
-                // Also 4DP
-                var quads=getPerms(s.digits,4);
-                quads.forEach(function(q){
-                    var c=gen5From4DP(q,sum);
-                    Object.keys(c).forEach(function(type){Object.keys(c[type]).forEach(function(n){if(rowPool[type])rowPool[type][n]=1})});
-                });
+            // Per-row deduped candidates
+            var rS={},rD={},rDD={},rTQ={};
+            pairs.forEach(function(p){
+                var c=gen2DPPCandidates(p,sum);
+                c.S.forEach(function(n){rS[n]=1});c.D.forEach(function(n){rD[n]=1});
+                c.DD.forEach(function(n){rDD[n]=1});c.T.forEach(function(n){rTQ[n]=1});c.Q.forEach(function(n){rTQ[n]=1});
+            });
+            var triples=getPerms(s.digits,3);
+            var r3S={},r3DT={};
+            triples.forEach(function(t){
+                var c=gen3DPPCandidates(t,sum);
+                c.S.forEach(function(n){r3S[n]=1});
+                ['D','DD','T','Q'].forEach(function(tp){c[tp].forEach(function(n){r3DT[n]=1})});
+            });
 
-                h += '<tr class="sum-sub sum-sub-'+sum+'" onclick="toggleInvRow(this)">';
-                h += '<td></td>';
-                h += '<td style="color:var(--text3);font-weight:900">'+sum+'</td>';
-                h += '<td>'+s.date+'</td>';
-                h += '<td>'+(daysHot?'<span class="days-hot">'+daysAgo+'</span>':daysAgo)+'</td>';
-                h += '<td style="font-weight:700">'+(isFuture?'<span class="future-blink">'+s.number+'</span>':s.number)+'</td>';
-                h += '<td>'+(s.state||'FL').slice(0,7)+'</td>';
-                h += '<td>'+s.td+'</td>';
-                h += '<td class="ti-dp" style="font-size:.48rem">'+dp3html+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--ora)">'+Object.keys(rowPool.S).slice(0,4).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(rowPool.D).slice(0,3).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(rowPool.DD).slice(0,3).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(rowPool.T).slice(0,2).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--err)">'+Object.keys(rowPool.FH).slice(0,2).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--err)">'+Object.keys(rowPool.Q).slice(0,1).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.46rem">'+quads.slice(0,3).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.46rem">'+s.normalized+'</td></tr>';
-            } else {
-                // Pick4: 2DP primary
-                var pairs=getPerms(s.digits,2);
-                var dp2html=pairs.map(function(p){
-                    var cnt=sd.dp2Freq[p]||1;
-                    return cnt>=2?'<span class="dp-hot">'+p+'('+cnt+'x)🔥</span>':p;
-                }).join(' ');
-                pairs.forEach(function(p){
-                    var c=gen4From2DP(p,sum);
-                    Object.keys(c).forEach(function(type){Object.keys(c[type]).forEach(function(n){if(rowPool[type])rowPool[type][n]=1})});
-                });
-                var triples=getPerms(s.digits,3);
-
-                h += '<tr class="sum-sub sum-sub-'+sum+'" onclick="toggleInvRow(this)">';
-                h += '<td></td>';
-                h += '<td style="color:var(--text3);font-weight:900">'+sum+'</td>';
-                h += '<td>'+s.date+'</td>';
-                h += '<td>'+(daysHot?'<span class="days-hot">'+daysAgo+'</span>':daysAgo)+'</td>';
-                h += '<td style="font-weight:700">'+(isFuture?'<span class="future-blink">'+s.number+'</span>':s.number)+'</td>';
-                h += '<td>'+(s.state||'FL').slice(0,7)+'</td>';
-                h += '<td>'+s.td+'</td>';
-                h += '<td style="font-size:.52rem">'+s.digits.join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.5rem">'+dp2html+'</td>';
-                h += '<td class="ti-dp" style="font-size:.46rem;color:var(--ora)">'+Object.keys(rowPool.S).slice(0,5).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(rowPool.D).slice(0,4).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(rowPool.DD).slice(0,3).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.46rem;color:var(--err)">'+Object.keys(rowPool.T).concat(Object.keys(rowPool.Q)).slice(0,2).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.5rem">'+triples.join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.5rem">'+s.normalized+'</td></tr>';
-            }
+            h += '<tr class="sum-sub sum-sub-'+sum+'" onclick="toggleInvRow(this)">';
+            h += '<td></td>';
+            h += '<td style="color:var(--text3);font-weight:900">'+sum+'</td>';
+            h += '<td>'+s.date+'</td>';
+            h += '<td>'+(daysHot?'<span class="days-hot">'+daysAgo+'</span>':daysAgo)+'</td>';
+            h += '<td style="font-weight:700">'+(isFuture?'<span class="future-blink">'+s.number+'</span>':s.number)+'</td>';
+            h += '<td>'+(s.state||'FL').slice(0,7)+'</td>';
+            h += '<td>'+s.td+'</td>';
+            h += '<td style="font-size:.52rem">'+s.digits.join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.5rem">'+dp2html+'</td>';
+            h += '<td class="ti-dp" style="font-size:.46rem;color:var(--ora)">'+Object.keys(rS).slice(0,5).map(fmtNum).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(rD).slice(0,4).map(fmtNum).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(rDD).slice(0,3).map(fmtNum).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(rTQ).slice(0,2).map(function(n){return'<span style="color:var(--err)">'+fmtNum(n)+'</span>'}).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.5rem">'+triples.join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(r3S).slice(0,3).map(fmtNum).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.46rem">'+Object.keys(r3DT).slice(0,2).map(fmtNum).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.5rem">'+s.normalized+'</td></tr>';
         });
-        var colSpan=isPick5?16:16;
-        if(si<sumKeys.length-1)h+='<tr style="height:2px;background:var(--border)"><td colspan="'+colSpan+'"></td></tr>';
+        if(si<sumKeys.length-1)h+='<tr style="height:2px;background:var(--border)"><td colspan="17"></td></tr>';
     });
 
     h += '</tbody></table></div>';
     if(!sumKeys.length) h += '<div style="color:var(--text3);font-size:.7rem;padding:10px">No sums with 2+ draws.</div>';
-    h += '<div style="font-size:.55rem;color:var(--text3);margin-top:4px">☑ '+(isPick5?'Pick5 Gen: 3DP→2 remaining digits. ':'Pick4: 2DP→2 remaining. ')+'Check columns to control candidate types. Check Σ rows to include.</div>';
+    h += '<div style="font-size:.55rem;color:var(--text3);margin-top:4px">☑ Check columns above 2DPP(S)–(T|Q) to control which types go to Candidates. Check Σ rows to include that sum group.</div>';
     pane.innerHTML = h;
 
     var sumTab = document.querySelector('.tc-tab.tc-sums .tc-cnt');
@@ -1517,33 +1374,29 @@ function updateTrendCands(){
     var allCands={};
     Object.keys(checkedSums).forEach(function(sumKey){
         var sd=window._sumDataMap[sumKey];if(!sd)return;
-        // Map checkbox data-col to pool keys
         if(enabledTypes.S)Object.keys(sd.pool.S).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
         if(enabledTypes.D)Object.keys(sd.pool.D).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
         if(enabledTypes.DD)Object.keys(sd.pool.DD).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
-        if(enabledTypes.T)Object.keys(sd.pool.T).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
-        if(enabledTypes.FH&&sd.pool.FH)Object.keys(sd.pool.FH).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
-        if(enabledTypes.Q)Object.keys(sd.pool.Q).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
+        if(enabledTypes.TQ)Object.keys(sd.pool.TQ).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
+        Object.keys(sd.pool3.S).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
+        Object.keys(sd.pool3.DT).forEach(function(n){allCands[n]=(allCands[n]||0)+1});
     });
 
     var sorted=Object.entries(allCands).sort(function(a,b){return b[1]-a[1]});
     var pwSet={};_allLoadedSeeds.forEach(function(s){pwSet[s.normalized]=1});
     var candPane=document.getElementById('pane-t-cand');if(!candPane)return;
     var pwCount=sorted.filter(function(c){return pwSet[c[0]]}).length;
-    var types=[];
-    ['S','D','DD','T','FH','Q'].forEach(function(t){if(enabledTypes[t])types.push(t)});
-    var isPick5=(document.getElementById('gameType').value==='pick5');
-    var genLabel=isPick5?'Pick5 Gen (3DP→2rem)':'Pick4 Gen (2DP→2rem)';
+    var types=[];if(enabledTypes.S)types.push('S');if(enabledTypes.D)types.push('D');if(enabledTypes.DD)types.push('DD');if(enabledTypes.TQ)types.push('T/Q');
 
-    var h='<div style="font-size:.58rem;color:var(--text2);padding:4px 0;margin-bottom:6px"><strong>'+genLabel+'</strong> · Candidates from checked Σ groups × checked types</div>';
-    h+='<div class="cand-select-bar"><label><input type="checkbox" onclick="toggleAllCands(this,\'tCandGrid\')"> Select all</label><span class="cs-info">Showing: <strong>'+Math.min(sorted.length,100)+'</strong> · PWs: <strong style="color:var(--ok)">'+pwCount+'</strong> · Total: '+sorted.length+' · Types: '+types.join(' ')+'</span></div>';
+    var h='<div class="cand-filters"><div class="cand-fg"><label>Digits incl.</label><input type="text" placeholder="2,4,9-12"></div><div class="cand-fg"><label>Sums incl.</label><input type="text" placeholder="2,4,9-12"></div><div class="cand-fg"><label>TD incl.</label><input type="text" placeholder="2,4,9-12"></div></div>';
+    h+='<div class="cand-select-bar"><label><input type="checkbox" onclick="toggleAllCands(this,\'tCandGrid\')"> Select all</label><span class="cs-info">Showing: <strong>'+Math.min(sorted.length,80)+'</strong> · PWs: <strong style="color:var(--ok)">'+pwCount+'</strong> · Total: '+sorted.length+' · Types: '+types.join(' ')+'</span></div>';
     h+='<div class="cand-grid-sel" id="tCandGrid">';
-    sorted.slice(0,100).forEach(function(c){
+    sorted.slice(0,80).forEach(function(c){
         h+='<div class="cand-item"><input type="checkbox"><span class="cand-num'+(pwSet[c[0]]?' pw':'')+'">'+c[0]+'</span></div>';
     });
     h+='</div>';
     candPane.innerHTML=h;
-    var badge=document.getElementById('tCandBadge');if(badge)badge.textContent=Math.min(sorted.length,100);
+    var badge=document.getElementById('tCandBadge');if(badge)badge.textContent=Math.min(sorted.length,80);
 }
 
 // ── Render Sidebar Trend Rows (from analysis data) ──
