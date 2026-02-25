@@ -1439,20 +1439,9 @@ function renderTrendSums(seeds, a){
     h += '</tr></thead><tbody>';
 
     function fmtNum(n){
-        var match=null;
-        _allLoadedSeeds.forEach(function(ls){
-            if(ls.normalized===n&&ls.date>endDate){
-                if(!match||ls.date<match.date) match=ls; // earliest future match
-            }
-        });
-        if(match){
-            var md=new Date(match.date),ed=new Date(endDate);
-            var diff=Math.round((md-ed)/(864e5));
-            var short=match.date.slice(5); // MM-DD
-            var label=diff<=1?short+'·'+diff+'d':short;
-            return '<span class="future-blink" title="Drew '+match.date+' '+match.state+'">'+n+'<sub style="font-size:.42rem;color:var(--ok);font-weight:700">('+label+')</sub></span>';
-        }
-        return n;
+        var drawn=false;
+        _allLoadedSeeds.forEach(function(ls){if(ls.normalized===n&&ls.date>endDate)drawn=true});
+        return drawn?'<span class="future-blink">'+n+'</span>':n;
     }
 
     sumKeys.forEach(function(sumKey, si){
@@ -1490,12 +1479,12 @@ function renderTrendSums(seeds, a){
         var pS=Object.keys(sd.pool.S).length, pD=Object.keys(sd.pool.D).length;
         var pDD=Object.keys(sd.pool.DD).length, pT=Object.keys(sd.pool.T).length;
         var pFH=Object.keys(sd.pool.FH||{}).length, pQ=Object.keys(sd.pool.Q).length;
-        h += '<td style="font-size:.54rem;color:var(--ora)"><b>'+pS+'</b></td>';
-        h += '<td style="font-size:.54rem"><b>'+pD+'</b></td>';
-        h += '<td style="font-size:.54rem"><b>'+pDD+'</b></td>';
-        h += '<td style="font-size:.54rem"><b>'+pT+'</b></td>';
-        if(isPick5) h += '<td style="font-size:.54rem;color:var(--err)"><b>'+pFH+'</b></td>';
-        h += '<td style="font-size:.54rem;color:var(--err)"><b>'+pQ+'</b></td>';
+        h += '<td style="font-size:.46rem;color:var(--ora)"><b>'+pS+'</b></td>';
+        h += '<td style="font-size:.46rem"><b>'+pD+'</b></td>';
+        h += '<td style="font-size:.46rem"><b>'+pDD+'</b></td>';
+        h += '<td style="font-size:.46rem"><b>'+pT+'</b></td>';
+        if(isPick5) h += '<td style="font-size:.46rem;color:var(--err)"><b>'+pFH+'</b></td>';
+        h += '<td style="font-size:.46rem;color:var(--err)"><b>'+pQ+'</b></td>';
         h += '<td></td><td></td></tr>';
 
         // ── PW rows ──
@@ -1532,12 +1521,12 @@ function renderTrendSums(seeds, a){
                         if(pwPool[type]) Object.keys(c[type]).forEach(function(n){pwPool[type][n]=1});
                     });
                 });
-                h += '<td class="ti-dp" style="font-size:.56rem;color:var(--ora)">'+Object.keys(pwPool.S).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.56rem">'+Object.keys(pwPool.D).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.56rem">'+Object.keys(pwPool.DD).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.56rem">'+Object.keys(pwPool.T).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.56rem;color:var(--err)">'+Object.keys(pwPool.FH).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.56rem;color:var(--err)">'+Object.keys(pwPool.Q).map(fmtNum).join(' ')+'</td>';
+                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--ora)">'+Object.keys(pwPool.S).slice(0,4).map(fmtNum).join(' ')+'</td>';
+                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(pwPool.D).slice(0,4).map(fmtNum).join(' ')+'</td>';
+                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(pwPool.DD).slice(0,3).map(fmtNum).join(' ')+'</td>';
+                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(pwPool.T).slice(0,2).map(fmtNum).join(' ')+'</td>';
+                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--err)">'+Object.keys(pwPool.FH).slice(0,2).map(fmtNum).join(' ')+'</td>';
+                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--err)">'+Object.keys(pwPool.Q).slice(0,1).map(fmtNum).join(' ')+'</td>';
                 h += '<td class="ti-dp" style="font-size:.46rem">'+getPerms(s.digits,4).slice(0,3).join(' ')+'</td>';
                 h += '<td class="ti-dp" style="font-size:.46rem">'+s.normalized+'</td>';
             } else {
