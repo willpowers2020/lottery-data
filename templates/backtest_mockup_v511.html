@@ -457,7 +457,8 @@
         <h3>⚙️ Configuration</h3>
         <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Florida" selected>Florida</option><option value="Georgia">Georgia</option><option value="Ohio">Ohio</option><option value="Pennsylvania">Pennsylvania</option><option value="Maryland">Maryland</option><option value="Virginia">Virginia</option><option value="Delaware">Delaware</option><option value="Washington DC">Washington DC</option><option value="Louisiana">Louisiana</option><option value="New York">New York</option><option value="Texas">Texas</option></select></div>
         <div class="fg"><label>Game</label><select id="gameType" onchange="updateGame()"><option value="pick2">Pick 2 (1DP–2DP)</option><option value="pick3">Pick 3 (1DP–3DP)</option><option value="pick4">Pick 4 (1DP–4DP)</option><option value="pick5" selected>Pick 5 (1DP–5DP)</option></select></div>
-        <div class="fg"><label>Date Range</label><div style="display:flex;gap:4px;align-items:center"><input type="date" id="startDate" onchange="updateQueryEstimate();autoMode()" style="flex:1"><span style="color:var(--text3);font-size:.7rem;font-weight:700"> – </span><input type="date" id="endDate" onchange="updateQueryEstimate();autoMode()" style="flex:1"></div></div>
+        <div class="fg"><label>Start Date</label><input type="date" id="startDate" onchange="updateQueryEstimate()"></div>
+        <div class="fg"><label>End Date</label><input type="date" id="endDate" onchange="updateQueryEstimate()"></div>
         <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
         <div class="fg"><label>DP Filter</label><select id="dpSize"><option value="0">None</option><option value="2" selected>2DP on last seed</option><option value="3">3DP on last seed</option></select></div>
         <div class="fg"><label>Show Top</label><select id="sugLimit"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="500">500</option></select></div>
@@ -773,19 +774,6 @@ function clickTrend(row){
 function updateGame(){var game=document.getElementById('gameType').value;document.querySelectorAll('.pe-num').forEach(function(n){n.classList.toggle('active',n.dataset.game===game)});updateQueryEstimate()}
 
 function switchMode(mode){var btn=document.getElementById('runBtn'),icon=document.getElementById('runBtnIcon'),text=document.getElementById('runBtnText');if(mode==='prediction'){icon.textContent='🎯';text.textContent='Run Prediction';btn.className='btn btn-run prediction-mode'}else{icon.textContent='🧪';text.textContent='Run Backtest';btn.className='btn btn-run'}}
-
-function autoMode(){
-    var end=document.getElementById('endDate').value;
-    if(!end)return;
-    var today=new Date().toISOString().split('T')[0];
-    if(end>=today){
-        document.getElementById('modePrediction').checked=true;
-        switchMode('prediction');
-    } else {
-        document.getElementById('modeBacktest').checked=true;
-        switchMode('backtest');
-    }
-}
 
 function updateQueryEstimate(){
     var state=document.getElementById('stateSelect').value,game=document.getElementById('gameType').value;
@@ -1133,9 +1121,7 @@ function renderDeltaSumTD(a){
 }
 
 function renderSeeds(draws){
-    // _allLoadedSeeds is set in runAction (includes future draws for blink)
-    // Only set here if not already set with future draws
-    if(!_allLoadedSeeds.length) _allLoadedSeeds = draws;
+    _allLoadedSeeds = draws; // store globally for getSelectedSeeds
     var grid=document.getElementById('seedGrid');
     var info=document.getElementById('seedInfo');
     grid.innerHTML='';
@@ -1847,47 +1833,29 @@ async function runAction(){
     try {
         var seeds;
         if(USE_LIVE_API){
+            // Try live MongoDB
             seeds = await fetchLiveSeeds(state, game, start, end, tod);
             if(seeds.length){
                 text.textContent='Fetching TD values...';
                 await fetchTDValues(seeds, state, game);
             }
-            // Also fetch draws AFTER endDate (up to +5 days) for future blink detection
-            text.textContent='Checking future draws...';
-            try {
-                var futureEnd = new Date(end);
-                futureEnd.setDate(futureEnd.getDate() + 5);
-                var futureEndStr = futureEnd.toISOString().split('T')[0];
-                var nextDay = new Date(end);
-                nextDay.setDate(nextDay.getDate() + 1);
-                var nextDayStr = nextDay.toISOString().split('T')[0];
-                var futureSeeds = await fetchLiveSeeds(state, game, nextDayStr, futureEndStr, '');
-                // Add future seeds to _allLoadedSeeds (they'll be detected by fmtNum)
-                futureSeeds.forEach(function(fs){ fs._future = true });
-                _allLoadedSeeds = seeds.concat(futureSeeds);
-            } catch(e2) {
-                console.warn('Future draw fetch failed:', e2);
-                _allLoadedSeeds = seeds;
-            }
         } else {
+            // Use mock DB
             seeds = fetchMockSeeds(state, start, end, tod);
-            _allLoadedSeeds = seeds;
         }
 
         if(seeds.length){
             renderSeeds(seeds);
-            var futureCount = _allLoadedSeeds.filter(function(s){ return s.date > end }).length;
             document.getElementById('seedInfo').textContent=seeds.length+' draws from '+
-                (USE_LIVE_API?'MongoDB':'mock DB')+' ('+start+' → '+end+')'+
-                (futureCount ? ' · '+futureCount+' future draws loaded for blink' : '');
+                (USE_LIVE_API?'MongoDB':'mock DB')+' ('+start+' → '+end+')';
         } else {
             document.getElementById('seedInfo').textContent='No draws found. Try widening dates or check state/game.';
             document.getElementById('seedGrid').innerHTML='<div style="color:var(--text3);font-size:.7rem;padding:10px">No matching draws found.</div>';
         }
     } catch(e) {
         console.error('Live API failed, falling back to mock:', e);
+        // Fallback to mock DB
         var mockSeeds = fetchMockSeeds(state, start, end, tod);
-        _allLoadedSeeds = mockSeeds;
         if(mockSeeds.length){
             renderSeeds(mockSeeds);
             document.getElementById('seedInfo').textContent=mockSeeds.length+' draws from mock DB (API unavailable: '+e.message+')';
@@ -1896,9 +1864,8 @@ async function runAction(){
         }
     }
 
-    autoMode();
-    btn.disabled=false;
     var isPred=document.getElementById('modePrediction').checked;
+    btn.disabled=false;
     icon.textContent=isPred?'🎯':'🧪';
     text.textContent=isPred?'Run Prediction':'Run Backtest';
 }
@@ -1910,7 +1877,6 @@ async function runAction(){
     document.getElementById('endDate').value=t.toISOString().split('T')[0];
     document.getElementById('stateSelect').value='Florida';
     updateGame();
-    autoMode();
 })();
 </script>
 </body>
