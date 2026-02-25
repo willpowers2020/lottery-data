@@ -455,12 +455,11 @@
     <!-- CONFIG -->
     <div class="card card-ora">
         <h3>⚙️ Configuration</h3>
-        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Pennsylvania">Pennsylvania (15k)</option><option value="Washington DC">Washington DC (12k)</option><option value="Georgia">Georgia (11k)</option><option value="Ohio">Ohio (10k)</option><option value="Florida" selected>Florida (7k)</option><option value="Maryland">Maryland (3k)</option><option value="Virginia">Virginia (2k)</option><option value="Louisiana">Louisiana (2k)</option><option value="Delaware">Delaware (1k)</option></select></div>
+        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Florida" selected>Florida</option><option value="Georgia">Georgia</option><option value="Ohio">Ohio</option><option value="Pennsylvania">Pennsylvania</option><option value="Maryland">Maryland</option><option value="Virginia">Virginia</option><option value="Delaware">Delaware</option><option value="Washington DC">Washington DC</option><option value="Louisiana">Louisiana</option><option value="New York">New York</option><option value="Texas">Texas</option></select></div>
         <div class="fg"><label>Game</label><select id="gameType" onchange="updateGame()"><option value="pick2">Pick 2 (1DP–2DP)</option><option value="pick3">Pick 3 (1DP–3DP)</option><option value="pick4">Pick 4 (1DP–4DP)</option><option value="pick5" selected>Pick 5 (1DP–5DP)</option></select></div>
         <div class="fg"><label>Date Range</label><div style="display:flex;gap:4px;align-items:center"><input type="date" id="startDate" onchange="updateQueryEstimate();autoMode()" style="flex:1"><span style="color:var(--text3);font-size:.7rem;font-weight:700"> – </span><input type="date" id="endDate" onchange="updateQueryEstimate();autoMode()" style="flex:1"></div></div>
         <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
         <div class="fg"><label>DP Filter</label><select id="dpSize"><option value="0">None</option><option value="2" selected>2DP on last seed</option><option value="3">3DP on last seed</option></select></div>
-        <div class="fg"><label>3DP Mode</label><select id="dpMode"><option value="glob" selected>Glob (wide net)</option><option value="perpw">Per-PW (tight)</option></select></div>
         <div class="fg"><label>Show Top</label><select id="sugLimit"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="500">500</option></select></div>
         <div class="query-guard" id="queryGuard"><div class="query-guard-title">⚡ Query Cost Estimate</div><div class="query-guard-meter"><div class="query-guard-fill" id="queryGuardFill" style="width:15%;background:var(--ok)"></div></div><div class="query-guard-stats"><span>Seeds: <span id="estSeeds">10</span></span><span>Cands: <span id="estCands">~330</span></span><span>Time: <span id="estTime">~2s</span></span></div><div class="query-guard-cap">📏 No caps in mockup mode</div></div>
         <div class="mode-toggle"><input type="radio" name="mode" id="modeBacktest" value="backtest" checked onchange="switchMode('backtest')"><label for="modeBacktest"><span class="mode-icon">🧪</span>Backtest<span class="mode-sub">Validate past draws</span></label><input type="radio" name="mode" id="modePrediction" value="prediction" onchange="switchMode('prediction')"><label for="modePrediction"><span class="mode-icon">🎯</span>Prediction<span class="mode-sub">Forward-looking plays</span></label></div>
@@ -1345,32 +1344,14 @@ function renderTrendSums(seeds, a){
             });
             var uniqueDigits = Object.keys(digitFreq).map(Number).sort();
 
-            // Step 2: Generate 3DP combos based on mode
-            var dpMode = document.getElementById('dpMode').value;
+            // Step 2: Extract 3DP combos from EACH PW individually, dedupe across all PWs
             var all3DP = {};  // key → [a,b,c]
-
-            if(dpMode === 'glob'){
-                // GLOB: Pool ALL digits from ALL PWs (with duplicates), C(n,3) combos
-                var glob = [];
-                group.forEach(function(s){ glob = glob.concat(s.digits) });
-                for(var i=0; i<glob.length; i++){
-                    for(var j=i+1; j<glob.length; j++){
-                        for(var k=j+1; k<glob.length; k++){
-                            var tri = [glob[i], glob[j], glob[k]].sort(function(a,b){return a-b});
-                            var key = tri.join('');
-                            if(!all3DP[key]) all3DP[key] = tri;
-                        }
-                    }
-                }
-            } else {
-                // PER-PW: Extract 3DPs from each PW individually, dedupe
-                group.forEach(function(s){
-                    var perms = getPerms(s.digits, 3);
-                    perms.forEach(function(p){
-                        if(!all3DP[p]) all3DP[p] = p.split('').map(Number);
-                    });
+            group.forEach(function(s){
+                var perms = getPerms(s.digits, 3); // unique sorted combos from THIS PW
+                perms.forEach(function(p){
+                    if(!all3DP[p]) all3DP[p] = p.split('').map(Number);
                 });
-            }
+            });
 
             // Step 3: Track which 3DPs appear in how many PWs (for fire badges)
             Object.keys(all3DP).forEach(function(key){
@@ -1403,7 +1384,7 @@ function renderTrendSums(seeds, a){
             });
 
             sumDataMap[sumKey] = {group:group, sum:sum, dp2Freq:dp2Freq, dp3Freq:dp3Freq,
-                pool:pool, trendCount:0, isPick5:true, dpMode:dpMode,
+                pool:pool, trendCount:0, isPick5:true,
                 combinedDigits:uniqueDigits, digitFreq:digitFreq,
                 total3DP:Object.keys(all3DP).length,
                 totalCands:Object.keys(pool.S).length+Object.keys(pool.D).length+Object.keys(pool.DD).length+Object.keys(pool.T).length+Object.keys(pool.FH||{}).length+Object.keys(pool.Q).length};
@@ -1444,8 +1425,7 @@ function renderTrendSums(seeds, a){
 
     var totalRows = 0;
     sumKeys.forEach(function(k){totalRows+=bySum[k].length});
-    var dpModeLabel = (document.getElementById('dpMode')||{}).value === 'glob' ? 'Glob' : 'Per-PW';
-    var h = '<div class="inv-summary"><span>Type: <strong style="color:var(--ora)">Consecutive Sums</strong></span><span>Game: <strong>'+(isPick5?'Pick 5':'Pick 4')+'</strong></span><span>Sums: <strong>'+sumKeys.length+'</strong></span><span>Rows: <strong>'+totalRows+'</strong></span><span>Source: <strong>'+(USE_LIVE_API?'MongoDB':'Mock')+'</strong></span><span>Gen: <strong>'+(isPick5?'3DP→2rem ('+dpModeLabel+')':'2DP→2rem')+'</strong></span></div>';
+    var h = '<div class="inv-summary"><span>Type: <strong style="color:var(--ora)">Consecutive Sums</strong></span><span>Game: <strong>'+(isPick5?'Pick 5':'Pick 4')+'</strong></span><span>Sums: <strong>'+sumKeys.length+'</strong></span><span>Rows: <strong>'+totalRows+'</strong></span><span>Source: <strong>'+(USE_LIVE_API?'MongoDB':'Mock')+'</strong></span><span>Gen: <strong>'+(isPick5?'3DP→2rem':'2DP→2rem')+'</strong></span></div>';
 
     // Table header with column checkboxes
     h += '<div class="trend-inv-wrap"><table class="trend-inv-table"><thead>';
@@ -1602,7 +1582,7 @@ function renderTrendSums(seeds, a){
 
     h += '</tbody></table></div>';
     if(!sumKeys.length) h += '<div style="color:var(--text3);font-size:.7rem;padding:10px">No sums with 2+ draws.</div>';
-    h += '<div style="font-size:.55rem;color:var(--text3);margin-top:4px">☑ '+(isPick5?'Pick5 Gen: '+dpModeLabel+' mode — '+(dpModeLabel==='Glob'?'combine ALL PW digits into glob → all 3DP combos (wide net)':'extract 3DPs per PW individually (tight)')+ ' → remainder → candidates. ':'Pick4: 2DP→2 remaining. ')+'Check columns to control candidate types. Check Σ rows to include.</div>';
+    h += '<div style="font-size:.55rem;color:var(--text3);margin-top:4px">☑ '+(isPick5?'Pick5 Gen: Combine PW digits → all 3DP combos → remainder → candidates. ':'Pick4: 2DP→2 remaining. ')+'Check columns to control candidate types. Check Σ rows to include.</div>';
     pane.innerHTML = h;
 
     var sumTab = document.querySelector('.tc-tab.tc-sums .tc-cnt');
