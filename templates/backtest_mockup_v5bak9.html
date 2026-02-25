@@ -1513,20 +1513,8 @@ function renderTrendSums(seeds, a){
                     return cnt>=2?'<span class="dp-hot">'+t+'('+cnt+'x)🔥</span>':t;
                 }).join(' ');
                 h += '<td class="ti-dp" style="font-size:.46rem">'+dp3html+'</td>';
-                // Per-PW candidates from this PW's 3DPs
-                var pwPool={S:{},D:{},DD:{},T:{},FH:{},Q:{}};
-                pw3dp.forEach(function(t){
-                    var c=gen5From3DP(t,sum);
-                    Object.keys(c).forEach(function(type){
-                        if(pwPool[type]) Object.keys(c[type]).forEach(function(n){pwPool[type][n]=1});
-                    });
-                });
-                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--ora)">'+Object.keys(pwPool.S).slice(0,4).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(pwPool.D).slice(0,4).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(pwPool.DD).slice(0,3).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem">'+Object.keys(pwPool.T).slice(0,2).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--err)">'+Object.keys(pwPool.FH).slice(0,2).map(fmtNum).join(' ')+'</td>';
-                h += '<td class="ti-dp" style="font-size:.44rem;color:var(--err)">'+Object.keys(pwPool.Q).slice(0,1).map(fmtNum).join(' ')+'</td>';
+                // Cand columns show "—" for PW rows (candidates are at group level)
+                for(var ec=0;ec<6;ec++) h+='<td></td>';
                 h += '<td class="ti-dp" style="font-size:.46rem">'+getPerms(s.digits,4).slice(0,3).join(' ')+'</td>';
                 h += '<td class="ti-dp" style="font-size:.46rem">'+s.normalized+'</td>';
             } else {
