@@ -1,0 +1,36 @@
+name: Daily DB freshness check
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # run every day at 09:00 UTC
+  workflow_dispatch: {}  # allow manual trigger
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install requests
+
+      - name: Run DB freshness script
+        env:
+          DB_MODE: ${{ secrets.DB_MODE }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          # exit with code 1 if there are alerts; GitHub will notify watchers
+          python3 check_db_current.py --alert-days 1 --email

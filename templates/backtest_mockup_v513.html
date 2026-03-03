@@ -850,7 +850,7 @@ var USE_LIVE_API = true; // set false to use mock DB offline
 function apiUrl(path){return path}
 
 // ── Pick 5 states list (matches server) ──
-var PICK5_STATES=['Maryland','Florida','Virginia','Delaware','Ohio','Pennsylvania','Georgia','Washington, D.C.','Louisiana'];
+var PICK5_STATES=['Maryland','Florida','Virginia','Delaware','Ohio','Pennsylvania','Georgia','Washington DC','Louisiana'];
 
 // ── Fetch seeds from live MongoDB via /api/draws/recent ──
 async function fetchLiveSeeds(state, gameType, startDate, endDate, tod){
@@ -1520,16 +1520,16 @@ function renderTrendSums(seeds, a){
             h += '</td>';
         }
 
-        // Candidate counts by type — show ALL candidates (with future blink) on header row
-        var pS=Object.keys(sd.pool.S), pD=Object.keys(sd.pool.D);
-        var pDD=Object.keys(sd.pool.DD), pT=Object.keys(sd.pool.T);
-        var pFH=Object.keys(sd.pool.FH||{}), pQ=Object.keys(sd.pool.Q);
-        h += '<td style="font-size:.56rem;color:var(--ora)"><b>'+pS.length+'</b><br>'+pS.map(fmtNum).join(' ')+'</td>';
-        h += '<td style="font-size:.56rem"><b>'+pD.length+'</b><br>'+pD.map(fmtNum).join(' ')+'</td>';
-        h += '<td style="font-size:.56rem"><b>'+pDD.length+'</b><br>'+pDD.map(fmtNum).join(' ')+'</td>';
-        h += '<td style="font-size:.56rem"><b>'+pT.length+'</b><br>'+pT.map(fmtNum).join(' ')+'</td>';
-        if(isPick5) h += '<td style="font-size:.56rem;color:var(--err)"><b>'+pFH.length+'</b><br>'+pFH.map(fmtNum).join(' ')+'</td>';
-        h += '<td style="font-size:.56rem;color:var(--err)"><b>'+pQ.length+'</b><br>'+pQ.map(fmtNum).join(' ')+'</td>';
+        // Candidate counts by type
+        var pS=Object.keys(sd.pool.S).length, pD=Object.keys(sd.pool.D).length;
+        var pDD=Object.keys(sd.pool.DD).length, pT=Object.keys(sd.pool.T).length;
+        var pFH=Object.keys(sd.pool.FH||{}).length, pQ=Object.keys(sd.pool.Q).length;
+        h += '<td style="font-size:.54rem;color:var(--ora)"><b>'+pS+'</b></td>';
+        h += '<td style="font-size:.54rem"><b>'+pD+'</b></td>';
+        h += '<td style="font-size:.54rem"><b>'+pDD+'</b></td>';
+        h += '<td style="font-size:.54rem"><b>'+pT+'</b></td>';
+        if(isPick5) h += '<td style="font-size:.54rem;color:var(--err)"><b>'+pFH+'</b></td>';
+        h += '<td style="font-size:.54rem;color:var(--err)"><b>'+pQ+'</b></td>';
         h += '<td></td><td></td></tr>';
 
         // ── PW rows ──

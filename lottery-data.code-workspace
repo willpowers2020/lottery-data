@@ -1,0 +1,8 @@
+{
+    "folders": [
+        { "path": "." }
+    ],
+    "settings": {
+        // workspace-specific settings can go here
+    }
+}
