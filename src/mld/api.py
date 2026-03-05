@@ -35,7 +35,7 @@ from pathlib import Path
 import sqlite3
 import hashlib
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../../templates')
 
 # CORS support — allows mld_platform.html to call the API from file:// or any origin
 @app.after_request
@@ -54,6 +54,7 @@ STATE_NAME_ALIASES = {
     'Washington, D.C.': 'Washington, D.C.',
     'washington dc': 'Washington, D.C.',
     'Washington D.C.': 'Washington, D.C.',
+    'Washington DC': 'Washington, D.C.',
     'Washington D.C': 'Washington, D.C.',
     'DC': 'Washington, D.C.',
 }
