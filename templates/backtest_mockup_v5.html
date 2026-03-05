@@ -350,6 +350,67 @@
         .cand-item .cand-num{margin:0}
         @media(max-width:1200px){.admin-sidebar{display:none}}
         @media(max-width:900px){.layout{flex-direction:column}.sidebar{width:100%}.nav-breadcrumb{display:none}}
+
+        /* ===== FOCUS MODE ===== */
+        /* Overlay that dims everything */
+        .focus-overlay{
+            display:none;position:fixed;inset:0;
+            background:rgba(0,0,0,0);
+            backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);
+            z-index:100;
+            transition:background .35s ease,backdrop-filter .35s ease;
+            cursor:pointer;
+        }
+        :root[data-theme="dark"] .focus-overlay{background:rgba(0,0,0,0)}
+        .focus-active .focus-overlay{
+            display:block;
+            background:rgba(0,0,0,.55);
+            backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+        }
+        :root[data-theme="dark"] .focus-active .focus-overlay{background:rgba(0,0,0,.72)}
+
+        /* Cards in background: dim + slightly shrink */
+        .focus-active .card:not(.focus-card){
+            opacity:.25;
+            filter:blur(1px) saturate(.4);
+            transform:scale(.985);
+            pointer-events:none;
+            transition:opacity .3s ease,filter .3s ease,transform .3s ease;
+            position:relative;z-index:99;
+        }
+        /* The focused card rises above the overlay */
+        .card{transition:opacity .3s ease,filter .3s ease,transform .3s ease,box-shadow .3s ease,border-color .3s ease}
+        .focus-card{
+            position:relative;z-index:200;
+            box-shadow:0 8px 40px rgba(0,0,0,.28),0 0 0 2px var(--pri)!important;
+            transform:scale(1.012)!important;
+            opacity:1!important;filter:none!important;
+        }
+        :root[data-theme="dark"] .focus-card{box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 2px var(--pri)!important}
+
+        /* Card h3 — show focus cursor hint */
+        .card h3{cursor:pointer;user-select:none}
+        .card h3:hover .focus-hint{opacity:1}
+        .focus-hint{
+            margin-left:auto;font-size:.55rem;font-weight:600;
+            color:var(--text3);opacity:0;transition:opacity .2s;
+            padding:2px 6px;border-radius:4px;border:1px solid var(--border);
+            white-space:nowrap;letter-spacing:.3px;
+        }
+        .focus-card h3 .focus-hint{opacity:1;color:var(--pri);border-color:var(--pri);background:var(--pri-g)}
+
+        /* Exit focus pill button */
+        .focus-exit-btn{
+            display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+            z-index:300;
+            background:var(--surface);border:1.5px solid var(--pri);border-radius:20px;
+            padding:8px 20px;font-size:.75rem;font-weight:800;color:var(--pri);
+            cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.2);
+            letter-spacing:.3px;gap:6px;align-items:center;
+            transition:background .2s,box-shadow .2s;
+        }
+        .focus-exit-btn:hover{background:var(--pri-g);box-shadow:0 6px 28px rgba(0,0,0,.28)}
+        .focus-active .focus-exit-btn{display:flex}
     </style>
 </head>
 <body>
@@ -455,7 +516,7 @@
     <!-- CONFIG -->
     <div class="card card-ora">
         <h3>⚙️ Configuration</h3>
-        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Pennsylvania">Pennsylvania (15k)</option><option value="Washington DC">Washington DC (12k)</option><option value="Georgia">Georgia (11k)</option><option value="Ohio">Ohio (10k)</option><option value="Florida" selected>Florida (7k)</option><option value="Maryland">Maryland (3k)</option><option value="Virginia">Virginia (2k)</option><option value="Louisiana">Louisiana (2k)</option><option value="Delaware">Delaware (1k)</option></select></div>
+        <div class="fg"><label>State</label><select id="stateSelect" onchange="updateQueryEstimate()"><option value="">Select</option><option value="All">All States</option><option value="Pennsylvania">Pennsylvania (15k)</option><option value="Washington DC">Washington DC (12k)</option><option value="Georgia">Georgia (11k)</option><option value="Ohio">Ohio (10k)</option><option value="FL" selected>FL (7k)</option><option value="Maryland">Maryland (3k)</option><option value="Virginia">Virginia (2k)</option><option value="Louisiana">Louisiana (2k)</option><option value="Delaware">Delaware (1k)</option></select></div>
         <div class="fg"><label>Game</label><select id="gameType" onchange="updateGame()"><option value="pick2">Pick 2 (1DP–2DP)</option><option value="pick3">Pick 3 (1DP–3DP)</option><option value="pick4">Pick 4 (1DP–4DP)</option><option value="pick5" selected>Pick 5 (1DP–5DP)</option></select></div>
         <div class="fg"><label>Date Range</label><div style="display:flex;gap:4px;align-items:center"><input type="date" id="startDate" onchange="updateQueryEstimate();autoMode()" style="flex:1"><span style="color:var(--text3);font-size:.7rem;font-weight:700"> – </span><input type="date" id="endDate" onchange="updateQueryEstimate();autoMode()" style="flex:1"></div></div>
         <div class="fg"><label>Target TOD</label><select id="targetTOD"><option value="">All</option><option value="midday">Midday</option><option value="evening" selected>Evening</option></select></div>
@@ -467,6 +528,11 @@
         <button class="btn btn-run" id="runBtn" onclick="runAction()"><span id="runBtnIcon">🧪</span> <span id="runBtnText">Run Backtest</span></button>
     </div>
 </div>
+
+<!-- Focus mode overlay (click to exit) -->
+<div class="focus-overlay" onclick="exitFocus()"></div>
+<!-- Focus exit pill -->
+<button class="focus-exit-btn" onclick="exitFocus()">✕ Exit Focus</button>
 
 <!-- ===== MAIN CONTENT ===== -->
 <div class="main">
@@ -589,9 +655,9 @@
                             <th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th><th class="th-group-cyan">3DPP(D)</th>
                             <th class="th-group">4DPPs</th><th class="th-group">4DPP(S)</th>
                         </tr></thead><tbody>
-                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">16</td><td>2</td><td class="ti-vals">1726<br>5137</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">60 48</td><td class="inv-mono" style="font-size:.54rem">1 2 6 7 1<br>3 5 7</td><td class="inv-mono" style="font-size:.54rem">217 617<br>317 517</td><td class="ti-dp" style="font-size:.52rem">12 16 17<br>26 27 67</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1609</span><br><span style="color:var(--ora)">1708</span><br><span style="color:var(--ora)">2608</span><br>3508<br>6703</td><td class="ti-dp ti-dp-d" style="font-size:.52rem"><span style="color:var(--ora)">2707</span><br>1519<br><span style="color:var(--ora)">1618</span><br>1339</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem"><span style="color:var(--err)">1717</span> 3535<br>2626</td><td class="ti-dp" style="font-size:.52rem">1555 3733</td><td class="ti-dp" style="font-size:.52rem">126 127<br>167 267<br>135 137</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">1267<br>1357</td><td class="ti-dp"></td></tr>
-                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">17</td><td>2</td><td class="ti-vals">2069<br>1754</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">54 36</td><td class="inv-mono" style="font-size:.54rem">0 2 6 9 1<br>4 5 7</td><td class="inv-mono" style="font-size:.54rem">null</td><td class="ti-dp" style="font-size:.52rem">02 06 09<br>26 29 69</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">0917</span><br><span style="color:var(--ora)">0278</span><br>0935<br>0638</td><td class="ti-dp ti-dp-d" style="font-size:.52rem"><span style="color:var(--ora)">2627</span><br>2933<br>2636</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem">4544</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">026 029<br>069 269<br>145 147</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">0269<br>1457</td><td class="ti-dp"></td></tr>
-                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">18</td><td>2</td><td class="ti-vals">5292<br>8271</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">24 50</td><td class="inv-mono" style="font-size:.54rem">2 5 9 1 2<br>7 8</td><td class="inv-mono" style="font-size:.54rem">null</td><td class="ti-dp" style="font-size:.52rem">22 25 29</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1809</span><br><span style="color:var(--ora)">2907</span><br>7803</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">2808<br>1719<br>1737</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem"><span style="color:var(--err)">1818</span> 2277</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">225 229<br>259</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">2259<br>1278</td><td class="ti-dp"></td></tr>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">16</td><td>2</td><td class="ti-vals">1726<br>5137</td><td><span class="ti-state">FL<br>FL</span></td><td class="inv-mono">60 48</td><td class="inv-mono" style="font-size:.54rem">1 2 6 7 1<br>3 5 7</td><td class="inv-mono" style="font-size:.54rem">217 617<br>317 517</td><td class="ti-dp" style="font-size:.52rem">12 16 17<br>26 27 67</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1609</span><br><span style="color:var(--ora)">1708</span><br><span style="color:var(--ora)">2608</span><br>3508<br>6703</td><td class="ti-dp ti-dp-d" style="font-size:.52rem"><span style="color:var(--ora)">2707</span><br>1519<br><span style="color:var(--ora)">1618</span><br>1339</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem"><span style="color:var(--err)">1717</span> 3535<br>2626</td><td class="ti-dp" style="font-size:.52rem">1555 3733</td><td class="ti-dp" style="font-size:.52rem">126 127<br>167 267<br>135 137</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">1267<br>1357</td><td class="ti-dp"></td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">17</td><td>2</td><td class="ti-vals">2069<br>1754</td><td><span class="ti-state">FL<br>FL</span></td><td class="inv-mono">54 36</td><td class="inv-mono" style="font-size:.54rem">0 2 6 9 1<br>4 5 7</td><td class="inv-mono" style="font-size:.54rem">null</td><td class="ti-dp" style="font-size:.52rem">02 06 09<br>26 29 69</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">0917</span><br><span style="color:var(--ora)">0278</span><br>0935<br>0638</td><td class="ti-dp ti-dp-d" style="font-size:.52rem"><span style="color:var(--ora)">2627</span><br>2933<br>2636</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem">4544</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">026 029<br>069 269<br>145 147</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">0269<br>1457</td><td class="ti-dp"></td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">18</td><td>2</td><td class="ti-vals">5292<br>8271</td><td><span class="ti-state">FL<br>FL</span></td><td class="inv-mono">24 50</td><td class="inv-mono" style="font-size:.54rem">2 5 9 1 2<br>7 8</td><td class="inv-mono" style="font-size:.54rem">null</td><td class="ti-dp" style="font-size:.52rem">22 25 29</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1809</span><br><span style="color:var(--ora)">2907</span><br>7803</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">2808<br>1719<br>1737</td><td class="ti-dp"></td><td class="ti-dp ti-dp-t" style="font-size:.52rem"><span style="color:var(--err)">1818</span> 2277</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">225 229<br>259</td><td class="ti-dp"></td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">2259<br>1278</td><td class="ti-dp"></td></tr>
                         </tbody></table>
                     </div>
                 </div>
@@ -607,8 +673,8 @@
                             <th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th>
                             <th class="th-group">4DPPs</th>
                         </tr></thead><tbody>
-                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">32</td><td>3</td><td class="ti-vals">4819<br>2750<br>6033</td><td><span class="ti-state">Florida<br>Florida<br>Florida</span></td><td class="inv-mono">22 14 12</td><td class="inv-mono" style="font-size:.54rem">1 4 8 9<br>0 2 5 7<br>0 3 3 6</td><td class="inv-mono" style="font-size:.54rem">148 189<br>025 257</td><td class="ti-dp" style="font-size:.52rem">14 18 19<br>48 49 89<br>02 05 25</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1432</span><br>1832<br><span style="color:var(--ora)">4932</span><br>0232</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">1948<br>8914<br>2750<br>0533</td><td class="ti-dp" style="font-size:.52rem">148 189<br>149 489<br>025 027</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">1489</span></td><td class="ti-dp" style="font-size:.52rem">1489<br>0257</td></tr>
-                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">45</td><td>2</td><td class="ti-vals">3916<br>7204</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">19 13</td><td class="inv-mono" style="font-size:.54rem">1 3 6 9<br>0 2 4 7</td><td class="inv-mono" style="font-size:.54rem">136 139</td><td class="ti-dp" style="font-size:.52rem">13 16 19<br>36 39 69<br>02 04 07</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">1345<br><span style="color:var(--ora)">3945</span><br>0245</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">1639<br>6913<br>0724</td><td class="ti-dp" style="font-size:.52rem">136 139<br>169 369<br>024 027</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">1369<br>0247</td></tr>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">32</td><td>3</td><td class="ti-vals">4819<br>2750<br>6033</td><td><span class="ti-state">FL<br>FL<br>FL</span></td><td class="inv-mono">22 14 12</td><td class="inv-mono" style="font-size:.54rem">1 4 8 9<br>0 2 5 7<br>0 3 3 6</td><td class="inv-mono" style="font-size:.54rem">148 189<br>025 257</td><td class="ti-dp" style="font-size:.52rem">14 18 19<br>48 49 89<br>02 05 25</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">1432</span><br>1832<br><span style="color:var(--ora)">4932</span><br>0232</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">1948<br>8914<br>2750<br>0533</td><td class="ti-dp" style="font-size:.52rem">148 189<br>149 489<br>025 027</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">1489</span></td><td class="ti-dp" style="font-size:.52rem">1489<br>0257</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">45</td><td>2</td><td class="ti-vals">3916<br>7204</td><td><span class="ti-state">FL<br>FL</span></td><td class="inv-mono">19 13</td><td class="inv-mono" style="font-size:.54rem">1 3 6 9<br>0 2 4 7</td><td class="inv-mono" style="font-size:.54rem">136 139</td><td class="ti-dp" style="font-size:.52rem">13 16 19<br>36 39 69<br>02 04 07</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">1345<br><span style="color:var(--ora)">3945</span><br>0245</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">1639<br>6913<br>0724</td><td class="ti-dp" style="font-size:.52rem">136 139<br>169 369<br>024 027</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">1369<br>0247</td></tr>
                         </tbody></table>
                     </div>
                 </div>
@@ -624,9 +690,9 @@
                             <th class="th-group-cyan">3DPPs</th><th class="th-group-cyan">3DPP(S)</th>
                             <th class="th-group">4DPPs</th>
                         </tr></thead><tbody>
-                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">8</td><td>2</td><td class="ti-vals">7244<br>9257</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">25 15</td><td class="inv-mono" style="font-size:.54rem">2 4 4 7<br>2 5 7 9</td><td class="ti-dp" style="font-size:.52rem">24 27 44<br>47 25 29<br>57 59 79</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">2408</span><br>4708<br>2508<br>5908</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">7244<br>2747<br>9257<br>5972</td><td class="ti-dp" style="font-size:.52rem">244 247<br>447 259<br>257 279</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">2447</span></td><td class="ti-dp" style="font-size:.52rem">2447<br>2579</td></tr>
-                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">21</td><td>2</td><td class="ti-vals">9257<br>9572</td><td><span class="ti-state">Florida<br>Florida</span></td><td class="inv-mono">15 44</td><td class="inv-mono" style="font-size:.54rem">2 5 7 9<br>2 5 7 9</td><td class="ti-dp" style="font-size:.52rem">25 27 29<br>57 59 79</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">2521<br>2721<br><span style="color:var(--ora)">5921</span></td><td class="ti-dp ti-dp-d" style="font-size:.52rem">9257<br>5729<br>7952</td><td class="ti-dp" style="font-size:.52rem">257 259<br>279 579</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">2579</td></tr>
-                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">14</td><td>3</td><td class="ti-vals">5890<br>0985<br>6029</td><td><span class="ti-state">Florida<br>Florida<br>Florida</span></td><td class="inv-mono">22 32 29</td><td class="inv-mono" style="font-size:.54rem">0 5 8 9<br>0 5 8 9<br>0 2 6 9</td><td class="ti-dp" style="font-size:.52rem">05 08 09<br>58 59 89<br>02 06 26</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">0514<br><span style="color:var(--ora)">0814</span><br>5914<br>0214</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">5890<br>0985<br>8905<br>6029</td><td class="ti-dp" style="font-size:.52rem">058 059<br>089 589<br>026 029</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">0589</span></td><td class="ti-dp" style="font-size:.52rem">0589<br>0269</td></tr>
+                            <tr class="selected" onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" checked onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">8</td><td>2</td><td class="ti-vals">7244<br>9257</td><td><span class="ti-state">FL<br>FL</span></td><td class="inv-mono">25 15</td><td class="inv-mono" style="font-size:.54rem">2 4 4 7<br>2 5 7 9</td><td class="ti-dp" style="font-size:.52rem">24 27 44<br>47 25 29<br>57 59 79</td><td class="ti-dp ti-dp-s" style="font-size:.52rem"><span style="color:var(--ora)">2408</span><br>4708<br>2508<br>5908</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">7244<br>2747<br>9257<br>5972</td><td class="ti-dp" style="font-size:.52rem">244 247<br>447 259<br>257 279</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">2447</span></td><td class="ti-dp" style="font-size:.52rem">2447<br>2579</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">21</td><td>2</td><td class="ti-vals">9257<br>9572</td><td><span class="ti-state">FL<br>FL</span></td><td class="inv-mono">15 44</td><td class="inv-mono" style="font-size:.54rem">2 5 7 9<br>2 5 7 9</td><td class="ti-dp" style="font-size:.52rem">25 27 29<br>57 59 79</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">2521<br>2721<br><span style="color:var(--ora)">5921</span></td><td class="ti-dp ti-dp-d" style="font-size:.52rem">9257<br>5729<br>7952</td><td class="ti-dp" style="font-size:.52rem">257 259<br>279 579</td><td class="ti-dp"></td><td class="ti-dp" style="font-size:.52rem">2579</td></tr>
+                            <tr onclick="toggleInvRow(this)"><td><input type="checkbox" class="inv-cb" onclick="event.stopPropagation()"></td><td class="inv-mono" style="font-weight:900">14</td><td>3</td><td class="ti-vals">5890<br>0985<br>6029</td><td><span class="ti-state">FL<br>FL<br>FL</span></td><td class="inv-mono">22 32 29</td><td class="inv-mono" style="font-size:.54rem">0 5 8 9<br>0 5 8 9<br>0 2 6 9</td><td class="ti-dp" style="font-size:.52rem">05 08 09<br>58 59 89<br>02 06 26</td><td class="ti-dp ti-dp-s" style="font-size:.52rem">0514<br><span style="color:var(--ora)">0814</span><br>5914<br>0214</td><td class="ti-dp ti-dp-d" style="font-size:.52rem">5890<br>0985<br>8905<br>6029</td><td class="ti-dp" style="font-size:.52rem">058 059<br>089 589<br>026 029</td><td class="ti-dp" style="font-size:.52rem"><span style="color:var(--ora)">0589</span></td><td class="ti-dp" style="font-size:.52rem">0589<br>0269</td></tr>
                         </tbody></table>
                     </div>
                 </div>
@@ -685,7 +751,7 @@
     <div class="admin-info"><div class="admin-badge">👤 Admin</div><div class="admin-stats"><div class="admin-stat"><span class="label">Last Draw:</span><span class="value">2026-02-21</span></div><div class="admin-stat"><span class="label">Total Draws:</span><span class="value">847,293</span></div><div class="admin-stat"><span class="label">Date Range:</span><span class="value">1990–2026</span></div><div class="admin-stat"><span class="label">DB Size:</span><span class="value">2.1 GB</span></div></div></div>
     <div class="admin-health"><h4>🩺 System Health</h4><div class="health-row"><div class="health-dot green"></div><span class="health-label">MongoDB</span><span class="health-value">OK</span></div><div class="health-row"><div class="health-dot green"></div><span class="health-label">API Latency</span><span class="health-value">42ms</span></div><div class="health-row"><div class="health-dot yellow"></div><span class="health-label">Active Queries</span><span class="health-value" style="color:var(--warn)">3/5</span></div><div class="health-row"><div class="health-dot green"></div><span class="health-label">Cache Hit</span><span class="health-value">87%</span></div></div>
     <div class="admin-limits"><h4>📏 Query Limits</h4><div class="limit-row"><span class="limit-label">Max Date Range</span><span class="limit-value">90 days</span></div><div class="limit-row"><span class="limit-label">All States Cap</span><span class="limit-value">14 days</span></div><div class="limit-row"><span class="limit-label">Max Seeds</span><span class="limit-value">∞</span></div><div class="limit-row"><span class="limit-label">Max Candidates</span><span class="limit-value">5,000</span></div><div style="margin-top:8px"><div class="limit-row"><span class="limit-label">Today's Queries</span><span class="limit-value">12 / 50</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:24%;background:var(--ok)"></div></div></div><div style="margin-top:6px"><div class="limit-row"><span class="limit-label">Heavy Queries</span><span class="limit-value" style="color:var(--warn)">2 / 5</span></div><div class="limit-bar"><div class="limit-bar-fill" style="width:40%;background:var(--warn)"></div></div></div></div>
-    <div class="admin-recent"><h4>🕑 Recent Queries</h4><div class="recent-query"><span class="rq-state">Florida</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.2s</span><div class="rq-date">02-21 18:42 · 5d · Evening</div></div><div class="recent-query"><span class="rq-state">All States</span> · <span class="rq-game">Pick 5</span> <span class="rq-cost heavy">12.4s</span><div class="rq-date">02-21 17:55 · 14d · All</div></div><div class="recent-query"><span class="rq-state">Georgia</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.8s</span><div class="rq-date">02-21 16:30 · 7d · Midday</div></div><div class="recent-query"><span class="rq-state">Ohio</span> · <span class="rq-game">Pick 3</span> <span class="rq-cost light">0.1s</span><div class="rq-date">02-21 15:12 · 3d · Evening</div></div></div>
+    <div class="admin-recent"><h4>🕑 Recent Queries</h4><div class="recent-query"><span class="rq-state">FL</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.2s</span><div class="rq-date">02-21 18:42 · 5d · Evening</div></div><div class="recent-query"><span class="rq-state">All States</span> · <span class="rq-game">Pick 5</span> <span class="rq-cost heavy">12.4s</span><div class="rq-date">02-21 17:55 · 14d · All</div></div><div class="recent-query"><span class="rq-state">Georgia</span> · <span class="rq-game">Pick 4</span> <span class="rq-cost light">0.8s</span><div class="rq-date">02-21 16:30 · 7d · Midday</div></div><div class="recent-query"><span class="rq-state">Ohio</span> · <span class="rq-game">Pick 3</span> <span class="rq-cost light">0.1s</span><div class="rq-date">02-21 15:12 · 3d · Evening</div></div></div>
 </div>
 
 </div></div>
@@ -735,11 +801,11 @@ function toggleAllCands(masterCb,gridId){
 function toggleTheme(){var h=document.documentElement,c=h.getAttribute('data-theme'),n=c==='light'?'dark':'light';h.setAttribute('data-theme',n);document.getElementById('tpLight').classList.toggle('active',n==='light');document.getElementById('tpDark').classList.toggle('active',n==='dark')}
 
 var STRATS={
-    sniper:{desc:'<strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list.<br><em style="color:var(--ok)">Win #1: Rank #18/226 → $8,100 (72x ROI)</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'1 seed'},{t:'2DP filter',hl:1},{t:'Evening'},{t:'2019-09-15'}],config:{state:'Florida',game:'pick4',tod:'evening',dp:'2'}},
-    widenet:{desc:'<strong>🕸️ Wide Net:</strong> Many seeds, broad coverage, 2DP narrows the field.<br><em style="color:var(--ok)">Win #1: Rank #161/230.</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'5+ seeds'},{t:'2DP filter',hl:1},{t:'Evening'}],config:{state:'Florida',game:'pick4',tod:'evening',dp:'2'}},
-    shadow:{desc:'<strong>👥 Shadow:</strong> 2 seeds, NO DP filter. Co-occurrence only.<br><em style="color:var(--ok)">Win #2: 156 candidates → $24 box.</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'2 seeds'},{t:'No DP'},{t:'Excl non-dupes',hl:1},{t:'Midday'}],config:{state:'Florida',game:'pick4',tod:'midday',dp:'0'}},
-    rewind:{desc:'<strong>⏪ Rewind:</strong> Post-hoc. Include the winner in seeds to learn WHY it hit.',tags:[{t:'Any State'},{t:'Any Game'},{t:'Include winner'},{t:'All TOD'}],config:{state:'Florida',game:'pick4',tod:'',dp:'0'}},
-    hots:{desc:'<strong>🌶️ Hots:</strong> Cherry-pick from hot digit properties — 1DP, 2DP bands, sum range, 3DP.',tags:[{t:'Any State'},{t:'Manual build',hl:1},{t:'No grouping'}],config:{state:'Florida',game:'pick4',tod:'',dp:'0'}},
+    sniper:{desc:'<strong>🎯 Sniper:</strong> One seed. Maximum precision. 2DP filter laser-focuses the list.<br><em style="color:var(--ok)">Win #1: Rank #18/226 → $8,100 (72x ROI)</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'1 seed'},{t:'2DP filter',hl:1},{t:'Evening'},{t:'2019-09-15'}],config:{state:'FL',game:'pick4',tod:'evening',dp:'2'}},
+    widenet:{desc:'<strong>🕸️ Wide Net:</strong> Many seeds, broad coverage, 2DP narrows the field.<br><em style="color:var(--ok)">Win #1: Rank #161/230.</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'5+ seeds'},{t:'2DP filter',hl:1},{t:'Evening'}],config:{state:'FL',game:'pick4',tod:'evening',dp:'2'}},
+    shadow:{desc:'<strong>👥 Shadow:</strong> 2 seeds, NO DP filter. Co-occurrence only.<br><em style="color:var(--ok)">Win #2: 156 candidates → $24 box.</em>',tags:[{t:'FL'},{t:'Pick 4'},{t:'2 seeds'},{t:'No DP'},{t:'Excl non-dupes',hl:1},{t:'Midday'}],config:{state:'FL',game:'pick4',tod:'midday',dp:'0'}},
+    rewind:{desc:'<strong>⏪ Rewind:</strong> Post-hoc. Include the winner in seeds to learn WHY it hit.',tags:[{t:'Any State'},{t:'Any Game'},{t:'Include winner'},{t:'All TOD'}],config:{state:'FL',game:'pick4',tod:'',dp:'0'}},
+    hots:{desc:'<strong>🌶️ Hots:</strong> Cherry-pick from hot digit properties — 1DP, 2DP bands, sum range, 3DP.',tags:[{t:'Any State'},{t:'Manual build',hl:1},{t:'No grouping'}],config:{state:'FL',game:'pick4',tod:'',dp:'0'}},
     nexus:{desc:'<strong>🔮 Nexus:</strong> ΔSumsTD consecutive trending across ALL states.',tags:[{t:'All States',hl:1},{t:'Pick 5'},{t:'Date range'},{t:'All TOD'}],config:{state:'All',game:'pick5',tod:'',dp:'0'}}
 };
 
@@ -771,7 +837,7 @@ function clickTrend(row){
     if(target){var card=document.getElementById(target);if(card){card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.remove('highlight-pulse');void card.offsetWidth;card.classList.add('highlight-pulse');setTimeout(function(){card.classList.remove('highlight-pulse')},1000)}}
 }
 
-function updateGame(){var game=document.getElementById('gameType').value;document.querySelectorAll('.pe-num').forEach(function(n){n.classList.toggle('active',n.dataset.game===game)});updateQueryEstimate()}
+function updateGame(){var game=document.getElementById('gameType').value;document.querySelectorAll('.pe-num').forEach(function(n){n.classList.toggle('active',n.dataset.game===game)});updateQueryEstimate();recompute();}
 
 function switchMode(mode){var btn=document.getElementById('runBtn'),icon=document.getElementById('runBtnIcon'),text=document.getElementById('runBtnText');if(mode==='prediction'){icon.textContent='🎯';text.textContent='Run Prediction';btn.className='btn btn-run prediction-mode'}else{icon.textContent='🧪';text.textContent='Run Backtest';btn.className='btn btn-run'}}
 
@@ -836,7 +902,7 @@ var MOCK_DB=(function(){
         var d=new Date(base);d.setDate(d.getDate()+Math.floor(i/2));
         var n=nums[i],digs=n.split('').map(Number);
         draws.push({number:n,date:d.toISOString().split('T')[0],
-            tod:i%2===0?'midday':'evening',state:'Florida',game:'pick4',
+            tod:i%2===0?'midday':'evening',state:['FL','Georgia','Ohio','Pennsylvania','New York','Maryland','Virginia','Texas'][i%8],game:'pick4',
             digits:digs,normalized:digs.slice().sort().join(''),
             sum:digs.reduce(function(a,b){return a+b},0),
             td:20+((parseInt(n,10)*7+i*13)%41)});
@@ -850,7 +916,7 @@ var USE_LIVE_API = true; // set false to use mock DB offline
 function apiUrl(path){return path}
 
 // ── Pick 5 states list (matches server) ──
-var PICK5_STATES=['Maryland','Florida','Virginia','Delaware','Ohio','Pennsylvania','Georgia','Washington, D.C.','Louisiana'];
+var PICK5_STATES=['Maryland','FL','Virginia','Delaware','Ohio','Pennsylvania','Georgia','Washington, D.C.','Louisiana'];
 
 // ── Fetch seeds from live MongoDB via /api/draws/recent ──
 async function fetchLiveSeeds(state, gameType, startDate, endDate, tod){
@@ -862,7 +928,7 @@ async function fetchLiveSeeds(state, gameType, startDate, endDate, tod){
             stateList=await stRes.json();
         }catch(e){
             // Fallback to known list
-            stateList=(gameType==='pick5')?PICK5_STATES:['Florida','Georgia','Ohio','Pennsylvania','New York','Texas','Maryland','Virginia'];
+            stateList=(gameType==='pick5')?PICK5_STATES:['FL','Georgia','Ohio','Pennsylvania','New York','Texas','Maryland','Virginia'];
         }
         var allSeeds=[];
         for(var i=0;i<stateList.length;i++){
@@ -933,15 +999,25 @@ function sortDesc(obj){return Object.entries(obj).sort(function(a,b){return b[1]
 
 // ── Analysis Engine ──
 function analyzeSeeds(seeds){
-    var dp1={},dp2={},dp3={},dp4={},sums=[],tds=[],deltas=[];
+    var gameType=(document.getElementById('gameType')||{}).value||'pick4';
+    var isPick5=(gameType==='pick5');
+    var dp1={},dp2={},dp3={},dp4={},dp5={},sums=[],tds=[],deltas=[];
     seeds.forEach(function(s){
-        s.digits.forEach(function(d){dp1[d]=(dp1[d]||0)+1});
-        getCombos(s.digits,2).forEach(function(p){var k=p.slice().sort().join('');dp2[k]=(dp2[k]||0)+1});
-        getCombos(s.digits,3).forEach(function(p){var k=p.slice().sort().join('');dp3[k]=(dp3[k]||0)+1});
-        dp4[s.normalized]=(dp4[s.normalized]||0)+1;
+        var digs=s.digits;
+        digs.forEach(function(d){dp1[d]=(dp1[d]||0)+1});
+        getCombos(digs,2).forEach(function(p){var k=p.slice().sort().join('');dp2[k]=(dp2[k]||0)+1});
+        getCombos(digs,3).forEach(function(p){var k=p.slice().sort().join('');dp3[k]=(dp3[k]||0)+1});
+        if(isPick5){
+            // Pick5: 4DP = C(5,4) sub-combos of the 5 digits; 5DP = full normalized
+            getCombos(digs,4).forEach(function(p){var k=p.slice().sort().join('');dp4[k]=(dp4[k]||0)+1});
+            dp5[s.normalized]=(dp5[s.normalized]||0)+1;
+        } else {
+            // Pick4: 4DP = full normalized (C(4,4))
+            dp4[s.normalized]=(dp4[s.normalized]||0)+1;
+        }
         sums.push(s.sum);tds.push(s.td);deltas.push(Math.abs(s.sum-s.td));
     });
-    return{dp1:dp1,dp2:dp2,dp3:dp3,dp4:dp4,sums:sums,tds:tds,deltas:deltas};
+    return{dp1:dp1,dp2:dp2,dp3:dp3,dp4:dp4,dp5:dp5,sums:sums,tds:tds,deltas:deltas,isPick5:isPick5};
 }
 
 // ── Get selected seeds (uses live data store, falls back to mock) ──
@@ -980,29 +1056,29 @@ function getSelectedSeeds(){
 
 function renderHotDigits(a){
     var card=document.getElementById('hotDigitsCard');if(!card)return;
-    var h='<h3>🔥 Hot Digits <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(from selected seeds)</span></h3>';
+    var isPick5=a.isPick5;
+    var gameLabel=isPick5?'Pick 5':'Pick 4';
+    h='<h3>🔥 Hot Digits <span style="font-size:.68rem;font-weight:400;color:var(--text3)">(from selected seeds · '+gameLabel+')</span></h3>';
 
-    // 1DP
+    // 1DP — always shown
     h+='<div class="hd-label">1DP Digits</div><div class="hd-row">';
     sortDesc(a.dp1).forEach(function(e){h+='<span class="hd-chip" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>'});
     h+='</div>';
 
-    // 2DP + Bands
+    // 2DP + Bands — always shown
     var dp2s=sortDesc(a.dp2);
     var dp2top=dp2s.filter(function(e){return e[1]>=2}).slice(0,12);
     h+='<div class="hd-label" style="margin-top:8px">2DP Pairs + Bands</div><div class="hd-row">';
     dp2top.forEach(function(e){h+='<span class="hd-chip" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>'});
     if(!dp2top.length)h+='<span style="font-size:.6rem;color:var(--text3)">No pairs with 2+ hits</span>';
     h+='</div>';
-
-    // 2DP Bands
-    var bands={};
-    Object.entries(a.dp2).forEach(function(e){var l=e[0][0]+'x';if(!bands[l])bands[l]={t:0,p:[]};bands[l].t+=e[1];if(e[1]>=2)bands[l].p.push({k:e[0],c:e[1]})});
-    var bArr=Object.entries(bands).sort(function(a,b){return b[1].t-a[1].t});
-    var mx=bArr.length?bArr[0][1].t:1;
+    var bands2={};
+    Object.entries(a.dp2).forEach(function(e){var l=e[0][0]+'x';if(!bands2[l])bands2[l]={t:0,p:[]};bands2[l].t+=e[1];if(e[1]>=2)bands2[l].p.push({k:e[0],c:e[1]})});
+    var bArr2=Object.entries(bands2).sort(function(a,b){return b[1].t-a[1].t});
+    var mx2=bArr2.length?bArr2[0][1].t:1;
     h+='<div class="band-row">';
-    bArr.slice(0,5).forEach(function(b){
-        var pct=Math.round(b[1].t/mx*100);var hot=pct>70;
+    bArr2.slice(0,5).forEach(function(b){
+        var pct=Math.round(b[1].t/mx2*100);var hot=pct>70;
         h+='<div class="band-group'+(hot?'':' cold')+'"><div class="band-header"><span class="band-name">'+b[0]+'</span><span class="band-count">'+b[1].t+'</span></div>';
         h+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'var(--ora)':'rgba(99,195,255,.7)')+'"></div></div>';
         if(b[1].p.length){h+='<div class="band-pairs">';b[1].p.sort(function(a,b){return b.c-a.c}).slice(0,4).forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});h+='</div>';}
@@ -1010,14 +1086,12 @@ function renderHotDigits(a){
     });
     h+='</div><div class="band-divider"></div>';
 
-    // 3DP
+    // 3DP + Bands — always shown
     var dp3s=sortDesc(a.dp3).filter(function(e){return e[1]>=2}).slice(0,8);
     h+='<div class="hd-label">3DP Triples + Bands</div><div class="hd-row">';
     dp3s.forEach(function(e){h+='<span class="hd-chip" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>'});
     if(!dp3s.length)h+='<span style="font-size:.6rem;color:var(--text3)">No triples with 2+ hits</span>';
     h+='</div>';
-
-    // 3DP Bands
     var bands3={};
     Object.entries(a.dp3).forEach(function(e){var l=e[0][0]+'xx';if(!bands3[l])bands3[l]={t:0,p:[]};bands3[l].t+=e[1];if(e[1]>=2)bands3[l].p.push({k:e[0],c:e[1]})});
     var bArr3=Object.entries(bands3).sort(function(a,b){return b[1].t-a[1].t});
@@ -1032,30 +1106,74 @@ function renderHotDigits(a){
     });
     h+='</div><div class="band-divider"></div>';
 
-    // 4DP
-    var dp4s=sortDesc(a.dp4).filter(function(e){return e[1]>=1}).slice(0,6);
-    h+='<div class="hd-label">4DP Quads + Bands <span style="font-weight:400;color:var(--text3)">(normalized)</span></div>';
-    h+='<div class="dp4-grid">';
-    dp4s.forEach(function(e){
-        var cls=e[1]>=3?'dp4-hot':e[1]>=2?'dp4-warm':'';
-        h+='<div class="dp4-chip '+cls+'">'+e[0]+'<span class="dp4c">×'+e[1]+'</span></div>';
-    });
-    h+='</div>';
-
-    // 4DP Bands
-    var bands4={};
-    Object.entries(a.dp4).forEach(function(e){var l=e[0][0]+'xxx';if(!bands4[l])bands4[l]={t:0,p:[]};bands4[l].t+=e[1];bands4[l].p.push({k:e[0],c:e[1]})});
-    var bArr4=Object.entries(bands4).sort(function(a,b){return b[1].t-a[1].t});
-    var mx4=bArr4.length?bArr4[0][1].t:1;
-    h+='<div class="hd-label" style="margin-top:4px">4DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit)</span></div><div class="band-row">';
-    bArr4.slice(0,4).forEach(function(b){
-        var pct=Math.round(b[1].t/mx4*100);var hot=pct>60;
-        h+='<div class="band-group'+(hot?'':' cold')+'"><div class="band-header"><span class="band-name">'+b[0]+'</span><span class="band-count">'+b[1].t+' · '+b[1].p.length+' quads</span></div>';
-        h+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'var(--ora)':'rgba(99,195,255,.7)')+'"></div></div>';
-        if(b[1].p.length){h+='<div class="band-pairs">';b[1].p.sort(function(a,b){return b.c-a.c}).slice(0,3).forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});h+='</div>';}
+    if(isPick5){
+        // ── PICK 5 MODE ──
+        // 4DP = C(5,4) sub-combos (all 5 possible 4-digit subsets from each draw)
+        var dp4s=sortDesc(a.dp4).filter(function(e){return e[1]>=2}).slice(0,8);
+        h+='<div class="hd-label">4DP Sub-Combos <span style="font-weight:400;color:var(--text3)">(C(5,4) — all 4-digit subsets from each Pick 5 draw)</span></div>';
+        h+='<div class="hd-row">';
+        dp4s.forEach(function(e){
+            var cls=e[1]>=4?'dp4-hot':e[1]>=2?'dp4-warm':'';
+            h+='<span class="hd-chip '+cls+'" onclick="this.classList.toggle(\'active\')">'+e[0]+' <span class="cnt">'+e[1]+'x</span></span>';
+        });
+        if(!dp4s.length)h+='<span style="font-size:.6rem;color:var(--text3)">No 4DP sub-combos with 2+ hits</span>';
         h+='</div>';
-    });
-    h+='</div>';
+        // 4DP Bands (leading digit of the 4-combo)
+        var bands4={};
+        Object.entries(a.dp4).forEach(function(e){var l=e[0][0]+'xxx';if(!bands4[l])bands4[l]={t:0,p:[]};bands4[l].t+=e[1];bands4[l].p.push({k:e[0],c:e[1]})});
+        var bArr4=Object.entries(bands4).sort(function(a,b){return b[1].t-a[1].t});
+        var mx4=bArr4.length?bArr4[0][1].t:1;
+        h+='<div class="band-row">';
+        bArr4.slice(0,4).forEach(function(b){
+            var pct=Math.round(b[1].t/mx4*100);var hot=pct>60;
+            h+='<div class="band-group'+(hot?'':' cold')+'"><div class="band-header"><span class="band-name">'+b[0]+'</span><span class="band-count">'+b[1].t+' · '+b[1].p.length+' combos</span></div>';
+            h+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'var(--ora)':'rgba(99,195,255,.7)')+'"></div></div>';
+            if(b[1].p.length){h+='<div class="band-pairs">';b[1].p.sort(function(a,b){return b.c-a.c}).slice(0,3).forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});h+='</div>';}
+            h+='</div>';
+        });
+        h+='</div><div class="band-divider"></div>';
+
+        // 5DP = full normalized Pick5 number
+        var dp5s=sortDesc(a.dp5||{}).filter(function(e){return e[1]>=1}).slice(0,6);
+        h+='<div class="hd-label">5DP Full Numbers <span style="font-weight:400;color:var(--text3)">(normalized Pick 5 draws · exact repeats)</span></div>';
+        h+='<div class="dp4-grid">';
+        if(dp5s.length){
+            dp5s.forEach(function(e){
+                var cls=e[1]>=3?'dp4-hot':e[1]>=2?'dp4-warm':'';
+                h+='<div class="dp4-chip '+cls+'">'+e[0]+'<span class="dp4c">×'+e[1]+'</span></div>';
+            });
+        } else {
+            h+='<span style="font-size:.6rem;color:var(--text3);padding:4px">No repeated normalized draws</span>';
+        }
+        h+='</div>';
+
+    } else {
+        // ── PICK 4 MODE ──
+        // 4DP = full normalized number (the draw itself)
+        var dp4s=sortDesc(a.dp4).filter(function(e){return e[1]>=1}).slice(0,6);
+        h+='<div class="hd-label">4DP Quads + Bands <span style="font-weight:400;color:var(--text3)">(normalized Pick 4 draws)</span></div>';
+        h+='<div class="dp4-grid">';
+        dp4s.forEach(function(e){
+            var cls=e[1]>=3?'dp4-hot':e[1]>=2?'dp4-warm':'';
+            h+='<div class="dp4-chip '+cls+'">'+e[0]+'<span class="dp4c">×'+e[1]+'</span></div>';
+        });
+        if(!dp4s.length)h+='<span style="font-size:.6rem;color:var(--text3);padding:4px">No repeated draws</span>';
+        h+='</div>';
+        // 4DP Bands
+        var bands4={};
+        Object.entries(a.dp4).forEach(function(e){var l=e[0][0]+'xxx';if(!bands4[l])bands4[l]={t:0,p:[]};bands4[l].t+=e[1];bands4[l].p.push({k:e[0],c:e[1]})});
+        var bArr4=Object.entries(bands4).sort(function(a,b){return b[1].t-a[1].t});
+        var mx4=bArr4.length?bArr4[0][1].t:1;
+        h+='<div class="hd-label" style="margin-top:4px">4DP Bands <span style="font-weight:400;color:var(--text3)">(grouped by leading digit)</span></div><div class="band-row">';
+        bArr4.slice(0,4).forEach(function(b){
+            var pct=Math.round(b[1].t/mx4*100);var hot=pct>60;
+            h+='<div class="band-group'+(hot?'':' cold')+'"><div class="band-header"><span class="band-name">'+b[0]+'</span><span class="band-count">'+b[1].t+' · '+b[1].p.length+' quads</span></div>';
+            h+='<div class="band-bar"><div class="band-bar-fill" style="width:'+pct+'%;background:'+(hot?'var(--ora)':'rgba(99,195,255,.7)')+'"></div></div>';
+            if(b[1].p.length){h+='<div class="band-pairs">';b[1].p.sort(function(a,b){return b.c-a.c}).slice(0,3).forEach(function(p){h+='<span class="band-pair">'+p.k+'<sup>'+p.c+'</sup></span>'});h+='</div>';}
+            h+='</div>';
+        });
+        h+='</div>';
+    }
 
     card.innerHTML=h;
 }
@@ -1182,8 +1300,10 @@ function recompute(){
     renderDeltaSumTD(a);
     renderSidebarTrends(a);
     renderTrendSums(seeds,a);
+    renderTCPanes(seeds);
     renderDateInvestigation(seeds,a);
     renderDateCandidates(seeds,a);
+    wireFocusHandlers();
 }
 
 // ── Classify a number by digit pattern ──
@@ -1309,6 +1429,15 @@ function gen5From2DP(pair, targetSum){
 }
 
 // ── Render Trend-Based Sums Table (Option A flat + expand/collapse, deduped, column checkboxes) ──
+// Global state abbreviation helper
+function abbrState(s){
+    if(!s)return'?';
+    var map={'Florida':'FL','Georgia':'GA','Ohio':'OH','Pennsylvania':'PA','New York':'NY',
+             'Maryland':'MD','Virginia':'VA','Texas':'TX','Delaware':'DE','Washington, D.C.':'DC',
+             'New Jersey':'NJ','Connecticut':'CT','Massachusetts':'MA','Michigan':'MI'};
+    return map[s]||s.slice(0,4);
+}
+
 function renderTrendSums(seeds, a){
     var pane = document.getElementById('tc-sums');
     if(!pane) return;
@@ -1547,7 +1676,7 @@ function renderTrendSums(seeds, a){
             h += '<td>'+s.date+'</td>';
             h += '<td>'+(daysHot?'<span class="days-hot">'+daysAgo+'</span>':daysAgo)+'</td>';
             h += '<td style="font-weight:700">'+(isFuture?'<span class="future-blink">'+s.number+'</span>':s.number)+'</td>';
-            h += '<td>'+(s.state||'FL').slice(0,7)+'</td>';
+            h += '<td><span class="ti-state">'+abbrState(s.state)+'</span></td>';
             h += '<td>'+s.td+'</td>';
 
             if(isPick5){
@@ -1658,6 +1787,102 @@ function updateTrendCands(){
 }
 
 // ── Render Sidebar Trend Rows (from analysis data) ──
+
+// ── Render Trend TC Panes (TD / Delta / DP / Monthly) ──
+function renderTCPanes(seeds){
+    var endDate = document.getElementById('endDate').value || '2099-12-31';
+
+    function makeRows(group, keyLabel, checked){
+        var h = '';
+        group.forEach(function(s, i){
+            var isFuture = s.date > endDate;
+            var digs = s.digits;
+            var dp1 = digs.slice().sort().join(' ');
+            var pairs2 = getCombos(digs,2).map(function(p){return p.slice().sort().join('')});
+            var pairs2Uniq = pairs2.filter(function(v,i,a){return a.indexOf(v)===i});
+            var straights = pairs2Uniq.filter(function(p){return p[0]!==p[1]});
+            var doubles = pairs2Uniq.filter(function(p){return p[0]===p[1]});
+            var tripsUniq = getCombos(digs,3).map(function(p){return p.slice().sort().join('')}).filter(function(v,i,a){return a.indexOf(v)===i});
+            var quadsUniq = getCombos(digs,4).map(function(p){return p.slice().sort().join('')}).filter(function(v,i,a){return a.indexOf(v)===i});
+            h += '<tr onclick="toggleInvRow(this)">';
+            h += '<td><input type="checkbox" class="inv-cb"'+(i===0&&checked?' checked':'')+' onclick="event.stopPropagation()"></td>';
+            h += '<td class="inv-mono" style="font-weight:900">'+keyLabel+'</td>';
+            h += '<td>'+(isFuture?'<span class="future-blink">'+s.number+'</span>':s.number)+'</td>';
+            h += '<td><span class="ti-state">'+abbrState(s.state)+'</span></td>';
+            h += '<td class="inv-mono">'+s.sum+'</td>';
+            h += '<td class="inv-mono">'+s.td+'</td>';
+            h += '<td class="inv-mono" style="font-size:.54rem">'+dp1+'</td>';
+            h += '<td class="ti-dp" style="font-size:.52rem">'+pairs2Uniq.slice(0,6).join(' ')+'</td>';
+            h += '<td class="ti-dp ti-dp-s" style="font-size:.52rem">'+straights.slice(0,4).map(function(p){return'<span style="color:var(--ora)">'+p+'</span>'}).join('<br>')+'</td>';
+            h += '<td class="ti-dp ti-dp-d" style="font-size:.52rem">'+doubles.join('<br>')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.52rem">'+tripsUniq.slice(0,4).join(' ')+'</td>';
+            h += '<td class="ti-dp" style="font-size:.52rem">'+quadsUniq.slice(0,3).join(' ')+'</td>';
+            h += '</tr>';
+        });
+        return h;
+    }
+
+    var hdrs = '<th style="width:24px"></th>';
+
+    // TC-TD
+    (function(){
+        var pane = document.getElementById('tc-td'); if(!pane) return;
+        var byTD={};
+        seeds.forEach(function(s){ if(!byTD[s.td])byTD[s.td]=[]; byTD[s.td].push(s); });
+        var keys=Object.keys(byTD).filter(function(k){return byTD[k].length>=2}).sort(function(a,b){return byTD[b].length-byTD[a].length}).slice(0,5);
+        var h='<div class="inv-summary"><span>Type: <strong style="color:var(--ok)">Consecutive TDs</strong></span><span>Rows: <strong>'+keys.length+'</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>';
+        h+='<div class="trend-inv-wrap"><table class="trend-inv-table"><thead><tr>'+hdrs+'<th>TD</th><th>PW</th><th>State</th><th>Sum</th><th>TD</th><th class="th-group">1DPPs</th><th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-cyan">3DPPs</th><th class="th-group">4DPPs</th></tr></thead><tbody>';
+        keys.forEach(function(k,ki){ h+='<tr class="sum-hdr selected"><td colspan="12" style="font-weight:700;color:var(--ok)">TD '+k+' ('+byTD[k].length+' draws)</td></tr>'+makeRows(byTD[k],k,ki===0); });
+        h+='</tbody></table></div>';
+        pane.innerHTML=h;
+        var cnt=document.querySelector('.tc-tab.tc-td .tc-cnt'); if(cnt)cnt.textContent=keys.length;
+    })();
+
+    // TC-DELTA
+    (function(){
+        var pane = document.getElementById('tc-delta'); if(!pane) return;
+        var byD={};
+        seeds.forEach(function(s){ var k=s.sum-s.td; if(!byD[k])byD[k]=[]; byD[k].push(s); });
+        var keys=Object.keys(byD).filter(function(k){return byD[k].length>=2}).sort(function(a,b){return byD[b].length-byD[a].length}).slice(0,5);
+        var h='<div class="inv-summary"><span>Type: <strong style="color:var(--cyan)">Consecutive ΔSumTD</strong></span><span>Rows: <strong>'+keys.length+'</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>';
+        h+='<div class="trend-inv-wrap"><table class="trend-inv-table"><thead><tr>'+hdrs+'<th>ΔSumTD</th><th>PW</th><th>State</th><th>Sum</th><th>TD</th><th class="th-group">1DPPs</th><th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-cyan">3DPPs</th><th class="th-group">4DPPs</th></tr></thead><tbody>';
+        keys.forEach(function(k,ki){ h+='<tr class="sum-hdr selected"><td colspan="12" style="font-weight:700;color:var(--cyan)">ΔSumTD='+k+' ('+byD[k].length+' draws)</td></tr>'+makeRows(byD[k],k,ki===0); });
+        h+='</tbody></table></div>';
+        pane.innerHTML=h;
+        var cnt=document.querySelector('.tc-tab.tc-delta .tc-cnt'); if(cnt)cnt.textContent=keys.length;
+    })();
+
+    // TC-DP
+    (function(){
+        var pane = document.getElementById('tc-dp'); if(!pane) return;
+        var dpFreq={};
+        seeds.forEach(function(s){ var seen={}; getCombos(s.digits,2).forEach(function(p){ var k=p.slice().sort().join(''); if(!seen[k]){seen[k]=1;dpFreq[k]=(dpFreq[k]||0)+1;} }); });
+        var topDPs=sortDesc(dpFreq).slice(0,5).map(function(e){return e[0]});
+        var h='<div class="inv-summary"><span>Type: <strong style="color:var(--pri)">Consecutive DP (Digit Pairs)</strong></span><span>Rows: <strong>'+topDPs.length+'</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>';
+        h+='<div class="trend-inv-wrap"><table class="trend-inv-table"><thead><tr>'+hdrs+'<th>DP</th><th>PW</th><th>State</th><th>Sum</th><th>TD</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-cyan">3DPPs</th><th class="th-group">4DPPs</th></tr></thead><tbody>';
+        topDPs.forEach(function(dp,dpi){
+            var group=seeds.filter(function(s){ return s.digits.indexOf(parseInt(dp[0]))>=0&&s.digits.indexOf(parseInt(dp[1]))>=0; });
+            h+='<tr class="sum-hdr selected"><td colspan="10" style="font-weight:700;color:var(--pri)">DP: '+dp+' ('+group.length+' draws)</td></tr>'+makeRows(group.slice(0,4),dp,dpi===0);
+        });
+        h+='</tbody></table></div>';
+        pane.innerHTML=h;
+        var cnt=document.querySelector('.tc-tab.tc-dp .tc-cnt'); if(cnt)cnt.textContent=topDPs.length;
+    })();
+
+    // TC-MONTHLY
+    (function(){
+        var pane = document.getElementById('tc-monthly'); if(!pane) return;
+        var byM={};
+        seeds.forEach(function(s){ var k=s.date.slice(0,7); if(!byM[k])byM[k]=[]; byM[k].push(s); });
+        var keys=Object.keys(byM).sort().reverse().slice(0,5);
+        var h='<div class="inv-summary"><span>Type: <strong style="color:#f59e0b">Monthly Pattern (yyyy-mm)</strong></span><span>Rows: <strong>'+keys.length+'</strong></span><span>Algorithm: <strong>RBTL (Hots)</strong></span></div>';
+        h+='<div class="trend-inv-wrap"><table class="trend-inv-table"><thead><tr>'+hdrs+'<th>Month</th><th>PW</th><th>State</th><th>Sum</th><th>TD</th><th class="th-group">1DPPs</th><th class="th-group-ora">2DPPs</th><th class="th-group-ora">2DPP(S)</th><th class="th-group-ora">2DPP(D)</th><th class="th-group-cyan">3DPPs</th><th class="th-group">4DPPs</th></tr></thead><tbody>';
+        keys.forEach(function(k,ki){ h+='<tr class="sum-hdr selected"><td colspan="12" style="font-weight:700;color:#f59e0b">'+k+' ('+byM[k].length+' draws)</td></tr>'+makeRows(byM[k].slice(0,6),k,ki===0); });
+        h+='</tbody></table></div>';
+        pane.innerHTML=h;
+        var cnt=document.querySelector('.tc-tab.tc-monthly .tc-cnt'); if(cnt)cnt.textContent=keys.length;
+    })();
+}
 function renderSidebarTrends(a){
     // Sums trends: find top 3 sums by frequency
     var sumFreq={};a.sums.forEach(function(s){sumFreq[s]=(sumFreq[s]||0)+1});
@@ -1817,6 +2042,9 @@ function renderDateCandidates(seeds,a){
 function runAutopsy(){
     var input=document.querySelector('.autopsy-input input');
     if(!input||!input.value.trim())return;
+    var isPick5=(document.getElementById('gameType').value==='pick5');
+    var digitCount=isPick5?5:4;
+    var digitRx=isPick5?/^\d{5}$/:/ ^\d{4}$/;
     var nums=input.value.trim().split(',').map(function(s){return s.trim()});
     var seeds=getSelectedSeeds();
     if(!seeds.length){alert('Select seeds first.');return}
@@ -1824,7 +2052,7 @@ function runAutopsy(){
 
     var results=[];
     nums.forEach(function(n){
-        if(!/^\d{4}$/.test(n)){results.push(n+' → invalid');return}
+        if(n.length!==digitCount||!/^\d+$/.test(n)){results.push(n+' → invalid (need '+digitCount+' digits)');return}
         var digs=n.split('').map(Number);
         var sum=digs.reduce(function(a,b){return a+b},0);
         var hits=[];
@@ -1838,9 +2066,16 @@ function runAutopsy(){
         // Sum match
         var sf={};a.sums.forEach(function(s){sf[s]=(sf[s]||0)+1});
         if(sf[sum])hits.push('Σ'+sum+'('+sf[sum]+'x)');
-        // 4DP
         var norm=digs.slice().sort().join('');
-        if(a.dp4[norm])hits.push('4DP:'+norm+'('+a.dp4[norm]+'x)');
+        if(isPick5){
+            // 4DP sub-combo matches (how many seeds share this 4-digit subset)
+            getCombos(digs,4).forEach(function(p){var k=p.sort().join('');if(a.dp4[k]>=2)hits.push('4DP:'+k+'('+a.dp4[k]+'x)')});
+            // 5DP exact match
+            if(a.dp5&&a.dp5[norm])hits.push('5DP:'+norm+'('+a.dp5[norm]+'x)');
+        } else {
+            // Pick4: 4DP is the full normalized number
+            if(a.dp4[norm])hits.push('4DP:'+norm+'('+a.dp4[norm]+'x)');
+        }
 
         results.push(n+' → '+(hits.length?hits.join(', '):'❌ No hot matches'));
     });
@@ -1923,12 +2158,62 @@ async function runAction(){
     text.textContent=isPred?'Run Prediction':'Run Backtest';
 }
 
-// ── Init (dates only — NO auto-run, static HTML shows first) ──
+// ── Focus Mode ──
+var _focusedCard = null;
+
+function enterFocus(card) {
+    if (_focusedCard === card) { exitFocus(); return; }
+    exitFocus(true); // silent exit if switching
+    _focusedCard = card;
+    card.classList.add('focus-card');
+    document.body.classList.add('focus-active');
+    // Scroll card into comfortable view
+    setTimeout(function(){
+        var rect = card.getBoundingClientRect();
+        var ideal = window.scrollY + rect.top - 80;
+        window.scrollTo({ top: Math.max(0, ideal), behavior: 'smooth' });
+    }, 60);
+}
+
+function exitFocus(silent) {
+    if (!_focusedCard) return;
+    _focusedCard.classList.remove('focus-card');
+    document.body.classList.remove('focus-active');
+    _focusedCard = null;
+}
+
+// Wire up focus on all card h3 headers (call after any DOM update)
+function wireFocusHandlers() {
+    document.querySelectorAll('.card h3').forEach(function(h3) {
+        if (h3._focusWired) return; // don't double-wire
+        h3._focusWired = true;
+
+        var hint = document.createElement('span');
+        hint.className = 'focus-hint';
+        hint.textContent = 'click to focus';
+        h3.appendChild(hint);
+
+        h3.addEventListener('click', function(e) {
+            if (e.target !== h3 && e.target !== hint && !e.target.closest('h3')) return;
+            var card = h3.closest('.card');
+            if (card) enterFocus(card);
+        });
+    });
+}
+
+// Wire on DOM ready
+document.addEventListener('DOMContentLoaded', wireFocusHandlers);
+
+// Escape key exits focus
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') exitFocus();
+});
+
 (function(){
     var t=new Date('2026-02-22'),a=new Date('2026-01-01');
     document.getElementById('startDate').value=a.toISOString().split('T')[0];
     document.getElementById('endDate').value=t.toISOString().split('T')[0];
-    document.getElementById('stateSelect').value='Florida';
+    document.getElementById('stateSelect').value='FL';
     updateGame();
     autoMode();
 })();
