@@ -2,8 +2,8 @@ name: Daily DB freshness check
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # run every day at 09:00 UTC
-  workflow_dispatch: {}  # allow manual trigger
+    - cron: '0 9 * * *'
+  workflow_dispatch: {}
 
 jobs:
   check:
@@ -24,6 +24,7 @@ jobs:
           python -m pip install requests
 
       - name: Run DB freshness script
+        working-directory: ./scripts
         env:
           DB_MODE: ${{ secrets.DB_MODE }}
           ALERT_TO: ${{ secrets.ALERT_TO }}
@@ -33,4 +34,4 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           # exit with code 1 if there are alerts; GitHub will notify watchers
-          python3 scripts/check_db_current.py --alert-days 1 --email
+          python3 check_db_current.py --alert-days 1 --email
