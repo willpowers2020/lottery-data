@@ -33,4 +33,4 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           # exit with code 1 if there are alerts; GitHub will notify watchers
-          python3 check_db_current.py --alert-days 1 --email
+          python3 scripts/check_db_current.py --alert-days 1 --email
