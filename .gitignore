@@ -5,3 +5,28 @@ _archive/
 .DS_Store
 *.pyc
 .env
+
+# Backup files
+*.bak
+*.bak_*
+src/mld/api.py.bak*
+
+# Old/backup templates
+templates/*bak*
+templates/*old*
+templates/*ok.html
+templates/*working*
+templates/*good*
+
+# One-off scripts
+fix_and_push.sh
+fix_template_folder.sh
+run_tests.sh
+test_backtest.py
+test_backtest_full.py
+
+# Nested repo clone
+lottery-data/
+
+# Pytest
+pytest.ini
